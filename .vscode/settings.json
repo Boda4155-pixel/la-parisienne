@@ -3,5 +3,7 @@
     "source.fixAll": "explicit",
     "source.organizeImports": "explicit",
     "source.sortMembers": "explicit"
-  }
+  },
+  "i18n-ally.localesPaths": ["i18next/locales"],
+  "i18n-ally.keystyle": "nested"
 }
