@@ -87,7 +87,8 @@
     "errorLoading": "Une erreur s'est produite lors du chargement.",
     "remove": "Retirer",
     "from": "À partir de",
-    "error": "Erreur"
+    "error": "Erreur",
+    "invalidPhone": "Veuillez entrer un numéro égyptien valide."
   },
   "cart": {
     "title": "Panier",
@@ -213,7 +214,26 @@
     "fullName": "Nom complet",
     "fullNamePlaceholder": "Entrez votre nom complet",
     "phone": "Téléphone",
-    "phonePlaceholder": "Entrez votre numéro (facultatif)"
+    "phonePlaceholder": "Entrez votre numéro (facultatif)",
+    "invalidEmail": "Veuillez entrer une adresse e-mail valide.",
+    "somethingWentWrong": "Une erreur s'est produite. Veuillez réessayer.",
+    "resetEmailSent": "Un lien de réinitialisation a été envoyé à votre e-mail.",
+    "forgotPasswordTitle": "Mot de passe oublié",
+    "forgotPasswordSubtitle": "Entrez votre e-mail et nous vous enverrons un lien.",
+    "emailPlaceholder": "Entrez votre e-mail",
+    "email": "E-mail",
+    "sendResetLink": "Envoyer le lien",
+    "passwordTooShort": "Le mot de passe doit contenir au moins 6 caractères.",
+    "passwordsDontMatch": "Les mots de passe ne correspondent pas.",
+    "passwordUpdated": "Votre mot de passe a été mis à jour avec succès.",
+    "resetPasswordTitle": "Réinitialiser le mot de passe",
+    "resetPasswordSubtitle": "Entrez votre nouveau mot de passe ci-dessous.",
+    "newPasswordPlaceholder": "Entrez le nouveau mot de passe",
+    "newPassword": "Nouveau mot de passe",
+    "confirmPasswordPlaceholder": "Confirmez le nouveau mot de passe",
+    "confirmPassword": "Confirmer le mot de passe",
+    "updatePassword": "Mettre à jour le mot de passe",
+    "forgotPassword": "Mot de passe oublié ?"
   },
   "home": {
     "deliverTo": "LIVRER À",

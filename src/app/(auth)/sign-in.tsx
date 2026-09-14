@@ -67,6 +67,12 @@ const SignIn = () => {
         secureTextEntry
       />
 
+      <Link href="/forgot-password" className="self-end">
+        <Text className="paragraph-bold text-primary">
+          {t("auth.forgotPassword")}
+        </Text>
+      </Link>
+
       <CustomButton
         title={t("auth.signIn")}
         isLoading={isSubmitting}

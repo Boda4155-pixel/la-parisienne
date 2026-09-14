@@ -208,27 +208,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         throw new Error("Failed to create account");
       }
 
-      const { error: profileError } = await supabase.from("profiles").insert({
-        id: data.user.id,
-        full_name: fullName,
-        email,
-        phone: phone || null,
-        role: "customer",
-      });
-
-      if (profileError) {
-        await supabase.auth.signOut();
-
-        set({
-          user: null,
-          session: null,
-          isAuthenticated: false,
-          profile: null,
-        });
-
-        throw profileError;
-      }
-
       set({
         user: data.user,
         session: data.session,

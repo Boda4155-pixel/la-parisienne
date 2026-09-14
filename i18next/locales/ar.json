@@ -87,7 +87,8 @@
     "errorLoading": "حدث خطأ أثناء التحميل. يرجى المحاولة مرة أخرى.",
     "remove": "إزالة",
     "from": "من",
-    "error": "خطأ"
+    "error": "خطأ",
+    "invalidPhone": "من فضلك أدخل رقم هاتف مصري صحيح."
   },
   "cart": {
     "title": "السلة",
@@ -219,7 +220,26 @@
     "fullName": "الاسم بالكامل",
     "fullNamePlaceholder": "أدخل اسمك بالكامل",
     "phone": "الهاتف",
-    "phonePlaceholder": "أدخل رقم هاتفك (اختياري)"
+    "phonePlaceholder": "أدخل رقم هاتفك (اختياري)",
+    "invalidEmail": "من فضلك أدخل بريد إلكتروني صحيح.",
+    "somethingWentWrong": "حصل خطأ ما، من فضلك حاول تاني.",
+    "resetEmailSent": "تم إرسال رابط إعادة تعيين كلمة المرور لبريدك الإلكتروني.",
+    "forgotPasswordTitle": "نسيت كلمة المرور",
+    "forgotPasswordSubtitle": "أدخل بريدك الإلكتروني وهنبعتلك رابط لإعادة التعيين.",
+    "emailPlaceholder": "أدخل بريدك الإلكتروني",
+    "email": "البريد الإلكتروني",
+    "sendResetLink": "إرسال رابط إعادة التعيين",
+    "passwordTooShort": "كلمة المرور لازم تكون 6 حروف على الأقل.",
+    "passwordsDontMatch": "كلمتا المرور مش متطابقتين.",
+    "passwordUpdated": "تم تحديث كلمة المرور بنجاح.",
+    "resetPasswordTitle": "إعادة تعيين كلمة المرور",
+    "resetPasswordSubtitle": "أدخل كلمة المرور الجديدة تحت.",
+    "newPasswordPlaceholder": "أدخل كلمة المرور الجديدة",
+    "newPassword": "كلمة المرور الجديدة",
+    "confirmPasswordPlaceholder": "أكّد كلمة المرور الجديدة",
+    "confirmPassword": "تأكيد كلمة المرور",
+    "updatePassword": "تحديث كلمة المرور",
+    "forgotPassword": "نسيت كلمة المرور؟"
   },
   "home": {
     "deliverTo": "التوصيل إلى",

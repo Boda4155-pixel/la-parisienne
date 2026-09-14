@@ -5,6 +5,7 @@ import { Alert, Text, View } from "react-native";
 import CustomButton from "../../../components/CustomButton";
 import CustomInput from "../../../components/CustomInput";
 import { useAuthStore } from "../../../store/auth.store";
+import { isValidEgyptianPhone } from "../../../utils/validation";
 
 const SignUp = () => {
   const signUp = useAuthStore((state) => state.signUp);
@@ -33,6 +34,11 @@ const SignUp = () => {
 
     if (password.length < 6) {
       Alert.alert(t("common.error"), t("auth.passwordTooShort"));
+      return;
+    }
+
+    if (phone.trim() && !isValidEgyptianPhone(phone)) {
+      Alert.alert(t("common.error"), t("auth.invalidPhone"));
       return;
     }
 

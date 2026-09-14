@@ -87,7 +87,8 @@
     "errorLoading": "Something went wrong while loading. Please try again.",
     "remove": "Remove",
     "from": "From",
-    "error": "Error"
+    "error": "Error",
+    "invalidPhone": "Please enter a valid Egyptian phone number."
   },
   "cart": {
     "title": "Cart",
@@ -213,7 +214,26 @@
     "fullName": "Full name",
     "fullNamePlaceholder": "Enter your full name",
     "phone": "Phone",
-    "phonePlaceholder": "Enter your phone number (optional)"
+    "phonePlaceholder": "Enter your phone number (optional)",
+    "invalidEmail": "Please enter a valid email address.",
+    "somethingWentWrong": "Something went wrong. Please try again.",
+    "resetEmailSent": "A password reset link has been sent to your email.",
+    "forgotPasswordTitle": "Forgot Password",
+    "forgotPasswordSubtitle": "Enter your email and we'll send you a reset link.",
+    "emailPlaceholder": "Enter your email",
+    "email": "Email",
+    "sendResetLink": "Send Reset Link",
+    "passwordTooShort": "Password must be at least 6 characters.",
+    "passwordsDontMatch": "Passwords don't match.",
+    "passwordUpdated": "Your password has been updated successfully.",
+    "resetPasswordTitle": "Reset Password",
+    "resetPasswordSubtitle": "Enter your new password below.",
+    "newPasswordPlaceholder": "Enter new password",
+    "newPassword": "New Password",
+    "confirmPasswordPlaceholder": "Confirm new password",
+    "confirmPassword": "Confirm Password",
+    "updatePassword": "Update Password",
+    "forgotPassword": "Forgot Password?"
   },
   "home": {
     "deliverTo": "DELIVER TO",

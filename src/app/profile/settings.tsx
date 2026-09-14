@@ -8,9 +8,13 @@ import {
   Trash2,
   User,
 } from "lucide-react-native";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Alert, Pressable, ScrollView, Text, View } from "react-native";
+import { Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import ActionSheet, {
+  ActionSheetOption,
+} from "../../../components/ActionSheet";
 import { changeAppLanguage } from "../../../i18next/i18next";
 import { useAuthStore } from "../../../store/auth.store";
 
@@ -24,46 +28,58 @@ export default function Settings() {
   const { t, i18n } = useTranslation();
   const signOut = useAuthStore((state) => state.signOut);
 
+  const [languageSheetVisible, setLanguageSheetVisible] = useState(false);
+
+  const [actionSheet, setActionSheet] = useState<{
+    visible: boolean;
+    title?: string;
+    message?: string;
+    options: ActionSheetOption[];
+    showCancel?: boolean;
+  }>({
+    visible: false,
+    options: [],
+  });
+
   const showComingSoon = () => {
-    Alert.alert(t("profile.comingSoonTitle"), t("profile.comingSoonMessage"));
+    setActionSheet({
+      visible: true,
+      title: t("profile.comingSoonTitle"),
+      message: t("profile.comingSoonMessage"),
+      options: [],
+      showCancel: true,
+    });
   };
 
-  const handleLanguagePress = () => {
-    const languages: ("en" | "ar" | "fr")[] = ["en", "ar", "fr"];
-    const options = languages.map((lang) => ({
-      text: LANGUAGE_LABELS[lang],
-      onPress: () => {
-        if (lang !== i18n.language) {
-          changeAppLanguage(lang);
-        }
-      },
-    }));
-
-    Alert.alert(t("profile.language"), undefined, [
-      ...options,
-      { text: t("common.cancel"), style: "cancel" },
-    ]);
-  };
+  const languageOptions: ActionSheetOption[] = (
+    ["en", "ar", "fr"] as const
+  ).map((lang) => ({
+    label: LANGUAGE_LABELS[lang],
+    selected: lang === i18n.language,
+    onPress: () => {
+      if (lang !== i18n.language) {
+        changeAppLanguage(lang);
+      }
+    },
+  }));
 
   const handleDeleteAccount = () => {
-    Alert.alert(
-      t("profile.deleteAccountTitle"),
-      t("profile.deleteAccountConfirm"),
-      [
-        { text: t("common.cancel"), style: "cancel" },
+    setActionSheet({
+      visible: true,
+      title: t("profile.deleteAccountTitle"),
+      message: t("profile.deleteAccountConfirm"),
+      options: [
         {
-          text: t("common.delete"),
-          style: "destructive",
+          label: t("common.delete"),
+          destructive: true,
           onPress: () => {
-            // TODO: يحتاج Edge Function بـ service role لحذف حساب المستخدم فعلياً
-            Alert.alert(
-              t("profile.comingSoonTitle"),
-              t("profile.comingSoonMessage"),
-            );
+            // TODO: Edge Function بـ service role
+            showComingSoon();
           },
         },
       ],
-    );
+      showCancel: true,
+    });
   };
 
   return (
@@ -82,6 +98,7 @@ export default function Settings() {
       >
         {/* Account Section */}
         <SectionHeader title={t("profile.sectionAccount")} />
+
         <SettingsGroup>
           <SettingsRow
             icon={<User size={18} color="#FE8C00" />}
@@ -89,6 +106,7 @@ export default function Settings() {
             subtitle={t("profile.personalInfoSubtitle")}
             onPress={() => router.push("/profile/edit")}
           />
+
           <SettingsRow
             icon={<Lock size={18} color="#FE8C00" />}
             label={t("profile.changePassword")}
@@ -100,13 +118,15 @@ export default function Settings() {
 
         {/* App Preferences */}
         <SectionHeader title={t("profile.sectionPreferences")} />
+
         <SettingsGroup>
           <SettingsRow
             icon={<Globe size={18} color="#FE8C00" />}
             label={t("profile.language")}
             value={LANGUAGE_LABELS[i18n.language]}
-            onPress={handleLanguagePress}
+            onPress={() => setLanguageSheetVisible(true)}
           />
+
           <SettingsRow
             icon={<Moon size={18} color="#FE8C00" />}
             label={t("profile.theme")}
@@ -118,12 +138,14 @@ export default function Settings() {
 
         {/* Privacy & Security */}
         <SectionHeader title={t("profile.sectionPrivacy")} />
+
         <SettingsGroup>
           <SettingsRow
             icon={<Shield size={18} color="#FE8C00" />}
             label={t("profile.privacyPolicy")}
             onPress={showComingSoon}
           />
+
           <SettingsRow
             icon={<Shield size={18} color="#FE8C00" />}
             label={t("profile.termsConditions")}
@@ -138,16 +160,41 @@ export default function Settings() {
           className="flex-row items-center gap-x-3 border border-red-200 rounded-2xl p-4 mt-6"
         >
           <Trash2 size={18} color="#EF4444" />
+
           <View className="flex-1">
             <Text className="paragraph-bold text-red-500">
               {t("profile.deleteAccount")}
             </Text>
+
             <Text className="small-regular text-gray-100">
               {t("profile.deleteAccountSubtitle")}
             </Text>
           </View>
         </Pressable>
       </ScrollView>
+
+      {/* Language Action Sheet */}
+      <ActionSheet
+        visible={languageSheetVisible}
+        onClose={() => setLanguageSheetVisible(false)}
+        title={t("profile.language")}
+        options={languageOptions}
+      />
+
+      {/* General Action Sheet */}
+      <ActionSheet
+        visible={actionSheet.visible}
+        onClose={() =>
+          setActionSheet((prev) => ({
+            ...prev,
+            visible: false,
+          }))
+        }
+        title={actionSheet.title}
+        message={actionSheet.message}
+        options={actionSheet.options}
+        showCancel={actionSheet.showCancel}
+      />
     </SafeAreaView>
   );
 }
@@ -194,8 +241,10 @@ function SettingsRow({
     >
       <View className="flex-row items-center gap-x-3 flex-1">
         {icon}
+
         <View className="flex-1">
           <Text className="paragraph-bold text-dark-100">{label}</Text>
+
           {subtitle && (
             <Text className="small-regular text-gray-100 mt-0.5">
               {subtitle}
