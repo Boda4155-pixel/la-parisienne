@@ -406,6 +406,8 @@
     },
     "settings": {
       "title": "Paramètres",
+      "subtitle": "Gérez la configuration de votre magasin",
+      "total": "Total",
       "storeHours": {
         "title": "Horaires du Magasin",
         "subtitle": "Gérez les horaires d'ouverture pour chaque jour",

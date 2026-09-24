@@ -406,6 +406,8 @@
     },
     "settings": {
       "title": "Settings",
+      "subtitle": "Manage your store configuration",
+      "total": "Total",
       "storeHours": {
         "title": "Store Hours",
         "subtitle": "Manage opening hours for each day",
