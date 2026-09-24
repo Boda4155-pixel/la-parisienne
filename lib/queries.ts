@@ -546,15 +546,63 @@ export const updateProfile = async ({
 // =========================================
 
 export type DeliveryOption = {
-  id: "standard" | "express" | "pickup";
+  id: string;
+  label: string;
+  time: string;
   fee: number;
 };
 
-export const DELIVERY_OPTIONS: DeliveryOption[] = [
-  { id: "standard", fee: 30 },
-  { id: "express", fee: 50 },
-  { id: "pickup", fee: 0 },
-];
+export const getAllDeliveryZones = async (): Promise<DeliveryOption[]> => {
+  const { data, error } = await supabase
+    .from("delivery_zones")
+    .select("id, name, price, is_active");
+
+  if (error) throw error;
+
+  // Default zones if none configured
+  if (!data || data.length === 0) {
+    return [
+      { id: "standard", label: "Standard Delivery", time: "1 - 2 hours", fee: 30 },
+      { id: "express", label: "Express Delivery", time: "30 - 60 min", fee: 50 },
+      { id: "pickup", label: "Store Pickup", time: "Ready in 20 min", fee: 0 },
+    ];
+  }
+
+  // Build zones from database, keeping defaults as fallbacks
+  const zones: Record<string, DeliveryOption> = {
+    standard: { id: "standard", label: "Standard Delivery", time: "1 - 2 hours", fee: 30 },
+    express: { id: "express", label: "Express Delivery", time: "30 - 60 min", fee: 50 },
+    pickup: { id: "pickup", label: "Store Pickup", time: "Ready in 20 min", fee: 0 },
+  };
+
+  data.forEach((zone) => {
+    if (zone.name && zone.price >= 0) {
+      // Use zone name as key, fallback to defaults for missing fields
+      const fee = zone.price ?? (zone.id === "standard" ? 30 : zone.id === "express" ? 50 : 0);
+      zones[zone.id ?? `zone_${zone.id}`] = {
+        id: zone.id ?? `zone_${zone.id}`,
+        label: zone.name,
+        time: "1 - 2 hours", // default time
+        fee,
+      };
+    }
+  });
+
+  return Object.values(zones);
+};
+
+export const DELIVERY_OPTIONS = async (): Promise<DeliveryOption[]> => {
+  try {
+    return await getAllDeliveryZones();
+  } catch {
+    // Fallback to defaults if Supabase is unavailable
+    return [
+      { id: "standard", label: "Standard Delivery", time: "1 - 2 hours", fee: 30 },
+      { id: "express", label: "Express Delivery", time: "30 - 60 min", fee: 50 },
+      { id: "pickup", label: "Store Pickup", time: "Ready in 20 min", fee: 0 },
+    ];
+  }
+};
 
 // =========================================
 // Driver Tracking

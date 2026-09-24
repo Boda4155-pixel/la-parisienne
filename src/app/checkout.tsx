@@ -16,6 +16,7 @@ import CheckoutStepper from "../../components/CheckoutStepper";
 import CustomButton from "../../components/CustomButton";
 import PaymentInfoStripe from "../../components/PaymentInfoStripe";
 import { useSupabaseQuery } from "../../hooks/useSupabaseQuery";
+import { useStoreSettings } from "../../hooks/useStoreSettings";
 import {
   createOrder,
   DELIVERY_OPTIONS,
@@ -43,6 +44,8 @@ export default function Checkout() {
     skip: !user,
   });
 
+  const { data: deliveryOptions } = useStoreSettings();
+
   const [step, setStep] = useState(0);
 
   // Step 1: Address
@@ -68,7 +71,7 @@ export default function Checkout() {
   const [submitting, setSubmitting] = useState(false);
 
   const deliveryFee =
-    DELIVERY_OPTIONS.find((d) => d.id === deliveryType)?.fee ?? 30;
+    deliveryOptions.find((d) => d.id === deliveryType)?.fee ?? 30;
   const discountAmount = appliedCoupon?.discountAmount ?? 0;
   const finalTotal = totalPrice + deliveryFee - discountAmount;
 
@@ -279,7 +282,7 @@ export default function Checkout() {
               </Text>
 
               <View className="gap-y-3">
-                {DELIVERY_OPTIONS.map((option) => {
+                {(deliveryOptions ?? []).map((option) => {
                   const isSelected = deliveryType === option.id;
 
                   return (
@@ -294,10 +297,10 @@ export default function Checkout() {
                     >
                       <View>
                         <Text className="paragraph-bold text-dark-100">
-                          {t(`checkout.delivery.${option.id}.label`)}
+                          {option.label}
                         </Text>
                         <Text className="paragraph-regular text-gray-100 mt-1">
-                          {t(`checkout.delivery.${option.id}.time`)}
+                          {option.time}
                         </Text>
                       </View>
 

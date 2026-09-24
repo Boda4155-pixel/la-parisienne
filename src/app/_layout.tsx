@@ -1,5 +1,6 @@
 import { useFonts } from "expo-font";
 import { SplashScreen, Stack, useRouter, useSegments } from "expo-router";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 import { useEffect } from "react";
 import "../../i18next/i18next";
 
@@ -13,7 +14,7 @@ export default function RootLayout() {
   const router = useRouter();
   const segments = useSegments();
 
-  const { isLoading, isAuthenticated, initializeAuth } = useAuthStore();
+  const { isLoading, isAuthenticated, profile, initializeAuth } = useAuthStore();
 
   const [fontsLoaded, error] = useFonts({
     "QuickSand-Bold": require("../../assets/fonts/Quicksand-Bold.ttf"),
@@ -84,9 +85,15 @@ export default function RootLayout() {
 
     // Authenticated
     if (inAuthGroup) {
-      router.replace("/");
+      router.replace(profile?.role === "admin" ? "/dashboard" : "/");
+      return;
     }
-  }, [fontsLoaded, isLoading, isAuthenticated, segments, router]);
+
+    // Admin users should land on the admin dashboard, not customer screens
+    if (profile?.role === "admin" && segments[0] !== "(admin)") {
+      router.replace("/dashboard");
+    }
+  }, [fontsLoaded, isLoading, isAuthenticated, profile, segments, router]);
 
   // =========================
   // Loading
@@ -98,5 +105,9 @@ export default function RootLayout() {
   // =========================
   // App
   // =========================
-  return <Stack screenOptions={{ headerShown: false }} />;
+  return (
+    <SafeAreaProvider>
+      <Stack screenOptions={{ headerShown: false }} />
+    </SafeAreaProvider>
+  );
 }
