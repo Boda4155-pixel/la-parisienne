@@ -5,6 +5,8 @@ import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
 import { I18nManager } from "react-native";
 
+import { getAppLanguage } from "../lib/adminQueries";
+
 import ar from "./locales/ar.json";
 import en from "./locales/en.json";
 import fr from "./locales/fr.json";
@@ -37,6 +39,15 @@ const initI18n = async () => {
   try {
     savedLanguage = await AsyncStorage.getItem("user-language");
   } catch (e) {}
+
+  // Fallback to Supabase app_language if AsyncStorage has no saved language
+  if (!savedLanguage) {
+    try {
+      savedLanguage = await getAppLanguage();
+    } catch (e) {
+      // No network or table not available — fall through to device default
+    }
+  }
 
   const resolvedLanguage = savedLanguage || defaultLanguage;
 

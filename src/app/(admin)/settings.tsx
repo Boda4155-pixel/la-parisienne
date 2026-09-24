@@ -37,6 +37,7 @@ import {
 } from "../../../lib/adminQueries";
 import { useAdminStore } from "../../../store/admin.store";
 import AdminMoreTrigger from "../../../components/admin/AdminMoreTrigger";
+import { changeAppLanguage } from "../../../i18next/i18next";
 
 const DAY_NAMES = [
   "admin.settings.storeHours.sunday",
@@ -433,7 +434,7 @@ function LanguageSection({ onRefresh }: LanguageSectionProps) {
 
   const handleLanguageChange = async (language: string) => {
     try {
-      await setAppLanguage(language);
+      await changeAppLanguage(language);
       setSelectedLanguage(language);
       onRefresh(refetch);
       Alert.alert(t("common.saved"));
@@ -798,6 +799,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
+    flexWrap: "wrap",
   },
   title: {
     fontSize: 28,
