@@ -6,6 +6,7 @@ import {
   StyleSheet,
   Text,
   View,
+  Image,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Settings as SettingsIcon, LogOut, Mail } from "lucide-react-native";
@@ -45,6 +46,16 @@ export default function Account() {
     router.push("/profile/settings");
   };
 
+  const getInitials = (name?: string | null) => {
+    if (!name) return "?";
+    return name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView
@@ -62,19 +73,60 @@ export default function Account() {
           </View>
         </View>
 
-        {/* Admin Info Card */}
-        <View style={styles.card}>
-          <View style={styles.rowItem}>
-            <View style={[styles.icon, { backgroundColor: "#FE8C0020" }]}>
-              <Mail size={20} color="#FE8C00" />
-            </View>
-            <View>
-              <Text style={styles.label}>{t("admin.account.email")}</Text>
-              <Text style={styles.value}>
-                {profile?.email ?? t("admin.account.noEmail")}
-              </Text>
+        {/* Admin Profile Card */}
+        <View style={styles.profileCard}>
+          <View style={styles.avatarContainer}>
+            <View style={styles.avatar}>
+              <Text style={styles.avatarText}>{getInitials(profile?.name)}</Text>
             </View>
           </View>
+          <Text style={styles.name}>{profile?.name ?? t("admin.account.noName")}</Text>
+          <View style={styles.roleBadge}>
+            <Text style={styles.roleBadgeText}>
+              {profile?.role === "admin"
+                ? t("admin.account.roleAdmin")
+                : profile?.role
+                ? profile.role
+                : t("admin.account.roleUnknown")}
+            </Text>
+          </View>
+        </View>
+
+        {/* Info Cards */}
+        <View style={styles.infoSection}>
+          <View style={styles.card}>
+            <View style={styles.rowItem}>
+              <View style={[styles.icon, { backgroundColor: "#FE8C0020" }]}>
+                <Mail size={20} color="#FE8C00" />
+              </View>
+              <View>
+                <Text style={styles.label}>{t("admin.account.email")}</Text>
+                <Text style={styles.value}>
+                  {profile?.email ?? t("admin.account.noEmail")}
+                </Text>
+              </View>
+            </View>
+          </View>
+
+          {profile?.created_at && (
+            <View style={styles.card}>
+              <View style={styles.rowItem}>
+                <View style={[styles.icon, { backgroundColor: "#3B82F620" }]}>
+                  <Text style={styles.iconText}>📅</Text>
+                </View>
+                <View>
+                  <Text style={styles.label}>{t("admin.account.memberSince")}</Text>
+                  <Text style={styles.value}>
+                    {new Date(profile.created_at).toLocaleDateString("en-US", {
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                    })}
+                  </Text>
+                </View>
+              </View>
+            </View>
+          )}
         </View>
 
         {/* Settings Link */}
@@ -123,11 +175,59 @@ const styles = StyleSheet.create({
     fontFamily: "Quicksand-Bold",
     color: "#181C2E",
   },
+  profileCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    padding: 24,
+    alignItems: "center",
+    marginBottom: 24,
+    shadowColor: "#181C2E",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  avatarContainer: {
+    marginBottom: 12,
+  },
+  avatar: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: "#FE8C00",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  avatarText: {
+    fontSize: 28,
+    fontFamily: "Quicksand-Bold",
+    color: "#FFFFFF",
+  },
+  name: {
+    fontSize: 20,
+    fontFamily: "Quicksand-Bold",
+    color: "#181C2E",
+    marginBottom: 8,
+  },
+  roleBadge: {
+    backgroundColor: "#FE8C0020",
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 20,
+  },
+  roleBadgeText: {
+    fontSize: 12,
+    fontFamily: "Quicksand-Bold",
+    color: "#FE8C00",
+    textTransform: "uppercase",
+  },
+  infoSection: {
+    gap: 12,
+  },
   card: {
     backgroundColor: "#FFFFFF",
     borderRadius: 16,
     padding: 20,
-    marginBottom: 24,
     shadowColor: "#181C2E",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
@@ -145,6 +245,9 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
+  },
+  iconText: {
+    fontSize: 20,
   },
   label: {
     fontSize: 11,
