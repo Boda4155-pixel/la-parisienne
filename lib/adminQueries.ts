@@ -258,6 +258,265 @@ export const getRecentOrders = async (limit = 10): Promise<RecentOrder[]> => {
 };
 
 // ===========================================
+// Global Orders (Admin)
+// ===========================================
+
+export type AdminOrder = {
+  id: string;
+  status: string;
+  payment_method: string;
+  subtotal: number;
+  delivery_fee: number;
+  discount_amount: number;
+  coupon_code: string | null;
+  total: number;
+  customer_note: string | null;
+  created_at: string;
+  address_id: string;
+  driver_id: string | null;
+  customer_name: string | null;
+  customer_email: string | null;
+  branch_name: string | null;
+};
+
+export type OrderStatusFilter =
+  | "all"
+  | "pending"
+  | "accepted"
+  | "preparing"
+  | "ready"
+  | "completed"
+  | "cancelled";
+
+export const getAdminOrders = async (
+  statusFilter: OrderStatusFilter = "all",
+  search: string = ""
+): Promise<AdminOrder[]> => {
+  let query = supabase
+    .from("orders")
+    .select("id, status, payment_method, subtotal, delivery_fee, discount_amount, coupon_code, total, customer_note, created_at, address_id, driver_id")
+    .order("created_at", { ascending: false })
+    .limit(100);
+
+  if (statusFilter !== "all") {
+    query = query.eq("status", statusFilter);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error("Supabase Admin Orders Error:", error.message, error);
+    return [];
+  }
+
+  const orders = data ?? [];
+
+  // Join customer + branch info per order (safe, best-effort)
+  const enriched = await Promise.all(
+    orders.map(async (order) => {
+      let customerName: string | null = null;
+      let customerEmail: string | null = null;
+      let branchName: string | null = null;
+
+      try {
+        const { data: address } = await supabase
+          .from("customer_addresses")
+          .select("user_id")
+          .eq("id", order.address_id)
+          .maybeSingle();
+
+        if (address?.user_id) {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("full_name, email")
+            .eq("id", address.user_id)
+            .maybeSingle();
+          customerName = profile?.full_name ?? null;
+          customerEmail = profile?.email ?? null;
+        }
+      } catch (err: any) {
+        console.error("Supabase Order Customer Join Exception:", err?.message ?? err);
+      }
+
+      try {
+        const { data: driver } = await supabase
+          .from("profiles")
+          .select("full_name")
+          .eq("id", order.driver_id)
+          .maybeSingle();
+        if (driver?.full_name) {
+          branchName = driver.full_name;
+        }
+      } catch (err: any) {
+        console.error("Supabase Order Driver Join Exception:", err?.message ?? err);
+      }
+
+      return {
+        ...order,
+        customer_name: customerName,
+        customer_email: customerEmail,
+        branch_name: branchName,
+      };
+    })
+  );
+
+  // Client-side search fallback (order ID or customer name)
+  if (search.trim()) {
+    const q = search.trim().toLowerCase();
+    return enriched.filter(
+      (o) =>
+        o.id.toLowerCase().includes(q) ||
+        (o.customer_name ?? "").toLowerCase().includes(q) ||
+        (o.customer_email ?? "").toLowerCase().includes(q)
+    );
+  }
+
+  return enriched;
+};
+
+export const updateOrderStatus = async (
+  orderId: string,
+  newStatus: string
+): Promise<boolean> => {
+  try {
+    const { error } = await supabase
+      .from("orders")
+      .update({ status: newStatus })
+      .eq("id", orderId);
+
+    if (error) {
+      console.error("Supabase Order Status Update Error:", error.message, error);
+      return false;
+    }
+    return true;
+  } catch (err: any) {
+    console.error("Supabase Order Status Update Exception:", err?.message ?? err);
+    return false;
+  }
+};
+
+// ===========================================
+// Inventory & Product Management (Admin)
+// ===========================================
+
+export type InventoryProduct = {
+  id: string;
+  name: string;
+  price: number;
+  stock_quantity: number;
+  reorder_point: number | null;
+  category_id: string | null;
+  image_url: string | null;
+  is_active: boolean;
+  is_featured: boolean;
+};
+
+export type CategoryFilter = "all" | "bakery" | "cookies" | "sandwiches" | "drinks" | "other";
+
+const CATEGORY_MAP: Record<CategoryFilter, string | null> = {
+  all: null,
+  bakery: "bakery",
+  cookies: "cookies",
+  sandwiches: "sandwiches",
+  drinks: "drinks",
+  other: null,
+};
+
+export const getProducts = async (
+  search: string = "",
+  categoryFilter: CategoryFilter = "all",
+  lowStockOnly: boolean = false
+): Promise<InventoryProduct[]> => {
+  try {
+    let query = supabase
+      .from("products")
+      .select(
+        "id, name, price, stock_quantity, reorder_point, category_id, image_url, is_active, is_featured"
+      )
+      .order("name", { ascending: true });
+
+    // Apply category filter if known
+    const catName = CATEGORY_MAP[categoryFilter];
+    if (catName) {
+      // Try exact category name match, fallback to category_id like match
+      query = query.or(`category_id=eq.${catName},name=ilike.%${catName}%`);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error("Supabase Get Products Error:", error.message, error);
+      return [];
+    }
+
+    let products = (data ?? []) as InventoryProduct[];
+
+    // Client-side low stock filter
+    if (lowStockOnly) {
+      products = products.filter((p) => p.stock_quantity <= (p.reorder_point ?? 5));
+    }
+
+    // Client-side search fallback
+    if (search.trim()) {
+      const q = search.trim().toLowerCase();
+      products = products.filter(
+        (p) =>
+          p.name.toLowerCase().includes(q) ||
+          p.id.toLowerCase().includes(q) ||
+          (p.category_id ?? "").toLowerCase().includes(q)
+      );
+    }
+
+    return products;
+  } catch (err: any) {
+    console.error("Supabase Get Products Exception:", err?.message ?? err);
+    return [];
+  }
+};
+
+export const updateProductStock = async (
+  productId: string,
+  newStock: number
+): Promise<boolean> => {
+  try {
+    const { error } = await supabase
+      .from("products")
+      .update({ stock_quantity: newStock })
+      .eq("id", productId);
+
+    if (error) {
+      console.error("Supabase Update Stock Error:", error.message, error);
+      return false;
+    }
+    return true;
+  } catch (err: any) {
+    console.error("Supabase Update Stock Exception:", err?.message ?? err);
+    return false;
+  }
+};
+
+export const toggleProductAvailability = async (
+  productId: string,
+  isAvailable: boolean
+): Promise<boolean> => {
+  try {
+    const { error } = await supabase
+      .from("products")
+      .update({ is_active: isAvailable })
+      .eq("id", productId);
+
+    if (error) {
+      console.error("Supabase Toggle Availability Error:", error.message, error);
+      return false;
+    }
+    return true;
+  } catch (err: any) {
+    console.error("Supabase Toggle Availability Exception:", err?.message ?? err);
+    return false;
+  }
+};
+
+// ===========================================
 // Low Stock Products
 // ===========================================
 
@@ -826,6 +1085,734 @@ export const deleteDeliveryZone = async (id: string): Promise<void> => {
   const { error } = await supabase.from("delivery_zones").delete().eq("id", id);
 
   if (error) throw error;
+};
+
+// ===========================================
+// Dashboard Metrics (Daily/Weekly/Alerts)
+// ===========================================
+
+export type BranchComparisonItem = {
+  branch_id: string;
+  branch_name: string | null;
+  order_count: number;
+  percentage: number;
+};
+
+export type DashboardMetrics = {
+  dailyRevenue: number;
+  weeklyRevenue: number;
+  todayOrders: number;
+  cancelledOrders: number;
+  lowStockCount: number;
+  refundRequests: number;
+  branchComparison: BranchComparisonItem[];
+};
+
+export const getDashboardMetrics = async (): Promise<DashboardMetrics> => {
+  const now = new Date();
+
+  // Start of today (midnight local time)
+  const startOfDay = new Date(now);
+  startOfDay.setHours(0, 0, 0, 0);
+
+  // Start of current week (Monday)
+  const startOfWeek = new Date(now);
+  const dayOfWeek = startOfWeek.getDay();
+  const diff = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+  startOfWeek.setDate(startOfWeek.getDate() - diff);
+  startOfWeek.setHours(0, 0, 0, 0);
+
+  // ── Today's orders (shared for revenue, counts, branch comparison) ──
+  let todayOrdersData: Array<{
+    id: string;
+    status: string;
+    total: number;
+    branch_id?: string;
+  }> = [];
+
+  try {
+    const { data, error } = await supabase
+      .from("orders")
+      .select("id, status, total, branch_id")
+      .gte("created_at", startOfDay.toISOString());
+
+    if (error) {
+      console.error("Supabase Today Orders Error:", error.message, error);
+    } else {
+      todayOrdersData = data ?? [];
+    }
+  } catch (err: any) {
+    console.error("Supabase Today Orders Exception:", err.message ?? err);
+  }
+
+  // Daily revenue: SUM(total) where status != 'cancelled'
+  const dailyRevenue = todayOrdersData
+    .filter((o) => o.status !== "cancelled")
+    .reduce((sum, o) => sum + (o.total ?? 0), 0);
+
+  // Today's order count
+  const todayOrdersCount = todayOrdersData.length;
+
+  // Cancelled orders today
+  const cancelledOrdersCount = todayOrdersData.filter(
+    (o) => o.status === "cancelled"
+  ).length;
+
+  // ── Weekly Revenue (independent query) ──
+  let weeklyRevenue = 0;
+  try {
+    const { data, error } = await supabase
+      .from("orders")
+      .select("status, total")
+      .gte("created_at", startOfWeek.toISOString());
+
+    if (error) {
+      console.error("Supabase Weekly Revenue Error:", error.message, error);
+    } else {
+      weeklyRevenue = (data ?? [])
+        .filter((o) => o.status !== "cancelled")
+        .reduce((sum, o) => sum + (o.total ?? 0), 0);
+    }
+  } catch (err: any) {
+    console.error("Supabase Weekly Revenue Exception:", err.message ?? err);
+  }
+
+  // ── Low Stock Count ──
+  let lowStockCount = 0;
+  try {
+    const { count, error } = await supabase
+      .from("products")
+      .select("id", { count: "exact", head: true })
+      .lt("stock_quantity", 5);
+
+    if (error) {
+      console.error("Supabase Low Stock Error:", error.message, error);
+    } else {
+      lowStockCount = count ?? 0;
+    }
+  } catch (err: any) {
+    console.error("Supabase Low Stock Exception:", err.message ?? err);
+  }
+
+  // ── Refund Requests ──
+  let refundRequests = 0;
+  try {
+    const { count, error } = await supabase
+      .from("orders")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "refund_requested");
+
+    if (error) {
+      console.error("Supabase Refund Requests Error:", error.message, error);
+    } else {
+      refundRequests = count ?? 0;
+    }
+  } catch (err: any) {
+    console.error("Supabase Refund Requests Exception:", err.message ?? err);
+  }
+
+  // ── Branch Comparison ──
+  let branchComparison: BranchComparisonItem[] = [];
+  try {
+    const branchMap = new Map<string, number>();
+    todayOrdersData.forEach((o) => {
+      if (o.branch_id) {
+        branchMap.set(o.branch_id, (branchMap.get(o.branch_id) ?? 0) + 1);
+      }
+    });
+
+    const totalBranchOrders = Array.from(branchMap.values()).reduce(
+      (a, b) => a + b,
+      0
+    );
+
+    if (totalBranchOrders > 0) {
+      const branchIds = Array.from(branchMap.keys());
+      const { data: branchesData, error: branchesError } = await supabase
+        .from("branches")
+        .select("id, name")
+        .in("id", branchIds);
+
+      if (branchesError) {
+        console.error("Supabase Branches Error:", branchesError.message, branchesError);
+      } else {
+        const branchNameMap = new Map<string, string | null>();
+        branchesData?.forEach((b) => branchNameMap.set(b.id, b.name ?? null));
+
+        branchComparison = Array.from(branchMap.entries())
+          .map(([branch_id, count]) => ({
+            branch_id,
+            branch_name: branchNameMap.get(branch_id) ?? null,
+            order_count: count,
+            percentage: Math.round((count / totalBranchOrders) * 100),
+          }))
+          .sort((a, b) => b.order_count - a.order_count);
+      }
+    }
+  } catch (err: any) {
+    console.error("Supabase Branch Comparison Exception:", err.message ?? err);
+    branchComparison = [];
+  }
+
+  return {
+    dailyRevenue,
+    weeklyRevenue,
+    todayOrders: todayOrdersCount,
+    cancelledOrders: cancelledOrdersCount,
+    lowStockCount,
+    refundRequests,
+    branchComparison,
+  };
+};
+
+// ===========================================
+// Staff Management (Admin)
+// ===========================================
+
+export type StaffRole = "cashier" | "supervisor" | "admin" | "delivery" | "customer";
+
+export type StaffMember = {
+  id: string;
+  full_name: string | null;
+  email: string | null;
+  phone: string | null;
+  role: StaffRole;
+  is_active: boolean;
+  created_at: string;
+  // Stats (optional, added after enrichment)
+  todayOrders?: number;
+  todayRevenue?: number;
+  lastActive?: string | null;
+};
+
+export const getStaffMembers = async (
+  search: string = "",
+  roleFilter: StaffRole | "all" = "all"
+): Promise<StaffMember[]> => {
+  // 1. Fetch profiles with allowed roles
+  let query = supabase
+    .from("profiles")
+    .select("id, full_name, email, phone, role, is_active, created_at")
+    .in("role", ["cashier", "supervisor", "admin", "delivery"])
+    .order("created_at", { ascending: false });
+
+  if (roleFilter !== "all") {
+    query = query.eq("role", roleFilter);
+  }
+
+  const { data: profiles, error: profilesError } = await query;
+
+  if (profilesError) {
+    console.error("Supabase Staff Profiles Error:", profilesError.message, profilesError);
+    return [];
+  }
+
+  const staffList = (profiles ?? []) as StaffMember[];
+
+  // 2. For each staff, try to compute today's orders & revenue (best-effort)
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+
+  const enriched = await Promise.all(
+    staffList.map(async (staff) => {
+      let todayOrders = 0;
+      let todayRevenue = 0;
+      let lastActive: string | null = null;
+
+      try {
+        // Try common column names for cashier attribution
+        const possibleColumns = ["cashier_id", "handled_by", "staff_id", "user_id"];
+        for (const col of possibleColumns) {
+          const { data, error } = await supabase
+            .from("orders")
+            .select("id, total, created_at")
+            .eq(col, staff.id)
+            .gte("created_at", todayStart.toISOString());
+
+          if (!error && data && data.length > 0) {
+            todayOrders = data.length;
+            todayRevenue = data.reduce((sum, o) => sum + (o.total ?? 0), 0);
+            lastActive = data.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0]?.created_at ?? null;
+            break; // found working column
+          }
+        }
+      } catch (err: any) {
+        console.error(`Supabase Staff Stats Exception for ${staff.id}:`, err?.message ?? err);
+      }
+
+      return {
+        ...staff,
+        todayOrders,
+        todayRevenue,
+        lastActive,
+      };
+    })
+  );
+
+  // 3. Client-side search fallback
+  if (search.trim()) {
+    const q = search.trim().toLowerCase();
+    return enriched.filter(
+      (s) =>
+        (s.full_name ?? "").toLowerCase().includes(q) ||
+        (s.email ?? "").toLowerCase().includes(q) ||
+        (s.role ?? "").toLowerCase().includes(q)
+    );
+  }
+
+  return enriched;
+};
+
+export const updateStaffRole = async (
+  staffId: string,
+  newRole: StaffRole
+): Promise<boolean> => {
+  try {
+    const { error } = await supabase
+      .from("profiles")
+      .update({ role: newRole })
+      .eq("id", staffId);
+
+    if (error) {
+      console.error("Supabase Update Staff Role Error:", error.message, error);
+      return false;
+    }
+    return true;
+  } catch (err: any) {
+    console.error("Supabase Update Staff Role Exception:", err?.message ?? err);
+    return false;
+  }
+};
+
+export const toggleStaffActive = async (
+  staffId: string,
+  isActive: boolean
+): Promise<boolean> => {
+  try {
+    const { error } = await supabase
+      .from("profiles")
+      .update({ is_active: isActive })
+      .eq("id", staffId);
+
+    if (error) {
+      console.error("Supabase Toggle Staff Active Error:", error.message, error);
+      return false;
+    }
+    return true;
+  } catch (err: any) {
+    console.error("Supabase Toggle Staff Active Exception:", err?.message ?? err);
+    return false;
+  }
+};
+
+// ===========================================
+// Advanced Analytics
+// ===========================================
+
+export type SalesAnalytics = {
+  totalRevenue: number;
+  totalOrders: number;
+  averageOrderValue: number;
+  revenueByPeriod: { period: string; revenue: number; orders: number }[];
+};
+
+export type TopProductAnalytics = {
+  id: string;
+  name: string;
+  quantitySold: number;
+  revenue: number;
+  category: string | null;
+};
+
+export type PeakHourAnalytics = {
+  hour: number;
+  hourLabel: string;
+  orderCount: number;
+  revenue: number;
+};
+
+export type TimeFrame = "day" | "week" | "month";
+
+export const getSalesAnalytics = async (
+  timeFrame: TimeFrame = "week"
+): Promise<SalesAnalytics> => {
+  const fallback: SalesAnalytics = {
+    totalRevenue: 0,
+    totalOrders: 0,
+    averageOrderValue: 0,
+    revenueByPeriod: [],
+  };
+
+  try {
+    // Calculate date range based on time frame
+    const now = new Date();
+    const startDate = new Date();
+    if (timeFrame === "day") {
+      startDate.setDate(now.getDate() - 1);
+    } else if (timeFrame === "week") {
+      startDate.setDate(now.getDate() - 7);
+    } else {
+      startDate.setMonth(now.getMonth() - 1);
+    }
+
+    const { data: ordersData, error: ordersError } = await supabase
+      .from("orders")
+      .select("id, total, created_at")
+      .gte("created_at", startDate.toISOString())
+      .order("created_at", { ascending: true });
+
+    if (ordersError) {
+      console.error("Supabase Sales Analytics Error:", ordersError.message, ordersError);
+      return fallback;
+    }
+
+    const orders = ordersData ?? [];
+    const totalRevenue = orders.reduce((sum, o) => sum + (o.total ?? 0), 0);
+    const totalOrders = orders.length;
+    const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+
+    // Group revenue by period
+    const grouped: Record<string, { revenue: number; orders: number }> = {};
+    orders.forEach((o) => {
+      const date = new Date(o.created_at);
+      let period: string;
+      if (timeFrame === "day") {
+        period = date.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
+      } else if (timeFrame === "week") {
+        period = date.toLocaleDateString("en-US", { weekday: "short" });
+      } else {
+        period = date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+      }
+      if (!grouped[period]) {
+        grouped[period] = { revenue: 0, orders: 0 };
+      }
+      grouped[period].revenue += o.total ?? 0;
+      grouped[period].orders += 1;
+    });
+
+    const revenueByPeriod = Object.entries(grouped).map(([period, val]) => ({
+      period,
+      revenue: val.revenue,
+      orders: val.orders,
+    }));
+
+    return {
+      totalRevenue,
+      totalOrders,
+      averageOrderValue,
+      revenueByPeriod,
+    };
+  } catch (err: any) {
+    console.error("Supabase Sales Analytics Exception:", err?.message ?? err);
+    return fallback;
+  }
+};
+
+export const getTopSellingProducts = async (
+  limit = 5
+): Promise<TopProductAnalytics[]> => {
+  try {
+    const { data, error } = await supabase
+      .from("order_items")
+      .select(`
+        product_id,
+        quantity,
+        unit_price,
+        products:product_id ( name, category_id, categories:category_id ( name ) )
+      `)
+      .order("quantity", { ascending: false })
+      .limit(limit);
+
+    if (error) {
+      console.error("Supabase Top Selling Products Error:", error.message, error);
+      return [];
+    }
+
+    const items = data ?? [];
+    const aggregated = new Map<string, TopProductAnalytics>();
+    items.forEach((item: any) => {
+      const pid = item.product_id ?? "unknown";
+      const existing = aggregated.get(pid);
+      const name = item.products?.name ?? "Unknown Product";
+      const category = item.products?.categories?.name ?? item.products?.category_id ?? null;
+      const revenue = (item.quantity ?? 0) * (item.unit_price ?? 0);
+      if (existing) {
+        existing.quantitySold += item.quantity ?? 0;
+        existing.revenue += revenue;
+      } else {
+        aggregated.set(pid, {
+          id: pid,
+          name,
+          quantitySold: item.quantity ?? 0,
+          revenue,
+          category,
+        });
+      }
+    });
+
+    return Array.from(aggregated.values())
+      .sort((a, b) => b.revenue - a.revenue)
+      .slice(0, limit);
+  } catch (err: any) {
+    console.error("Supabase Top Selling Products Exception:", err?.message ?? err);
+    return [];
+  }
+};
+
+export const getRolePermissions = async (role: 'cashier' | 'supervisor' | 'admin'): Promise<{ [key: string]: boolean }> => {
+  const defaultPermissions: { [key: string]: boolean } = {
+    "process-orders": false,
+    "cancel-orders": false,
+    "refund-orders": false,
+    "manage-products-stock": false,
+    "view-analytics-reports": false,
+    "edit-staff-roles": false,
+  };
+
+  try {
+    const { data, error } = await supabase
+      .from("role_permissions")
+      .select("permission_key, is_enabled")
+      .eq("role", role);
+
+    if (error) {
+      console.error("Supabase Role Permissions Error:", error.message, error);
+      return defaultPermissions;
+    }
+
+    if (!data || data.length === 0) {
+      console.warn(`No role permissions found for role: ${role}`);
+      return defaultPermissions;
+    }
+
+    const permissions: { [key: string]: boolean } = { ...defaultPermissions };
+    data.forEach((row: any) => {
+      const key = row.permission_key ?? "";
+      if (key in permissions) {
+        permissions[key] = row.is_enabled ?? false;
+      }
+    });
+
+    return permissions;
+  } catch (err: any) {
+    console.error("Supabase Role Permissions Exception:", err?.message ?? err);
+    return defaultPermissions;
+  }
+};
+
+export const updateRolePermissions = async (
+  role: string,
+  permissionKeys: string[]
+): Promise<boolean> => {
+  try {
+    const { error } = await supabase
+      .from("role_permissions")
+      .upsert(
+        permissionKeys.map((key) => ({
+          role,
+          permission_key: key,
+          is_enabled: true,
+        })),
+        { onConflict: "role,permission_key" }
+      );
+
+    if (error) {
+      console.error("Supabase Update Role Permissions Error:", error.message, error);
+      return false;
+    }
+
+    return true;
+  } catch (err: any) {
+    console.error("Supabase Update Role Permissions Exception:", err?.message ?? err);
+    return false;
+  }
+};
+
+export const getPeakHoursData = async (): Promise<PeakHourAnalytics[]> => {
+  try {
+    const { data, error } = await supabase
+      .from("orders")
+      .select("id, total, created_at")
+      .gte("created_at", new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString());
+
+    if (error) {
+      console.error("Supabase Peak Hours Error:", error.message, error);
+      return [];
+    }
+
+    const orders = data ?? [];
+    const hourMap = new Map<number, { orderCount: number; revenue: number }>();
+    for (let h = 0; h < 24; h++) {
+      hourMap.set(h, { orderCount: 0, revenue: 0 });
+    }
+
+    orders.forEach((o) => {
+      const hour = new Date(o.created_at).getHours();
+      const entry = hourMap.get(hour);
+      if (entry) {
+        entry.orderCount += 1;
+        entry.revenue += o.total ?? 0;
+      }
+    });
+
+    return Array.from(hourMap.entries()).map(([hour, val]) => ({
+      hour,
+      hourLabel: `${hour}:00`,
+      orderCount: val.orderCount,
+      revenue: val.revenue,
+    }));
+  } catch (err: any) {
+    console.error("Supabase Peak Hours Exception:", err?.message ?? err);
+    return [];
+  }
+};
+
+export type DriverStatus = "active" | "idle" | "delayed";
+
+export interface Driver {
+  id: string;
+  full_name: string;
+  status: DriverStatus;
+  current_location_text: string;
+  assigned_orders_count: number;
+}
+
+export const getDeliveryDrivers = async (): Promise<Driver[]> => {
+  try {
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("id, full_name, status, current_location_text, assigned_orders_count")
+      .eq("role", "delivery")
+      .order("full_name", { ascending: true });
+
+    if (error) {
+      console.error("Supabase Delivery Drivers Error:", error.message, error);
+      return [];
+    }
+
+    return data ?? [];
+  } catch (err: any) {
+    console.error("Supabase Delivery Drivers Exception:", err?.message ?? err);
+    return [];
+  }
+};
+
+export interface FleetOrder {
+  id: string;
+  status: string;
+  customer_address?: string | null;
+  driver_id: string | null;
+  total: number;
+  created_at: string;
+}
+
+export const getFleetOrders = async (): Promise<FleetOrder[]> => {
+  try {
+    const { data, error } = await supabase
+      .from("orders")
+      .select("id, status, created_at, total, driver_id")
+      .in("status", ["preparing", "out_for_delivery"])
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("Supabase Fleet Orders Error:", error.message, error);
+      return [];
+    }
+
+    return data ?? [];
+  } catch (err: any) {
+    console.error("Supabase Fleet Orders Exception:", err?.message ?? err);
+    return [];
+  }
+};
+
+export const assignDriverToOrder = async (
+  orderId: string,
+  driverId: string
+): Promise<boolean> => {
+  try {
+    const { error } = await supabase
+      .from("orders")
+      .update({
+        driver_id: driverId,
+        status: "out_for_delivery",
+      })
+      .eq("id", orderId);
+
+    if (error) {
+      console.error("Supabase Assign Driver Error:", error.message, error);
+      return false;
+    }
+
+    return true;
+  } catch (err: any) {
+    console.error("Supabase Assign Driver Exception:", err?.message ?? err);
+    return false;
+  }
+};
+
+// ===========================================
+// Admin Messenger & Broadcast Alerts
+// ===========================================
+
+export type TargetType = "all" | "role" | "branch" | "user";
+
+export interface BroadcastRecord {
+  id: string;
+  title: string;
+  body: string;
+  target_type: TargetType;
+  created_at: string;
+  read_count: number;
+}
+
+const MAX_MESSAGE_LENGTH = 500;
+
+export const sendAdminNotification = async (
+  targetType: TargetType,
+  targetValue: string,
+  title: string,
+  body: string
+): Promise<boolean> => {
+  try {
+    const { error } = await supabase.from("notifications").insert({
+      title,
+      body,
+      target_type: targetType,
+      target_value: targetValue,
+      created_by: null, // Will be set by RLS or trigger
+    });
+
+    if (error) {
+      console.error("Supabase Send Notification Error:", error.message, error);
+      return false;
+    }
+
+    return true;
+  } catch (err: any) {
+    console.error("Supabase Send Notification Exception:", err?.message ?? err);
+    return false;
+  }
+};
+
+export const getRecentBroadcasts = async (): Promise<BroadcastRecord[]> => {
+  try {
+    const { data, error } = await supabase
+      .from("notifications")
+      .select("id, title, body, target_type, created_at, read_count")
+      .order("created_at", { ascending: false })
+      .limit(50);
+
+    if (error) {
+      console.error("Supabase Recent Broadcasts Error:", error.message, error);
+      return [];
+    }
+
+    return data ?? [];
+  } catch (err: any) {
+    console.error("Supabase Recent Broadcasts Exception:", err?.message ?? err);
+    return [];
+  }
 };
 
 // ===========================================

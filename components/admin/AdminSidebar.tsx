@@ -12,9 +12,12 @@ import {
   BarChart3,
   MessageSquare,
   Settings as SettingsIcon,
+  Globe,
 } from "lucide-react-native";
 import { router, usePathname } from "expo-router";
 import { useTranslation } from "react-i18next";
+
+import { changeAppLanguage } from "../../i18next/i18next";
 
 const navigationItems = [
   {
@@ -30,10 +33,10 @@ const navigationItems = [
     href: "/orders",
   },
   {
-    id: "products",
-    label: "products",
+    id: "inventory",
+    label: "inventory",
     icon: Package,
-    href: "/products",
+    href: "/inventory",
   },
   {
     id: "categories",
@@ -48,16 +51,16 @@ const navigationItems = [
     href: "/customers",
   },
   {
-    id: "cashiers",
-    label: "cashiers",
+    id: "staff",
+    label: "staff",
     icon: CreditCard,
-    href: "/cashiers",
+    href: "/staff",
   },
   {
-    id: "delivery-riders",
-    label: "deliveryRiders",
+    id: "fleet",
+    label: "fleet",
     icon: Shield,
-    href: "/delivery-riders",
+    href: "/fleet",
   },
   {
     id: "coupons",
@@ -66,16 +69,22 @@ const navigationItems = [
     href: "/coupons",
   },
   {
-    id: "reports",
-    label: "reports",
+    id: "analytics",
+    label: "analytics",
     icon: BarChart3,
-    href: "/reports",
+    href: "/analytics",
   },
   {
-    id: "reviews",
-    label: "reviews",
+    id: "permissions",
+    label: "permissions",
+    icon: Shield,
+    href: "/permissions",
+  },
+  {
+    id: "messenger",
+    label: "messenger",
     icon: MessageSquare,
-    href: "/reviews",
+    href: "/messenger",
   },
   {
     id: "settings",
@@ -86,14 +95,23 @@ const navigationItems = [
 ];
 
 const AdminSidebar = ({ onNavigate }: { onNavigate?: () => void }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const pathname = usePathname();
+
+  const isRTL = i18n.dir() === "rtl";
+
+  const handleLanguageToggle = async () => {
+    const newLang = i18n.language === "ar" ? "en" : "ar";
+    await changeAppLanguage(newLang);
+  };
 
   return (
     <View style={styles.sidebarContainer}>
       {/* Sidebar Header */}
       <View style={styles.sidebarHeader}>
-        <Text style={styles.sidebarTitle}>{t("admin.brandName") ?? "La Parisienne"}</Text>
+        <Text style={styles.sidebarTitle}>
+          {t("admin.brandName") ?? "La Parisienne"}
+        </Text>
       </View>
 
       {/* Navigation */}
@@ -110,9 +128,9 @@ const AdminSidebar = ({ onNavigate }: { onNavigate?: () => void }) => {
             <Pressable
               key={item.id}
               onPress={() => {
-              router.push(item.href as any);
-              onNavigate?.();
-            }}
+                router.push(item.href as any);
+                onNavigate?.();
+              }}
               style={({ pressed }) => [
                 styles.navItem,
                 isActive && styles.navItemActive,
@@ -133,8 +151,17 @@ const AdminSidebar = ({ onNavigate }: { onNavigate?: () => void }) => {
         })}
       </ScrollView>
 
-      {/* User profile at bottom */}
+      {/* Language Toggle & User profile at bottom */}
       <View style={styles.sidebarFooter}>
+        <Pressable
+          style={styles.languageButton}
+          onPress={handleLanguageToggle}
+        >
+          <Globe size={20} color={isRTL ? "#FE8C00" : "#9CA3AF"} />
+          <Text style={styles.languageButtonText}>
+            {isRTL ? "English" : "عربي"}
+          </Text>
+        </Pressable>
         <Pressable style={styles.profileButton}>
           <View style={styles.profileDot} />
           <Text style={styles.profileName}>Admin</Text>
@@ -198,6 +225,21 @@ const styles = StyleSheet.create({
     padding: 16,
     borderTopWidth: 1,
     borderTopColor: "#2A2F45",
+    gap: 12,
+  },
+  languageButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    backgroundColor: "#2A2F45",
+  },
+  languageButtonText: {
+    fontSize: 14,
+    fontFamily: "Quicksand-Medium",
+    color: "#FFFFFF",
   },
   profileButton: {
     flexDirection: "row",

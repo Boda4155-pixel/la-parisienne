@@ -20,6 +20,7 @@ import {
   BarChart3,
   MessageSquare,
   Settings as SettingsIcon,
+  Globe,
   X,
 } from "lucide-react-native";
 import { router, usePathname } from "expo-router";
@@ -29,6 +30,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import AdminMoreTrigger from "./AdminMoreTrigger";
 import AdminSidebar from "./AdminSidebar";
 import { AdminMoreProvider, useAdminMore } from "./AdminMoreContext";
+import { changeAppLanguage } from "../../i18next/i18next";
 
 const SIDEBAR_WIDTH = 260;
 const DESKTOP_BREAKPOINT = 768;
@@ -48,10 +50,10 @@ const navigationItems = [
     href: "/orders",
   },
   {
-    id: "products",
-    label: "products",
+    id: "inventory",
+    label: "inventory",
     icon: Package,
-    href: "/products",
+    href: "/inventory",
   },
   {
     id: "categories",
@@ -66,16 +68,16 @@ const navigationItems = [
     href: "/customers",
   },
   {
-    id: "cashiers",
-    label: "cashiers",
+    id: "staff",
+    label: "staff",
     icon: CreditCard,
-    href: "/cashiers",
+    href: "/staff",
   },
   {
-    id: "delivery-riders",
-    label: "deliveryRiders",
+    id: "fleet",
+    label: "fleet",
     icon: Shield,
-    href: "/delivery-riders",
+    href: "/fleet",
   },
   {
     id: "coupons",
@@ -84,16 +86,22 @@ const navigationItems = [
     href: "/coupons",
   },
   {
-    id: "reports",
-    label: "reports",
+    id: "analytics",
+    label: "analytics",
     icon: BarChart3,
-    href: "/reports",
+    href: "/analytics",
   },
   {
-    id: "reviews",
-    label: "reviews",
+    id: "permissions",
+    label: "permissions",
+    icon: Shield,
+    href: "/permissions",
+  },
+  {
+    id: "messenger",
+    label: "messenger",
     icon: MessageSquare,
-    href: "/reviews",
+    href: "/messenger",
   },
   {
     id: "settings",
@@ -104,14 +112,13 @@ const navigationItems = [
 ];
 
 const mainTabs = [
-  { id: "dashboard", label: "dashboard", icon: Home, href: "/dashboard" },
-  { id: "orders", label: "orders", icon: ClipboardList, href: "/orders" },
-  { id: "products", label: "products", icon: Package, href: "/products" },
+  { id: "dashboard", label: "orders", icon: ClipboardList, href: "/orders" },
+  { id: "inventory", label: "inventory", icon: Package, href: "/inventory" },
   { id: "account", label: "account", icon: CreditCard, href: "/account" },
 ];
 
 const moreItems = navigationItems.filter(
-  (item) => !["dashboard", "orders", "products"].includes(item.id as any)
+  (item) => !["dashboard", "orders", "inventory", "account"].includes(item.id as any)
 );
 
 type AdminLayoutProps = {
@@ -199,6 +206,27 @@ const AdminLayoutContent = ({ children }: AdminLayoutProps) => {
                 );
               })}
             </ScrollView>
+            {/* Language Toggle at bottom of more drawer */}
+            <View style={styles.moreDrawerFooter}>
+              <Pressable
+                style={styles.moreDrawerLanguageButton}
+                onPress={async () => {
+                  const newLang = i18n.language === "ar" ? "en" : "ar";
+                  await changeAppLanguage(newLang);
+                  setMoreOpen(false);
+                }}
+              >
+                <Globe size={22} color={isRtl ? "#FE8C00" : "#9CA3AF"} />
+                <Text
+                  style={[
+                    styles.moreDrawerLabel,
+                    isRtl ? styles.moreDrawerLabelRtl : styles.moreDrawerLabelLtr,
+                  ]}
+                >
+                  {i18n.language === "ar" ? "English" : "عربي"}
+                </Text>
+              </Pressable>
+            </View>
           </SafeAreaView>
         </View>
       )}
@@ -412,6 +440,21 @@ const styles = StyleSheet.create({
   },
   tabLabelActive: {
     color: "#FE8C00",
+  },
+
+  // Language Toggle in More Drawer
+  moreDrawerFooter: {
+    padding: 16,
+    borderTopWidth: 1,
+    borderTopColor: "#2A2F45",
+  },
+  moreDrawerLanguageButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
   },
 });
 
