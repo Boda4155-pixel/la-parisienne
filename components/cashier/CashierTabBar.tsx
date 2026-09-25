@@ -1,4 +1,5 @@
 import { usePathname } from "expo-router";
+import { useTranslation } from "react-i18next";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { router } from "expo-router";
 import {
@@ -6,7 +7,6 @@ import {
   LayoutGrid,
   MoreHorizontal,
   ShoppingBag,
-  User,
 } from "lucide-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -15,25 +15,25 @@ const TAB_BAR_HEIGHT = 60;
 const navigationItems = [
   {
     id: "home",
-    label: "Home",
+    label: "home",
     icon: ShoppingBag,
     href: "/(cashier)/home",
   },
   {
     id: "orders",
-    label: "Orders",
+    label: "orders",
     icon: ClipboardList,
     href: "/(cashier)/orders",
   },
   {
     id: "products",
-    label: "Products",
+    label: "products",
     icon: LayoutGrid,
     href: "/(cashier)/products",
   },
   {
     id: "more",
-    label: "More",
+    label: "more",
     icon: MoreHorizontal,
     href: "/(cashier)/account",
   },
@@ -45,6 +45,7 @@ type CashierTabBarProps = {
 
 const CashierTabBar = ({ children }: CashierTabBarProps) => {
   const pathname = usePathname();
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
 
   const isActiveTab = (href: string) => {
@@ -57,7 +58,10 @@ const CashierTabBar = ({ children }: CashierTabBarProps) => {
 
   return (
     <View style={styles.container}>
-      <View style={[styles.contentArea, { paddingBottom: TAB_BAR_HEIGHT + insets.bottom }]}>
+      <View style={[
+        styles.contentArea,
+        { paddingBottom: TAB_BAR_HEIGHT + insets.bottom },
+      ]}>
         {children}
       </View>
 
@@ -76,12 +80,12 @@ const CashierTabBar = ({ children }: CashierTabBarProps) => {
               style={[styles.tabItem, { flex: 1 }]}
               onPress={() => navigate(tab.href)}
               accessibilityRole="button"
-              accessibilityLabel={tab.label}
+              accessibilityLabel={t(`tabs.${tab.label}`, tab.label)}
             >
               <View style={styles.tabItemContent}>
                 <Icon size={24} color={active ? "#FE8C00" : "#9CA3AF"} />
                 <Text style={[styles.tabLabel, active && styles.tabLabelActive]}>
-                  {tab.label}
+                  {t(`tabs.${tab.label}`, tab.label)}
                 </Text>
               </View>
             </Pressable>

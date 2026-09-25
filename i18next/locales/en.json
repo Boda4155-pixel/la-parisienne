@@ -4,7 +4,9 @@
     "categories": "Categories",
     "favorite": "Favorite",
     "orders": "Orders",
-    "account": "Account"
+    "products": "Products",
+    "account": "Account",
+    "more": "More"
   },
   "categories": {
     "title": "Categories",
@@ -240,6 +242,37 @@
     "confirmPassword": "Confirm Password",
     "updatePassword": "Update Password",
     "forgotPassword": "Forgot Password?"
+  },
+  "cashier": {
+    "title": "Cashier",
+    "pos": "POS",
+    "orders": "Orders",
+    "account": "Account",
+    "products": "Products",
+    "cart": "Cart",
+    "cartEmpty": "Cart is empty",
+    "checkout": "Checkout",
+    "subtotal": "Subtotal",
+    "total": "Total",
+    "payment": "Payment",
+    "cash": "Cash",
+    "card": "Card",
+    "incomingOrders": "Incoming Orders",
+    "todaysOrders": "Today's Orders",
+    "todaysSales": "Today's Sales",
+    "totalOrders": "Total Orders",
+    "completed": "Completed",
+    "pending": "Pending",
+    "cancelled": "Cancelled",
+    "noOrders": "No orders yet",
+    "accept": "Accept",
+    "reject": "Reject",
+    "orderCompleted": "Order Completed",
+    "orderSummary": "Order Summary",
+    "newOrder": "New Order",
+    "outOfStock": "Out of Stock",
+    "restore": "Restore",
+    "toggleStock": "Toggle Stock"
   },
   "home": {
     "deliverTo": "DELIVER TO",

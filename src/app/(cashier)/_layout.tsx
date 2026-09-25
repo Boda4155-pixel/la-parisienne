@@ -43,32 +43,16 @@ export default function CashierLayoutRoute() {
         screenOptions={{
           headerShown: false,
           tabBarShowLabel: false,
+          tabBarStyle: { height: 0, elevation: 0 },
         }}
       >
-        <Tabs.Screen
-          name="home"
-          options={{
-            title: "Home",
-          }}
-        />
-        <Tabs.Screen
-          name="orders"
-          options={{
-            title: "Orders",
-          }}
-        />
-        <Tabs.Screen
-          name="products"
-          options={{
-            title: "Products",
-          }}
-        />
-        <Tabs.Screen
-          name="account"
-          options={{
-            title: "More",
-          }}
-        />
+        <Tabs.Screen name="home" options={{ title: "Home" }} />
+        <Tabs.Screen name="orders" options={{ title: "Orders" }} />
+        <Tabs.Screen name="products" options={{ title: "Products" }} />
+        <Tabs.Screen name="account" options={{ title: "More" }} />
+        <Tabs.Screen name="cart" options={{ title: "Cart", href: null }} />
+        <Tabs.Screen name="checkout" options={{ title: "Checkout", href: null }} />
+        <Tabs.Screen name="receipt" options={{ title: "Receipt", href: null }} />
       </Tabs>
     </CashierTabBar>
   );

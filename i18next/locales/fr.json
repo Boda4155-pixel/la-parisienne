@@ -4,7 +4,9 @@
     "categories": "Catégories",
     "favorite": "Favoris",
     "orders": "Commandes",
-    "account": "Compte"
+    "products": "Produits",
+    "account": "Compte",
+    "more": "Plus"
   },
   "categories": {
     "title": "Catégories",
@@ -240,6 +242,37 @@
     "confirmPassword": "Confirmer le mot de passe",
     "updatePassword": "Mettre à jour le mot de passe",
     "forgotPassword": "Mot de passe oublié ?"
+  },
+  "cashier": {
+    "title": "Caissier",
+    "pos": "Caisse",
+    "orders": "Commandes",
+    "account": "Compte",
+    "products": "Produits",
+    "cart": "Panier",
+    "cartEmpty": "Le panier est vide",
+    "checkout": "Finaliser",
+    "subtotal": "Sous-total",
+    "total": "Total",
+    "payment": "Paiement",
+    "cash": "Espèces",
+    "card": "Carte",
+    "incomingOrders": "Commandes entrantes",
+    "todaysOrders": "Commandes d'aujourd'hui",
+    "todaysSales": "Ventes d'aujourd'hui",
+    "totalOrders": "Total des commandes",
+    "completed": "Terminées",
+    "pending": "En attente",
+    "cancelled": "Annulées",
+    "noOrders": "Aucune commande",
+    "accept": "Accepter",
+    "reject": "Refuser",
+    "orderCompleted": "Commande terminée",
+    "orderSummary": "Récapitulatif",
+    "newOrder": "Nouvelle commande",
+    "outOfStock": "Rupture de stock",
+    "restore": "Restaurer",
+    "toggleStock": "Basculer le stock"
   },
   "home": {
     "deliverTo": "LIVRER À",

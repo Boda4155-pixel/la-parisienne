@@ -4,7 +4,9 @@
     "categories": "الفئات",
     "favorite": "المفضلة",
     "orders": "الطلبات",
-    "account": "حسابي"
+    "products": "المنتجات",
+    "account": "حسابي",
+    "more": "المزيد"
   },
   "categories": {
     "title": "الفئات",
@@ -240,6 +242,37 @@
     "confirmPassword": "تأكيد كلمة المرور",
     "updatePassword": "تحديث كلمة المرور",
     "forgotPassword": "نسيت كلمة المرور؟"
+  },
+  "cashier": {
+    "title": "المخازن",
+    "pos": "كاشير",
+    "orders": "طلبات",
+    "account": "حساب",
+    "products": "المنتجات",
+    "cart": "السلة",
+    "cartEmpty": "السلة فارغة",
+    "checkout": "إتمام الطلب",
+    "subtotal": "الإجمالي الفرعي",
+    "total": "الإجمالي",
+    "payment": "الدفع",
+    "cash": "نقدي",
+    "card": "بطاقة",
+    "incomingOrders": "الطلبات الواردة",
+    "todaysOrders": "طلبات اليوم",
+    "todaysSales": "مبيعات اليوم",
+    "totalOrders": "إجمالي الطلبات",
+    "completed": "مكتملة",
+    "pending": "قيد الانتظار",
+    "cancelled": "ملغاة",
+    "noOrders": "لا توجد طلبات",
+    "accept": "قبول",
+    "reject": "رفض",
+    "orderCompleted": "تم إتمام الطلب",
+    "orderSummary": "ملخص الطلب",
+    "newOrder": "طلب جديد",
+    "outOfStock": "نفذ المخزون",
+    "restore": "استعادة",
+    "toggleStock": "تغيير الحالة"
   },
   "home": {
     "deliverTo": "التوصيل إلى",
