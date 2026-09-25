@@ -11,7 +11,7 @@ import {
   View,
 } from "react-native";
 import { PlusCircle, MinusCircle } from "lucide-react-native";
-import { supabase } from "../../lib/supabase";
+import { supabase } from "../../../lib/supabase";
 
 type Product = {
   id: string;
