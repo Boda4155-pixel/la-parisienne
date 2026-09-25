@@ -437,6 +437,135 @@ export const getOrderById = async ({
 };
 
 // =========================================
+// Cashier Queries
+// =========================================
+
+type PendingOrder = {
+  id: string;
+  status: string;
+  payment_method: string;
+  subtotal: number;
+  delivery_fee: number;
+  discount_amount: number;
+  total: number;
+  customer_note: string | null;
+  created_at: string;
+  address_id: string;
+  customer_name: string | null;
+  customer_phone: string | null;
+  customer_email: string | null;
+};
+
+export const getPendingOrders = async (): Promise<PendingOrder[]> => {
+  const { data: orders, error: ordersError } = await supabase
+    .from("orders")
+    .select(
+      "id, status, payment_method, subtotal, delivery_fee, discount_amount, total, customer_note, created_at, address_id",
+    )
+    .eq("status", "pending")
+    .order("created_at", { ascending: false });
+
+  if (ordersError) {
+    throw ordersError;
+  }
+
+  if (!orders || orders.length === 0) {
+    return [];
+  }
+
+  // Join with customer_addresses and profiles for customer info
+  const ordersWithCustomers = await Promise.all(
+    orders.map(async (order) => {
+      let customerName: string | null = null;
+      let customerPhone: string | null = null;
+      let customerEmail: string | null = null;
+
+      if (order.address_id) {
+        const { data: address } = await supabase
+          .from("customer_addresses")
+          .select("user_id, phone")
+          .eq("id", order.address_id)
+          .maybeSingle();
+
+        if (address?.user_id) {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("full_name, email")
+            .eq("id", address.user_id)
+            .maybeSingle();
+
+          customerName = profile?.full_name ?? null;
+          customerEmail = profile?.email ?? null;
+        }
+        customerPhone = address?.phone ?? null;
+      }
+
+      return {
+        ...order,
+        customer_name: customerName,
+        customer_phone: customerPhone,
+        customer_email: customerEmail,
+      };
+    }),
+  );
+
+  return ordersWithCustomers;
+};
+
+export const updateOrderStatus = async (
+  orderId: string,
+  status: string,
+): Promise<void> => {
+  const { error } = await supabase
+    .from("orders")
+    .update({ status })
+    .eq("id", orderId);
+
+  if (error) {
+    throw error;
+  }
+};
+
+export const toggleProductActive = async (
+  productId: string,
+  isActive: boolean,
+): Promise<void> => {
+  const { error } = await supabase
+    .from("products")
+    .update({ is_active: isActive })
+    .eq("id", productId);
+
+  if (error) {
+    throw error;
+  }
+};
+
+export type TodayOrder = {
+  id: string;
+  status: string;
+  payment_method: string;
+  total: number;
+  created_at: string;
+};
+
+export const getTodayOrders = async (): Promise<TodayOrder[]> => {
+  const startOfDay = new Date();
+  startOfDay.setHours(0, 0, 0, 0);
+
+  const { data, error } = await supabase
+    .from("orders")
+    .select("id, status, payment_method, total, created_at")
+    .gte("created_at", startOfDay.toISOString())
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    throw error;
+  }
+
+  return data ?? [];
+}
+
+// =========================================
 // Coupons
 // =========================================
 

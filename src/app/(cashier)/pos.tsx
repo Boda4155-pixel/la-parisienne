@@ -10,26 +10,38 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { PlusCircle, MinusCircle } from "lucide-react-native";
+import {
+  ArchiveRestore,
+  MinusCircle,
+  Package,
+  PlusCircle,
+  RefreshCw,
+  XCircle,
+} from "lucide-react-native";
+import { router } from "expo-router";
 import { supabase } from "../../../lib/supabase";
+import { toggleProductActive } from "../../../lib/queries";
 
 type Product = {
   id: string;
   name: string;
   price: number;
   image_url?: string | null;
+  is_active?: boolean;
+  stock_quantity?: number;
 };
 
 type CartItem = Product & { quantity: number };
 
 type PaymentMethod = "cash" | "card";
 
-export default function Cashier() {
+export default function CashierPos() {
   const [products, setProducts] = useState<Product[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [search, setSearch] = useState("");
   const [payment, setPayment] = useState<PaymentMethod>("cash");
   const [loading, setLoading] = useState(true);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
 
   // Fetch products from Supabase on mount
   useEffect(() => {
@@ -70,6 +82,7 @@ export default function Cashier() {
 
   // Add product to cart: if exists, qty + 1; otherwise, add with qty 1
   const addToCart = (product: Product) => {
+    if (!product.is_active) return;
     setCart((prev) => {
       const existing = prev.find((item) => item.id === product.id);
       if (existing) {
@@ -97,7 +110,25 @@ export default function Cashier() {
     0,
   );
 
-  // Handle checkout: insert order, then clear cart and show alert
+  // Toggle product active/inactive
+  const handleToggleActive = async (product: Product) => {
+    const newActiveState = !product.is_active;
+    setTogglingId(product.id);
+    try {
+      await toggleProductActive(product.id, newActiveState);
+      setProducts((prev) =>
+        prev.map((p) =>
+          p.id === product.id ? { ...p, is_active: newActiveState } : p,
+        ),
+      );
+    } catch (error: any) {
+      Alert.alert("Error", error.message ?? "Failed to update product");
+    } finally {
+      setTogglingId(null);
+    }
+  };
+
+  // Handle checkout: insert order, then navigate to receipt
   const handleCheckout = async () => {
     if (cart.length === 0) {
       Alert.alert("العربة فارغة", "الرجاء إضافة منتجات إلى العربة أولاً");
@@ -105,13 +136,17 @@ export default function Cashier() {
     }
 
     try {
-      const { error } = await supabase.from("orders").insert({
-        items: cart,
-        total: subtotal,
-        status: "completed",
-        payment_method: payment,
-        created_at: new Date().toISOString(),
-      });
+      const { data, error } = await supabase
+        .from("orders")
+        .insert({
+          items: cart,
+          total: subtotal,
+          status: "completed",
+          payment_method: payment,
+          created_at: new Date().toISOString(),
+        })
+        .select("id")
+        .single();
 
       if (error) {
         Alert.alert("Error", error.message);
@@ -119,7 +154,9 @@ export default function Cashier() {
       }
 
       setCart([]);
-      Alert.alert("تم الدفع", "تم إرسال الطلب بنجاح ✅");
+      router.push(
+        `/(cashier)/receipt?orderId=${data.id}&items=${encodeURIComponent(JSON.stringify(cart))}&total=${subtotal}&payment=${payment}&subtotal=${subtotal}&itemCount=${cart.reduce((sum, item) => sum + item.quantity, 0)}` as any,
+      );
     } catch (err: any) {
       Alert.alert("Error", err.message ?? "حدث خطأ غير متوقع");
     }
@@ -164,43 +201,80 @@ export default function Cashier() {
             numColumns={3}
             horizontal={false}
             contentContainerStyle={{ padding: 16, gap: 12 }}
-            renderItem={({ item }) => (
-              <View
-                style={{
-                  backgroundColor: "#ffffff",
-                  borderRadius: 20,
-                  padding: 12,
-                  minWidth: "33.333%",
-                  justifyContent: "center",
-                  alignItems: "center",
-                  shadowColor: "#000",
-                  shadowOpacity: 0.05,
-                  shadowRadius: 8,
-                  elevation: 2,
-                }}
-              >
-                <Text className="h4-bold text-dark-100 mt-2">
-                  {item.name}
-                </Text>
-                <Text className="h5-bold text-primary mt-2">
-                  {item.price} ج.م
-                </Text>
-                <Pressable
-                  onPress={() => addToCart(item)}
+            renderItem={({ item }) => {
+              const isInactive = !item.is_active;
+              return (
+                <View
                   style={{
-                    marginTop: 8,
-                    backgroundColor: "#C9A86A",
-                    borderRadius: 12,
-                    paddingVertical: 6,
-                    paddingHorizontal: 12,
+                    backgroundColor: "#ffffff",
+                    borderRadius: 20,
+                    padding: 12,
+                    minWidth: "33.333%",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    shadowColor: "#000",
+                    shadowOpacity: isInactive ? 0 : 0.05,
+                    shadowRadius: 8,
+                    elevation: isInactive ? 0 : 2,
+                    opacity: isInactive ? 0.4 : 1,
+                    borderWidth: isInactive ? 1 : 0,
+                    borderColor: "#e5e7eb",
                   }}
                 >
-                  <Text className="paragraph-bold text-white">
-                    Add
+                  {isInactive && (
+                    <View className="absolute top-2 right-2">
+                      <Package size={14} color="#C0392B" />
+                    </View>
+                  )}
+
+                  <Text className="h4-bold text-dark-100 mt-2">
+                    {item.name}
                   </Text>
-                </Pressable>
-              </View>
-            )}
+                  <Text className="h5-bold text-primary mt-2">
+                    {item.price} ج.م
+                  </Text>
+
+                  <View className="flex-row items-center gap-x-1 mt-2">
+                    <Pressable
+                      onPress={() => addToCart(item)}
+                      disabled={isInactive}
+                      style={{
+                        marginTop: 8,
+                        backgroundColor: isInactive ? "#9CA3AF" : "#C9A86A",
+                        borderRadius: 12,
+                        paddingVertical: 6,
+                        paddingHorizontal: 12,
+                        opacity: isInactive ? 0.5 : 1,
+                      }}
+                    >
+                      <Text className="paragraph-bold text-white">
+                        Add
+                      </Text>
+                    </Pressable>
+
+                    <Pressable
+                      onPress={() => handleToggleActive(item)}
+                      disabled={togglingId === item.id}
+                      style={{
+                        marginTop: 8,
+                        marginLeft: 4,
+                        padding: 6,
+                        borderRadius: 8,
+                        backgroundColor: isInactive ? "#7A9E7E" : "#F3F4F6",
+                      }}
+                    >
+                      {togglingId === item.id ? (
+                        <ActivityIndicator size={14} color="#6B7280" />
+                      ) : isInactive ? (
+                        <ArchiveRestore size={14} color="#ffffff" />
+                      ) : (
+                        <RefreshCw size={14} color="#6B7280" />
+                      )}
+                    </Pressable>
+                  </View>
+                </View>
+              );
+            }}
           />
         </View>
 
