@@ -29,7 +29,7 @@ export default function CashierReceipt() {
   }, [items]);
 
   const handleNewOrder = () => {
-    router.replace("/(cashier)/pos" as any);
+    router.replace("/(cashier)/home" as any);
   };
 
   return (
