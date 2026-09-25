@@ -46,9 +46,9 @@ export default function CashierLayoutRoute() {
         }}
       >
         <Tabs.Screen
-          name="pos"
+          name="home"
           options={{
-            title: "POS",
+            title: "Home",
           }}
         />
         <Tabs.Screen
@@ -58,9 +58,15 @@ export default function CashierLayoutRoute() {
           }}
         />
         <Tabs.Screen
+          name="products"
+          options={{
+            title: "Products",
+          }}
+        />
+        <Tabs.Screen
           name="account"
           options={{
-            title: "Account",
+            title: "More",
           }}
         />
       </Tabs>

@@ -1,17 +1,23 @@
 import { usePathname } from "expo-router";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { router } from "expo-router";
-import { ClipboardList, LayoutGrid, User } from "lucide-react-native";
+import {
+  ClipboardList,
+  LayoutGrid,
+  MoreHorizontal,
+  ShoppingBag,
+  User,
+} from "lucide-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const TAB_BAR_HEIGHT = 60;
 
 const navigationItems = [
   {
-    id: "pos",
-    label: "POS",
-    icon: LayoutGrid,
-    href: "/(cashier)/pos",
+    id: "home",
+    label: "Home",
+    icon: ShoppingBag,
+    href: "/(cashier)/home",
   },
   {
     id: "orders",
@@ -20,9 +26,15 @@ const navigationItems = [
     href: "/(cashier)/orders",
   },
   {
-    id: "account",
-    label: "Account",
-    icon: User,
+    id: "products",
+    label: "Products",
+    icon: LayoutGrid,
+    href: "/(cashier)/products",
+  },
+  {
+    id: "more",
+    label: "More",
+    icon: MoreHorizontal,
     href: "/(cashier)/account",
   },
 ];

@@ -96,7 +96,7 @@ export default function RootLayout() {
 
     // Cashier users should land on the cashier POS, not customer screens
     if (profile?.role === "cashier" && (segments[0] as string) !== "(cashier)") {
-      router.replace("/(cashier)/pos" as any);
+      router.replace("/(cashier)/home" as any);
     }
   }, [fontsLoaded, isLoading, isAuthenticated, profile, segments, router]);
 
