@@ -145,9 +145,18 @@
     "email": "E-mail",
     "deliveryMethod": "Mode de livraison",
     "delivery": {
-      "standard": { "label": "Livraison standard", "time": "1 - 2 heures" },
-      "express": { "label": "Livraison express", "time": "30 - 30 min" },
-      "pickup": { "label": "Retrait en magasin", "time": "Prêt en 20 min" }
+      "standard": {
+        "label": "Livraison standard",
+        "time": "1 - 2 heures"
+      },
+      "express": {
+        "label": "Livraison express",
+        "time": "30 - 30 min"
+      },
+      "pickup": {
+        "label": "Retrait en magasin",
+        "time": "Prêt en 20 min"
+      }
     },
     "free": "Gratuit",
     "orderNotes": "Notes de commande",
@@ -272,7 +281,47 @@
     "newOrder": "Nouvelle commande",
     "outOfStock": "Rupture de stock",
     "restore": "Restaurer",
-    "toggleStock": "Basculer le stock"
+    "toggleStock": "Basculer le stock",
+    "orders_title": "Commandes",
+    "orders_pending": "Commandes en attente",
+    "orders_today": "Commandes d'aujourd'hui",
+    "orders_noOrders": "Aucune commande",
+    "orders_accept": "Accepter",
+    "orders_reject": "Refuser",
+    "orders_edit": "Modifier",
+    "orders_message": "Message",
+    "orders_track": "Suivre",
+    "orders_confirmed": "Commande confirmée",
+    "orders_rejected": "Commande refusée",
+    "orders_failedToLoad": "Échec du chargement des commandes",
+    "orders_failedToUpdate": "Échec de la mise à jour de la commande",
+    "orders_guest": "Invité",
+    "orders_messageComingSoon": "Fonctionnalité de message bientôt",
+    "orders_trackingComingSoon": "Suivi de livraison bientôt",
+    "orders_status_pending": "En attente",
+    "orders_status_confirmed": "Confirmée",
+    "orders_status_preparing": "En préparation",
+    "orders_status_out_for_delivery": "En livraison",
+    "orders_status_delivered": "Livrée",
+    "orders_status_cancelled": "Annulée",
+    "settings_title": "Paramètres",
+    "settings_name": "Nom",
+    "settings_email": "E-mail",
+    "settings_phone": "Téléphone",
+    "settings_role": "Rôle",
+    "settings_cashier": "Caissier",
+    "settings_language": "Langue",
+    "settings_notifications": "Notifications",
+    "settings_pushNotifications": "Notifications push",
+    "settings_orderAlerts": "Alertes de commandes",
+    "settings_security": "Sécurité",
+    "settings_changePin": "Changer le code PIN",
+    "settings_biometricAuth": "Authentification biométrique",
+    "settings_signOut": "Déconnexion",
+    "settings_signedOut": "Déconnecté avec succès",
+    "settings_failedToSignOut": "Échec de la déconnexion",
+    "settings_comingSoon": "Bientôt",
+    "settings_enabled": "Activé"
   },
   "home": {
     "deliverTo": "LIVRER À",
