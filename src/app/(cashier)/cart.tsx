@@ -8,11 +8,13 @@ import {
   Text,
   View,
 } from "react-native";
+import { useTranslation } from "react-i18next";
 import { router } from "expo-router";
 import {
   MinusCircle,
   PlusCircle,
   ShoppingCart,
+  RefreshCw,
 } from "lucide-react-native";
 import { useCartStore } from "../../../store/cart.store";
 
@@ -25,6 +27,8 @@ type CartItem = {
 };
 
 export default function CashierCart() {
+  const { t, i18n } = useTranslation();
+  const isRTL = i18n.language === "ar";
   const { items, clearCart, increaseQty, decreaseQty, getTotalPrice } =
     useCartStore.getState();
 
@@ -32,12 +36,10 @@ export default function CashierCart() {
 
   const handleCheckout = async () => {
     if (items.length === 0) {
-      Alert.alert("السلة فارغة", "أضف منتجات إلى السلة أولاً");
+      Alert.alert(t("cashier.cartEmpty", "Cart is empty"), t("cashier.addProductsFirst", "Add products to cart first"));
       return;
     }
 
-    // Navigate to checkout (we'll need to create this screen later)
-    // For now, redirect to the receipt after creating order in pos.tsx flow
     router.push("/(cashier)/checkout" as any);
   };
 
@@ -53,9 +55,11 @@ export default function CashierCart() {
           }}
         >
           <ShoppingCart size={64} color="#9CA3AF" />
-          <Text className="h3-bold text-dark-100 mt-4">السلة خالية</Text>
+          <Text className="h3-bold text-dark-100 mt-4">
+            {t("cashier.cartEmpty", "Cart is empty")}
+          </Text>
           <Text className="text-gray-500 text-center mt-2">
-            أضف منتجات من صفحة المنتجات للبدء بطلبك
+            {t("cashier.browseProducts", "Browse products to get started")}
           </Text>
           <Pressable
             onPress={() => router.push("/(cashier)/products" as any)}
@@ -67,7 +71,9 @@ export default function CashierCart() {
               paddingVertical: 12,
             }}
           >
-            <Text className="h5-bold text-white">المنتجات</Text>
+            <Text className="h5-bold text-white">
+              {t("cashier.products", "Products")}
+            </Text>
           </Pressable>
         </View>
       </SafeAreaView>
@@ -77,7 +83,9 @@ export default function CashierCart() {
   return (
     <SafeAreaView style={{ backgroundColor: "#FFFBF2", flex: 1 }}>
       <View style={{ flex: 1, padding: 20 }}>
-        <Text className="h3-bold text-dark-100 mb-4">سلة المشتريات</Text>
+        <Text className="h3-bold text-dark-100 mb-4">
+          {t("cashier.cart", "Shopping Cart")}
+        </Text>
 
         <FlatList
           data={items}
@@ -97,7 +105,7 @@ export default function CashierCart() {
               <View style={{ flex: 1 }}>
                 <Text className="h5-bold text-dark-100">{item.name}</Text>
                 <Text className="text-gray-500 text-sm">
-                  {item.price} ج.م × {item.quantity}
+                  {item.price} EGP × {item.quantity}
                 </Text>
               </View>
 
@@ -142,7 +150,7 @@ export default function CashierCart() {
               </View>
 
               <Text className="h5-bold text-primary ml-4">
-                {(item.price * item.quantity).toFixed(2)} ج.م
+                {(item.price * item.quantity).toFixed(2)} EGP
               </Text>
             </View>
           )}
@@ -160,8 +168,8 @@ export default function CashierCart() {
             marginBottom: 8,
           }}
         >
-          <Text className="h4-bold text-dark-100">المجموع الفرعي</Text>
-          <Text className="h5-bold text-dark-100">{total.toFixed(2)} ج.م</Text>
+          <Text className="h4-bold text-dark-100">{t("cashier.subtotal", "Subtotal")}</Text>
+          <Text className="h5-bold text-dark-100">{total.toFixed(2)} EGP</Text>
         </View>
 
         <View style={{ flexDirection: "row", gap: 12 }}>
@@ -178,7 +186,7 @@ export default function CashierCart() {
               },
             ]}
           >
-            <Text className="h4-bold text-white">إلغاء</Text>
+            <Text className="h4-bold text-white">{t("common.cancel", "Cancel")}</Text>
           </Pressable>
 
           <Pressable
@@ -194,7 +202,7 @@ export default function CashierCart() {
               },
             ]}
           >
-            <Text className="h4-bold text-white">الدفع</Text>
+            <Text className="h4-bold text-white">{t("cashier.checkout", "Checkout")}</Text>
           </Pressable>
         </View>
       </View>

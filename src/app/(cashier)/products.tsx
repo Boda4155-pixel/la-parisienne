@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -10,6 +10,8 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { useTranslation } from "react-i18next";
+import { useCartStore } from "../../../store/cart.store";
 import { router } from "expo-router";
 import { supabase } from "../../../lib/supabase";
 import {
@@ -20,8 +22,6 @@ import {
   RefreshCw,
   Search,
 } from "lucide-react-native";
-import { useCartStore } from "../../../store/cart.store";
-import { getCategories } from "../../../lib/queries";
 
 type Product = {
   id: string;
@@ -36,13 +36,15 @@ type Product = {
 type CartItem = Product & { quantity: number };
 
 export default function CashierProducts() {
+  const { t, i18n } = useTranslation();
+  const isRTL = i18n.language === "ar";
   const [categories, setCategories] = useState<string[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [filtered, setFiltered] = useState<Product[]>([]);
   const [search, setSearch] = useState("");
-  const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   // Fetch categories from Supabase
   useEffect(() => {
@@ -63,7 +65,7 @@ export default function CashierProducts() {
         if (data && data.length > 0) {
           const catNames = data.map((c: any) => c.name);
           setCategories(catNames);
-          setSelectedCategory(catNames[0]); // Select first category by default
+          setSelectedCategory(catNames[0]);
         }
       } catch (err) {
         console.error("Error fetching categories:", err);
@@ -136,7 +138,6 @@ export default function CashierProducts() {
       image_url: product.image_url ?? "",
     };
     useCartStore.getState().addItem(newItem as any);
-    // Could show a toast here
   };
 
   // Toggle product active/inactive
@@ -144,7 +145,6 @@ export default function CashierProducts() {
     const newActiveState = !product.is_active;
     setTogglingId(product.id);
     try {
-      // Import toggleProductActive from queries
       const { toggleProductActive } = await import("../../../lib/queries");
       await toggleProductActive(product.id, newActiveState);
 
@@ -170,7 +170,7 @@ export default function CashierProducts() {
       <SafeAreaView style={{ backgroundColor: "#FFFBF2", flex: 1 }}>
         <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
           <ActivityIndicator size="large" />
-          <Text className="mt-4 text-dark-100">جاري التحميل...</Text>
+          <Text className="mt-4 text-dark-100">{t("common.loading", "Loading...")}</Text>
         </View>
       </SafeAreaView>
     );
@@ -180,11 +180,13 @@ export default function CashierProducts() {
     <SafeAreaView style={{ backgroundColor: "#FFFBF2", flex: 1 }}>
       <View style={{ padding: 20 }}>
         <View className="flex-row items-center justify-between mb-4">
-          <Text className="h3-bold text-dark-100">المنتجات</Text>
+          <Text className="h3-bold text-dark-100">
+            {t("cashier.products", "Products")}
+          </Text>
           <TextInput
             value={search}
             onChangeText={setSearch}
-            placeholder="Search..."
+            placeholder={t("common.search", "Search...")}
             placeholderTextColor="#9ca3af"
             className="border border-gray-200 rounded-full px-4 py-2 paragraph-regular text-dark-100 w-40"
           />
@@ -221,9 +223,7 @@ export default function CashierProducts() {
                       },
                 ]}
               >
-                <Text className="text-white text-bold">
-                  {category}
-                </Text>
+                <Text className="text-white text-bold">{category}</Text>
               </Pressable>
             ))}
           </ScrollView>
@@ -265,7 +265,7 @@ export default function CashierProducts() {
                   {item.name}
                 </Text>
                 <Text className="h5-bold text-primary mt-2">
-                  {item.price} ج.م
+                  {item.price} EGP
                 </Text>
 
                 <View className="flex-row items-center gap-x-1 mt-2">
@@ -282,7 +282,7 @@ export default function CashierProducts() {
                     }}
                   >
                     <Text className="paragraph-bold text-white">
-                      +
+                      {t("cashier.quickAdd", "+")}
                     </Text>
                   </Pressable>
 

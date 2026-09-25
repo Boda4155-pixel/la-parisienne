@@ -8,6 +8,7 @@ import {
   Text,
   View,
 } from "react-native";
+import { useTranslation } from "react-i18next";
 import { router } from "expo-router";
 import {
   MinusCircle,
@@ -28,6 +29,8 @@ type CartItem = {
 type PaymentMethod = "cash" | "card";
 
 export default function CashierCheckout() {
+  const { t, i18n } = useTranslation();
+  const isRTL = i18n.language === "ar";
   const { items, clearCart, increaseQty, decreaseQty, getTotalPrice } =
     useCartStore.getState();
 
@@ -38,7 +41,7 @@ export default function CashierCheckout() {
 
   const handleCheckout = async () => {
     if (items.length === 0) {
-      Alert.alert("السلة فارغة", "أضف منتجات إلى السلة أولاً");
+      Alert.alert(t("cashier.cartEmpty", "Cart is empty"), t("cashier.addProductsFirst", "Add products to cart first"));
       return;
     }
 
@@ -88,9 +91,11 @@ export default function CashierCheckout() {
           }}
         >
           <ShoppingCart size={64} color="#9CA3AF" />
-          <Text className="h3-bold text-dark-100 mt-4">السلة خالية</Text>
+          <Text className="h3-bold text-dark-100 mt-4">
+            {t("cashier.cartEmpty", "Cart is empty")}
+          </Text>
           <Text className="text-gray-500 text-center mt-2">
-            أضف منتجات من صفحة المنتجات للبدء بطلبك
+            {t("cashier.browseProducts", "Browse products to get started")}
           </Text>
           <Pressable
             onPress={() => router.push("/(cashier)/products" as any)}
@@ -102,7 +107,9 @@ export default function CashierCheckout() {
               paddingVertical: 12,
             }}
           >
-            <Text className="h5-bold text-white">المنتجات</Text>
+            <Text className="h5-bold text-white">
+              {t("cashier.products", "Products")}
+            </Text>
           </Pressable>
         </View>
       </SafeAreaView>
@@ -112,7 +119,9 @@ export default function CashierCheckout() {
   return (
     <SafeAreaView style={{ backgroundColor: "#FFFBF2", flex: 1 }}>
       <View style={{ flex: 1, padding: 20 }}>
-        <Text className="h3-bold text-dark-100 mb-4">الدفع</Text>
+        <Text className="h3-bold text-dark-100 mb-4">
+          {t("cashier.checkout", "Checkout")}
+        </Text>
 
         <ScrollView
           style={{ flex: 1, backgroundColor: "#ffffff", borderRadius: 16, padding: 20 }}
@@ -135,7 +144,7 @@ export default function CashierCheckout() {
                 <View style={{ flex: 1 }}>
                   <Text className="h5-bold text-dark-100">{item.name}</Text>
                   <Text className="text-gray-500 text-sm">
-                    {item.price} ج.م × {item.quantity}
+                    {item.price} EGP × {item.quantity}
                   </Text>
                 </View>
 
@@ -180,7 +189,7 @@ export default function CashierCheckout() {
                 </View>
 
                 <Text className="h5-bold text-primary ml-4">
-                  {(item.price * item.quantity).toFixed(2)} ج.م
+                  {(item.price * item.quantity).toFixed(2)} EGP
                 </Text>
               </View>
             )}
@@ -210,7 +219,7 @@ export default function CashierCheckout() {
               }}
             >
               <Text className="h5-bold text-white">
-                {payment === "cash" ? "Cash" : "Card"}
+                {payment === "cash" ? t("cashier.cash", "Cash") : t("cashier.card", "Card")}
               </Text>
             </Pressable>
 
@@ -228,7 +237,7 @@ export default function CashierCheckout() {
               }}
             >
               <Text className="h5-bold text-white">
-                {payment === "card" ? "Card" : "Cash"}
+                {payment === "card" ? t("cashier.card", "Card") : t("cashier.cash", "Cash")}
               </Text>
             </Pressable>
           </View>
@@ -245,8 +254,8 @@ export default function CashierCheckout() {
               marginBottom: 16,
             }}
           >
-            <Text className="h3-bold text-dark-100">الإجمالي</Text>
-            <Text className="h3-bold text-primary">{total.toFixed(2)} ج.م</Text>
+            <Text className="h3-bold text-dark-100">{t("cashier.total", "Total")}</Text>
+            <Text className="h3-bold text-primary">{total.toFixed(2)} EGP</Text>
           </View>
 
           {/* Checkout button */}
@@ -262,7 +271,7 @@ export default function CashierCheckout() {
             }}
           >
             <Text className="h3-bold text-white">
-              {loading ? "جاري المعالجة..." : "تأكيد الدفع"}
+              {loading ? t("common.saving", "Saving...") : t("cashier.confirmPayment", "Confirm Payment")}
             </Text>
           </Pressable>
         </ScrollView>
