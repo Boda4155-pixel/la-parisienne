@@ -5,8 +5,10 @@ import {
   ScrollView,
   RefreshControl,
   StyleSheet,
+  TouchableOpacity,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useRouter } from "expo-router";
 import {
   TrendingUp,
   ShoppingCart,
@@ -14,7 +16,7 @@ import {
   Clock,
   RotateCcw,
   Grid,
-  Shield,
+  ChevronRight,
 } from "lucide-react-native";
 
 import { useSupabaseQuery } from "../../../hooks/useSupabaseQuery";
@@ -51,7 +53,7 @@ const formatNumber = (num: number): string => {
 };
 
 // ===========================================
-// Stat Card Component (2-col grid, fixed 120 height)
+// Stat Card Component (2-col grid, fixed 120 height, clickable)
 // ===========================================
 
 type StatCardProps = {
@@ -61,6 +63,7 @@ type StatCardProps = {
   icon: React.ReactNode;
   color?: string;
   loading?: boolean;
+  onPress: () => void;
 };
 
 const StatCard = ({
@@ -70,8 +73,13 @@ const StatCard = ({
   icon: Icon,
   color = "#FE8C00",
   loading,
+  onPress,
 }: StatCardProps) => (
-  <View style={styles.statCard}>
+  <TouchableOpacity
+    style={styles.statCard}
+    onPress={onPress}
+    activeOpacity={0.7}
+  >
     <View style={styles.statCardRow}>
       <View style={{ flex: 1 }}>
         <Text style={styles.statCardTitle}>{title}</Text>
@@ -79,11 +87,14 @@ const StatCard = ({
           {loading ? "..." : `${formatNumber(value)}${suffix}`}
         </Text>
       </View>
-      <View style={[styles.iconCircle, { backgroundColor: `${color}22` }]}>
-        {Icon}
+      <View style={styles.iconAndChevron}>
+        <View style={[styles.iconCircle, { backgroundColor: `${color}22` }]}>
+          {Icon}
+        </View>
+        <ChevronRight size={18} color="#C09248" />
       </View>
     </View>
-  </View>
+  </TouchableOpacity>
 );
 
 // ===========================================
@@ -107,6 +118,7 @@ const SkeletonCard = () => (
 // ===========================================
 
 export default function Dashboard() {
+  const router = useRouter();
   const [refreshing, setRefreshing] = useState(false);
 
   const { data: metrics, loading, refetch } = useSupabaseQuery({
@@ -136,8 +148,6 @@ export default function Dashboard() {
   const branchComparison = metrics?.branchComparison ?? [];
 
   const showSkeleton = loading && !metrics;
-
-  const isRTL = false; // i18n.dir() === "rtl" — set from context if needed
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
@@ -170,6 +180,7 @@ export default function Dashboard() {
               icon={<TrendingUp size={24} color="#FE8C00" />}
               color="#FE8C00"
               loading={loading}
+              onPress={() => router.push("/(admin)/revenue?type=daily")}
             />
           )}
           {showSkeleton ? (
@@ -182,6 +193,7 @@ export default function Dashboard() {
               icon={<TrendingUp size={24} color="#FE8C00" />}
               color="#FE8C00"
               loading={loading}
+              onPress={() => router.push("/(admin)/revenue?type=weekly")}
             />
           )}
         </View>
@@ -197,6 +209,7 @@ export default function Dashboard() {
               icon={<ShoppingCart size={24} color="#FE8C00" />}
               color="#FE8C00"
               loading={loading}
+              onPress={() => router.push("/(admin)/orders?filter=today")}
             />
           )}
           {showSkeleton ? (
@@ -208,6 +221,7 @@ export default function Dashboard() {
               icon={<Package size={24} color={lowStockCount > 0 ? "#EF4444" : "#2F9B65"} />}
               color={lowStockCount > 0 ? "#EF4444" : "#2F9B65"}
               loading={loading}
+              onPress={() => router.push("/(admin)/inventory?filter=low_stock")}
             />
           )}
         </View>
@@ -352,6 +366,12 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-between",
+  },
+  iconAndChevron: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
   },
   iconCircle: {
     width: 44,
@@ -359,7 +379,6 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     alignItems: "center",
     justifyContent: "center",
-    marginLeft: 8,
   },
   statCardTitle: {
     fontSize: 11,

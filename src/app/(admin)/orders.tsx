@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useLocalSearchParams } from "expo-router";
 import { useTranslation } from "react-i18next";
 import {
   Search,
@@ -77,7 +78,11 @@ const formatDate = (dateStr: string): string => {
 
 export default function OrdersScreen() {
   const { t, i18n } = useTranslation();
-  const [activeStatus, setActiveStatus] = useState<OrderStatusFilter>("all");
+  const params = useLocalSearchParams<{ filter?: string }>();
+  const filter = params?.filter ?? "all";
+  const [activeStatus, setActiveStatus] = useState<OrderStatusFilter>(
+    filter === "all" ? "all" : filter === "today" ? "pending" : "all"
+  );
   const [searchQuery, setSearchQuery] = useState("");
   const [refreshing, setRefreshing] = useState(false);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
