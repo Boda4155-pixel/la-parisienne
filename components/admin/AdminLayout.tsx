@@ -112,7 +112,8 @@ const navigationItems = [
 ];
 
 const mainTabs = [
-  { id: "dashboard", label: "orders", icon: ClipboardList, href: "/orders" },
+  { id: "dashboard", label: "dashboard", icon: Home, href: "/dashboard" },
+  { id: "orders", label: "orders", icon: ClipboardList, href: "/orders" },
   { id: "inventory", label: "inventory", icon: Package, href: "/inventory" },
   { id: "account", label: "account", icon: CreditCard, href: "/account" },
 ];
