@@ -9,9 +9,11 @@ import {
   Pressable,
   FlatList,
   ActivityIndicator,
+  TouchableOpacity,
+  I18nManager,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams, router } from "expo-router";
 import { useTranslation } from "react-i18next";
 import {
   Search,
@@ -77,7 +79,7 @@ const formatDate = (dateStr: string): string => {
 // ===========================================
 
 export default function OrdersScreen() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const params = useLocalSearchParams<{ filter?: string }>();
   const filter = params?.filter ?? "all";
   const [activeStatus, setActiveStatus] = useState<OrderStatusFilter>(
@@ -87,7 +89,7 @@ export default function OrdersScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
 
-  const isRTL = i18n.dir() === "rtl";
+  const isRTL = I18nManager.isRTL;
 
   const { data: orders, loading, error, refetch } = useSupabaseQuery({
     fn: () => getAdminOrders(activeStatus, searchQuery),
@@ -238,9 +240,13 @@ export default function OrdersScreen() {
               placeholderTextColor="#878787"
             />
             {searchQuery.length > 0 && (
-              <Pressable onPress={() => setSearchQuery("")}>
+              <TouchableOpacity
+                activeOpacity={0.7}
+                hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
+                onPress={() => setSearchQuery("")}
+              >
                 <X size={20} color="#878787" />
-              </Pressable>
+              </TouchableOpacity>
             )}
           </View>
         </View>
@@ -253,8 +259,10 @@ export default function OrdersScreen() {
           contentContainerStyle={styles.tabsContent}
         >
           {(Object.keys(STATUS_CONFIG) as OrderStatusFilter[]).map((status) => (
-            <Pressable
+            <TouchableOpacity
               key={status}
+              activeOpacity={0.7}
+              hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
               style={[
                 styles.tab,
                 activeStatus === status && styles.activeTab,
@@ -269,7 +277,7 @@ export default function OrdersScreen() {
               >
                 {STATUS_CONFIG[status].label[isRTL ? "ar" : "en"]}
               </Text>
-            </Pressable>
+            </TouchableOpacity>
           ))}
         </ScrollView>
 

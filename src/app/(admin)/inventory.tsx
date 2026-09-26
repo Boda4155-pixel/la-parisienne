@@ -11,8 +11,11 @@ import {
   ActivityIndicator,
   Modal,
   Alert,
+  I18nManager,
+  TouchableOpacity,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import { useTranslation } from "react-i18next";
 import {
   Search,
@@ -62,17 +65,19 @@ const formatCurrency = (amount: number): string => {
 // ===========================================
 
 export default function InventoryScreen() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
+  const router = useRouter();
+  const searchParams = useLocalSearchParams as { filter?: string };
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("all");
-  const [lowStockOnly, setLowStockOnly] = useState(false);
+  const [lowStockOnly, setLowStockOnly] = useState(searchParams?.filter === "low_stock");
   const [refreshing, setRefreshing] = useState(false);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [restockModalVisible, setRestockModalVisible] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<InventoryProduct | null>(null);
   const [restockQty, setRestockQty] = useState("");
 
-  const isRTL = i18n.dir() === "rtl";
+  const isRTL = I18nManager.isRTL;
 
   const { data: products, loading, error, refetch } = useSupabaseQuery({
     fn: () => getProducts(searchQuery, categoryFilter, lowStockOnly),
@@ -179,7 +184,9 @@ export default function InventoryScreen() {
           </View>
 
           {/* Restock Button */}
-          <Pressable
+          <TouchableOpacity
+            activeOpacity={0.7}
+            hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
             style={[styles.restockButton, lowStock && styles.restockButtonHighlight]}
             onPress={() => {
               setSelectedProduct(item);
@@ -195,12 +202,14 @@ export default function InventoryScreen() {
                 {isRTL ? "إعادة التخزين" : "Restock Now"}
               </Text>
             )}
-          </Pressable>
+          </TouchableOpacity>
         </View>
 
         {/* Edit Button */}
         <View style={styles.actionColumn}>
-          <Pressable
+          <TouchableOpacity
+            activeOpacity={0.7}
+            hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
             style={styles.editButton}
             onPress={() => handleToggleAvailability(item)}
           >
@@ -208,7 +217,7 @@ export default function InventoryScreen() {
               size={20}
               color={item.is_active ? "#10B981" : "#9CA3AF"}
             />
-          </Pressable>
+          </TouchableOpacity>
         </View>
       </View>
     );
@@ -265,39 +274,49 @@ export default function InventoryScreen() {
               placeholderTextColor="#878787"
             />
             {searchQuery.length > 0 && (
-              <Pressable onPress={() => setSearchQuery("")}>
+              <TouchableOpacity
+                activeOpacity={0.7}
+                hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
+                onPress={() => setSearchQuery("")}
+              >
                 <X size={20} color="#878787" />
-              </Pressable>
+              </TouchableOpacity>
             )}
           </View>
         </View>
 
         {/* Top Action Row */}
         <View style={styles.actionRow}>
-          <Pressable
+          <TouchableOpacity
+            activeOpacity={0.7}
+            hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
             style={styles.primaryButton}
-            onPress={() => Alert.alert("Add Product", "Coming soon")}
+            onPress={() => router.push("/(admin)/add-product" as any)}
           >
             <Plus size={20} color="#FFFFFF" />
             <Text style={styles.primaryButtonText}>
               {isRTL ? "إضافة منتج جديد" : "+ Add New Product"}
             </Text>
-          </Pressable>
+          </TouchableOpacity>
 
-          <Pressable
+          <TouchableOpacity
+            activeOpacity={0.7}
+            hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
             style={styles.secondaryButton}
-            onPress={() => Alert.alert("Restock All", "Coming soon")}
+            onPress={() => router.push("/(admin)/suppliers" as any)}
           >
             <ShoppingCart size={16} color="#181C2E" />
             <Text style={styles.secondaryButtonText}>
               {isRTL ? "قائمة الموردين" : "Supplier List"}
             </Text>
-          </Pressable>
+          </TouchableOpacity>
         </View>
 
         {/* Low Stock Toggle */}
         <View style={styles.lowStockToggleContainer}>
-          <Pressable
+          <TouchableOpacity
+            activeOpacity={0.7}
+            hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
             style={[
               styles.lowStockToggle,
               lowStockOnly && styles.lowStockToggleActive,
@@ -315,7 +334,7 @@ export default function InventoryScreen() {
             <Text style={styles.lowStockToggleText}>
               {isRTL ? "أصناف أوشكت على النفاد" : "Low Stock Only"}
             </Text>
-          </Pressable>
+          </TouchableOpacity>
         </View>
 
         {/* Category Filter Chips */}
@@ -326,8 +345,10 @@ export default function InventoryScreen() {
           contentContainerStyle={styles.filterContent}
         >
           {CATEGORY_CHIPS.map((chip) => (
-            <Pressable
+            <TouchableOpacity
               key={chip.key}
+              activeOpacity={0.7}
+              hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
               style={[
                 styles.filterChip,
                 categoryFilter === chip.key && styles.activeFilterChip,
@@ -342,7 +363,7 @@ export default function InventoryScreen() {
               >
                 {chip.label[isRTL ? "ar" : "en"]}
               </Text>
-            </Pressable>
+            </TouchableOpacity>
           ))}
         </ScrollView>
 
@@ -406,7 +427,9 @@ export default function InventoryScreen() {
             keyboardType="numeric"
           />
           <View style={styles.modalButtons}>
-            <Pressable
+            <TouchableOpacity
+              activeOpacity={0.7}
+              hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
               style={styles.modalCancelButton}
               onPress={() => {
                 setRestockModalVisible(false);
@@ -417,15 +440,17 @@ export default function InventoryScreen() {
               <Text style={styles.modalCancelText}>
                 {isRTL ? "إلغاء" : "Cancel"}
               </Text>
-            </Pressable>
-            <Pressable
+            </TouchableOpacity>
+            <TouchableOpacity
+              activeOpacity={0.7}
+              hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
               style={styles.modalConfirmButton}
               onPress={handleRestock}
             >
               <Text style={styles.modalConfirmText}>
                 {isRTL ? "تأكيد" : "Confirm"}
               </Text>
-            </Pressable>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
@@ -821,7 +846,7 @@ const styles = StyleSheet.create({
 
   // Modal
   modalOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: "#00000040",
   },
   modalContent: {

@@ -79,6 +79,7 @@ const StatCard = ({
     style={styles.statCard}
     onPress={onPress}
     activeOpacity={0.7}
+    hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
   >
     <View style={styles.statCardRow}>
       <View style={{ flex: 1 }}>
