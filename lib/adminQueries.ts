@@ -435,11 +435,15 @@ export const getProducts = async (
       )
       .order("name", { ascending: true });
 
-    // Apply category filter if known
+    // Apply category filter using proper SDK chaining
     const catName = CATEGORY_MAP[categoryFilter];
     if (catName) {
-      // Try exact category name match, fallback to category_id like match
-      query = query.or(`category_id=eq.${catName},name=ilike.%${catName}%`);
+      query = query.ilike("category_id", `%${catName}%`);
+    }
+
+    // Apply search filter
+    if (search.trim()) {
+      query = query.ilike("name", `%${search.trim()}%`);
     }
 
     const { data, error } = await query;
@@ -454,17 +458,6 @@ export const getProducts = async (
     // Client-side low stock filter
     if (lowStockOnly) {
       products = products.filter((p) => p.stock_quantity <= (p.reorder_point ?? 5));
-    }
-
-    // Client-side search fallback
-    if (search.trim()) {
-      const q = search.trim().toLowerCase();
-      products = products.filter(
-        (p) =>
-          p.name.toLowerCase().includes(q) ||
-          p.id.toLowerCase().includes(q) ||
-          (p.category_id ?? "").toLowerCase().includes(q)
-      );
     }
 
     return products;
