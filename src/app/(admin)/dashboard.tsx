@@ -11,8 +11,10 @@ import {
   TrendingUp,
   ShoppingCart,
   Package,
+  Clock,
   RotateCcw,
   Grid,
+  Shield,
 } from "lucide-react-native";
 
 import { useSupabaseQuery } from "../../../hooks/useSupabaseQuery";
@@ -49,89 +51,53 @@ const formatNumber = (num: number): string => {
 };
 
 // ===========================================
-// Stat Card Component
+// Stat Card Component (2-col grid, fixed 120 height)
 // ===========================================
 
 type StatCardProps = {
   title: string;
   value: number;
   suffix?: string;
-  prefix?: string;
   icon: React.ReactNode;
   color?: string;
   loading?: boolean;
-  badge?: number;
-  badgeColor?: string;
 };
 
 const StatCard = ({
   title,
   value,
   suffix = "",
-  prefix = "",
   icon: Icon,
   color = "#FE8C00",
   loading,
-  badge,
-  badgeColor = "#F59E0B",
-}: StatCardProps) => {
-  return (
-    <View style={styles.statCard}>
-      <View style={styles.statCardHeader}>
-        <View style={[styles.iconContainer, { backgroundColor: `${color}22` }]}>
-          {Icon}
-        </View>
+}: StatCardProps) => (
+  <View style={styles.statCard}>
+    <View style={styles.statCardRow}>
+      <View style={{ flex: 1 }}>
         <Text style={styles.statCardTitle}>{title}</Text>
-      </View>
-      <View style={styles.statCardContent}>
         <Text style={styles.statCardValue} numberOfLines={1}>
-          {loading ? "..." : `${prefix}${formatNumber(value)}${suffix}`}
+          {loading ? "..." : `${formatNumber(value)}${suffix}`}
         </Text>
-        {badge !== undefined && badge > 0 && (
-          <View style={[styles.badge, { backgroundColor: badgeColor }]}>
-            <Text style={styles.badgeText}>{badge}</Text>
-          </View>
-        )}
       </View>
-    </View>
-  );
-};
-
-// ===========================================
-// Branch Comparison Component
-// ===========================================
-
-type BranchBarProps = {
-  name: string;
-  percentage: number;
-  active: boolean;
-};
-
-const BranchBar = ({ name, percentage, active }: BranchBarProps) => (
-  <View style={styles.branchBar}>
-    <Text style={styles.branchName}>{name}</Text>
-    <View style={styles.branchProgressContainer}>
-      <View style={[styles.branchProgressTrack, active && styles.branchProgressTrackActive]}>
-        <View style={[styles.branchProgressFill, { width: `${percentage}%` }]} />
+      <View style={[styles.iconCircle, { backgroundColor: `${color}22` }]}>
+        {Icon}
       </View>
-      <Text style={styles.branchPercentage}>{percentage}%</Text>
     </View>
   </View>
 );
 
 // ===========================================
-// Skeleton Component
+// Skeleton Card
 // ===========================================
 
 const SkeletonCard = () => (
   <View style={styles.statCard}>
-    <View style={styles.statCardHeader}>
+    <View style={styles.statCardRow}>
+      <View style={{ flex: 1 }}>
+        <View style={styles.skeletonLineShort} />
+        <View style={[styles.skeletonLine, { width: "60%", marginTop: 8 }]} />
+      </View>
       <View style={styles.skeletonIcon} />
-      <View style={styles.skeletonLine} />
-    </View>
-    <View style={styles.statCardContent}>
-      <View style={styles.skeletonValue} />
-      <View style={styles.skeletonBadge} />
     </View>
   </View>
 );
@@ -169,14 +135,9 @@ export default function Dashboard() {
   const refundRequests = metrics?.refundRequests ?? 0;
   const branchComparison = metrics?.branchComparison ?? [];
 
-  // Filter branches with orders
-  const activeBranches = useMemo(
-    () => branchComparison.filter((b) => b.percentage > 0),
-    [branchComparison]
-  );
-
-  // Show skeleton if loading and no data yet; otherwise show dashboard (values default to 0 on fetch errors)
   const showSkeleton = loading && !metrics;
+
+  const isRTL = false; // i18n.dir() === "rtl" — set from context if needed
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
@@ -186,19 +147,19 @@ export default function Dashboard() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={["#FE8C00"]} />
         }
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
         {/* Header */}
         <View style={styles.header}>
-          <View>
+          <View style={{ flex: 1 }}>
             <Text style={styles.title}>Dashboard</Text>
             <Text style={styles.date}>{formattedDate}</Text>
           </View>
           <AdminMoreTrigger />
         </View>
 
-        {/* Summary Cards */}
-        <View style={styles.cardsContainer}>
-          {/* Daily Revenue */}
+        {/* 2-Column Grid — Row 1 */}
+        <View style={styles.gridRow}>
           {showSkeleton ? (
             <SkeletonCard />
           ) : (
@@ -211,7 +172,6 @@ export default function Dashboard() {
               loading={loading}
             />
           )}
-          {/* Weekly Revenue */}
           {showSkeleton ? (
             <SkeletonCard />
           ) : (
@@ -224,7 +184,10 @@ export default function Dashboard() {
               loading={loading}
             />
           )}
-          {/* Today's Orders */}
+        </View>
+
+        {/* 2-Column Grid — Row 2 */}
+        <View style={styles.gridRow}>
           {showSkeleton ? (
             <SkeletonCard />
           ) : (
@@ -234,11 +197,8 @@ export default function Dashboard() {
               icon={<ShoppingCart size={24} color="#FE8C00" />}
               color="#FE8C00"
               loading={loading}
-              badge={cancelledOrders > 0 ? cancelledOrders : undefined}
-              badgeColor={cancelledOrders > 0 ? "#EF4444" : "#FE8C00"}
             />
           )}
-          {/* Low Stock */}
           {showSkeleton ? (
             <SkeletonCard />
           ) : (
@@ -248,29 +208,25 @@ export default function Dashboard() {
               icon={<Package size={24} color={lowStockCount > 0 ? "#EF4444" : "#2F9B65"} />}
               color={lowStockCount > 0 ? "#EF4444" : "#2F9B65"}
               loading={loading}
-              badge={lowStockCount > 0 ? lowStockCount : undefined}
-              badgeColor={lowStockCount > 0 ? "#FEF3C7" : "#DCFCE7"}
             />
           )}
         </View>
 
-        {/* Alert Badges Row */}
+        {/* Alerts Row */}
         <View style={styles.alertsContainer}>
-          {showSkeleton ? (
-            <SkeletonAlert />
-          ) : (
-            <>
-              {refundRequests > 0 && (
-                <View style={styles.alertBadge}>
-                  <RotateCcw size={18} color="#FFFFFF" />
-                  <Text style={styles.alertText}>Refund Requests</Text>
-                  <Text style={styles.alertCount}>{refundRequests}</Text>
-                </View>
-              )}
-              {lowStockCount > 0 && refundRequests > 0 && (
-                <View style={styles.alertDivider} />
-              )}
-            </>
+          {refundRequests > 0 && (
+            <View style={styles.alertBadge}>
+              <RotateCcw size={18} color="#FFFFFF" />
+              <Text style={styles.alertText}>Refund Requests</Text>
+              <Text style={styles.alertCount}>{refundRequests}</Text>
+            </View>
+          )}
+          {lowStockCount > 0 && (
+            <View style={[styles.alertBadge, { backgroundColor: lowStockCount > 0 ? "#FEF3C7" : "#DCFCE7", borderColor: lowStockCount > 0 ? "#FDE68A" : "#BBF7D0" }]}>
+              <Package size={18} color={lowStockCount > 0 ? "#92400E" : "#166534"} />
+              <Text style={[styles.alertText, { color: lowStockCount > 0 ? "#92400E" : "#166534" }]}>Low Stock</Text>
+              <Text style={[styles.alertCount, { color: lowStockCount > 0 ? "#92400E" : "#166534" }]}>{lowStockCount}</Text>
+            </View>
           )}
         </View>
 
@@ -278,16 +234,28 @@ export default function Dashboard() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Branch Performance</Text>
           {showSkeleton ? (
-            <SkeletonBranchSection />
+            <View style={styles.branchSection}>
+              {[...Array(3)].map((_, i) => (
+                <View key={i} style={styles.skeletonBranchBar}>
+                  <View style={styles.skeletonBranchName} />
+                  <View style={styles.skeletonBranchProgress} />
+                </View>
+              ))}
+            </View>
           ) : branchComparison.length > 0 ? (
             <View style={styles.branchSection}>
-              {activeBranches.map((branch) => (
-                <BranchBar
-                  key={branch.branch_id}
-                  name={branch.branch_name || `Branch ${branch.branch_id.slice(0, 4).toUpperCase()}`}
-                  percentage={branch.percentage}
-                  active={true}
-                />
+              {branchComparison.map((branch) => (
+                <View key={branch.branch_id} style={styles.branchBar}>
+                  <Text style={styles.branchName} numberOfLines={1}>
+                    {branch.branch_name || `Branch ${branch.branch_id.slice(0, 4).toUpperCase()}`}
+                  </Text>
+                  <View style={styles.branchProgressContainer}>
+                    <View style={styles.branchProgressTrack}>
+                      <View style={[styles.branchProgressFill, { width: `${branch.percentage}%` }]} />
+                    </View>
+                    <Text style={styles.branchPercentage}>{branch.percentage}%</Text>
+                  </View>
+                </View>
               ))}
             </View>
           ) : (
@@ -298,7 +266,7 @@ export default function Dashboard() {
           )}
         </View>
 
-        {/* Revenue Summary */}
+        {/* Week Overview */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>This Week Overview</Text>
           <View style={styles.summaryCard}>
@@ -309,13 +277,13 @@ export default function Dashboard() {
             <View style={styles.summaryDivider} />
             <View style={styles.summaryItem}>
               <Text style={styles.summaryLabel}>Cancelled</Text>
-              <Text style={styles.summaryValue} style={{ color: cancelledOrders > 0 ? "#EF4444" : "#6B7280" }}>
+              <Text style={[styles.summaryValue, { color: cancelledOrders > 0 ? "#EF4444" : "#6B7280" }]}>
                 {formatNumber(cancelledOrders)}
               </Text>
             </View>
             <View style={styles.summaryDivider} />
             <View style={styles.summaryItem}>
-              <Text style={styles.summaryLabel}>Completion Rate</Text>
+              <Text style={styles.summaryLabel}>Completion</Text>
               <Text style={styles.summaryValue}>
                 {todayOrders > 0 ? Math.round(((todayOrders - cancelledOrders) / todayOrders) * 100) : 100}%
               </Text>
@@ -328,28 +296,6 @@ export default function Dashboard() {
 }
 
 // ===========================================
-// Skeleton Components for Alerts
-// ===========================================
-
-const SkeletonAlert = () => (
-  <View style={styles.skeletonAlert}>
-    <View style={styles.skeletonAlertIcon} />
-    <View style={styles.skeletonAlertText} />
-  </View>
-);
-
-const SkeletonBranchSection = () => (
-  <View style={styles.branchSection}>
-    {[...Array(3)].map((_, i) => (
-      <View key={i} style={styles.skeletonBranchBar}>
-        <View style={styles.skeletonBranchName} />
-        <View style={styles.skeletonBranchProgress} />
-      </View>
-    ))}
-  </View>
-);
-
-// ===========================================
 // Styles
 // ===========================================
 
@@ -359,14 +305,18 @@ const styles = StyleSheet.create({
     backgroundColor: "#FDF8F3",
   },
   content: {
-    padding: 20,
-    paddingBottom: 40,
+    padding: 16,
+    paddingBottom: 24,
+    gap: 12,
   },
+
+  // Header
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 24,
+    marginTop: 4,
+    marginBottom: 8,
   },
   title: {
     fontSize: 28,
@@ -381,80 +331,56 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
 
-  // Stat Cards
-  cardsContainer: {
+  // Grid Rows
+  gridRow: {
     flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 16,
-    marginBottom: 24,
+    gap: 12,
   },
   statCard: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 20,
-    width: "100%",
-    maxWidth: "48%",
-    flex: 0,
-    flexBasis: "48%",
-    minWidth: 0,
+    borderRadius: 20,
+    padding: 16,
+    flex: 1,
+    height: 120,
     shadowColor: "#181C2E",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.08,
     shadowRadius: 12,
     elevation: 4,
   },
-  statCardHeader: {
+  statCardRow: {
+    flex: 1,
     flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 12,
+    alignItems: "center",
   },
-  iconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
-    backgroundColor: "#FE8C0022",
+  iconCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: "center",
     justifyContent: "center",
+    marginLeft: 8,
   },
   statCardTitle: {
-    fontSize: 12,
+    fontSize: 11,
     fontFamily: "Quicksand-Medium",
     color: "#878787",
     textTransform: "uppercase",
     letterSpacing: 0.5,
   },
-  statCardContent: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginTop: 12,
-  },
   statCardValue: {
-    fontSize: 20,
-    fontWeight: "600",
+    fontSize: 22,
+    fontWeight: "700",
     fontFamily: "Quicksand-Bold",
     color: "#181C2E",
-    minWidth: 80,
-  },
-  badge: {
-    backgroundColor: "#FE8C00",
-    borderRadius: 20,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-  },
-  badgeText: {
-    fontSize: 11,
-    fontFamily: "Quicksand-Bold",
-    color: "#FFFFFF",
+    marginTop: 4,
   },
 
   // Alerts
   alertsContainer: {
     flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 24,
-    flexWrap: "wrap",
+    gap: 12,
+    marginTop: 4,
   },
   alertBadge: {
     backgroundColor: "#FEF3C7",
@@ -464,6 +390,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
+    flex: 1,
     borderWidth: 1,
     borderColor: "#FDE68A",
   },
@@ -478,13 +405,10 @@ const styles = StyleSheet.create({
     fontFamily: "Quicksand-Bold",
     color: "#92400E",
   },
-  alertDivider: {
-    width: 16,
-  },
 
   // Branch Comparison
   section: {
-    marginBottom: 24,
+    marginTop: 4,
   },
   sectionTitle: {
     fontSize: 18,
@@ -495,7 +419,7 @@ const styles = StyleSheet.create({
   },
   branchSection: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 16,
+    borderRadius: 20,
     padding: 20,
     shadowColor: "#181C2E",
     shadowOffset: { width: 0, height: 4 },
@@ -530,9 +454,6 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     overflow: "hidden",
   },
-  branchProgressTrackActive: {
-    backgroundColor: "#E5E7EB",
-  },
   branchProgressFill: {
     height: "100%",
     backgroundColor: "#FE8C00",
@@ -549,7 +470,7 @@ const styles = StyleSheet.create({
   // Summary Card
   summaryCard: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 16,
+    borderRadius: 20,
     padding: 20,
     flexDirection: "row",
     alignItems: "center",
@@ -597,50 +518,20 @@ const styles = StyleSheet.create({
 
   // Skeleton
   skeletonIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: "#E5E7EB",
     overflow: "hidden",
   },
   skeletonLine: {
-    flex: 1,
     height: 12,
     backgroundColor: "#E5E7EB",
     borderRadius: 6,
   },
-  skeletonValue: {
-    width: 60,
-    height: 24,
-    backgroundColor: "#E5E7EB",
-    borderRadius: 6,
-  },
-  skeletonBadge: {
-    width: 36,
-    height: 18,
-    backgroundColor: "#E5E7EB",
-    borderRadius: 9,
-  },
-  skeletonAlert: {
-    backgroundColor: "#F3F4F6",
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginRight: 16,
-    marginBottom: 8,
-  },
-  skeletonAlertIcon: {
-    width: 18,
-    height: 18,
-    backgroundColor: "#E5E7EB",
-    borderRadius: 4,
-  },
-  skeletonAlertText: {
-    width: 120,
-    height: 14,
+  skeletonLineShort: {
+    height: 10,
+    width: 80,
     backgroundColor: "#E5E7EB",
     borderRadius: 6,
   },
