@@ -1399,6 +1399,73 @@ export const toggleStaffActive = async (
 };
 
 // ===========================================
+// Create Staff Member (Admin)
+// ===========================================
+
+export type CreateStaffInput = {
+  full_name: string;
+  phone: string;
+  role: StaffRole;
+  password: string;
+};
+
+export const createStaff = async (
+  input: CreateStaffInput
+): Promise<StaffMember | null> => {
+  try {
+    // 1. Create auth user via Supabase Auth
+    const { data: authData, error: authError } = await supabase.auth.signUp({
+      email: `${input.phone}@staff.local`,
+      password: input.password,
+      options: {
+        data: {
+          full_name: input.full_name,
+          phone: input.phone,
+          role: input.role,
+        },
+      },
+    });
+
+    if (authError) {
+      console.error("Supabase Auth Signup Error:", authError.message, authError);
+      return null;
+    }
+
+    const userId = authData.user?.id;
+    if (!userId) {
+      console.error("Supabase Auth Signup: no user returned");
+      return null;
+    }
+
+    // 2. Insert/update profile row
+    const { data: profileData, error: profileError } = await supabase
+      .from("profiles")
+      .upsert(
+        {
+          id: userId,
+          full_name: input.full_name,
+          phone: input.phone,
+          role: input.role,
+          is_active: true,
+        },
+        { onConflict: "id" }
+      )
+      .select("id, full_name, email, phone, role, is_active, created_at")
+      .single();
+
+    if (profileError) {
+      console.error("Supabase Create Staff Profile Error:", profileError.message, profileError);
+      return null;
+    }
+
+    return (profileData ?? null) as StaffMember | null;
+  } catch (err: any) {
+    console.error("Supabase Create Staff Exception:", err?.message ?? err);
+    return null;
+  }
+};
+
+// ===========================================
 // Advanced Analytics
 // ===========================================
 

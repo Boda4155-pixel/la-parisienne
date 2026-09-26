@@ -9,6 +9,8 @@ import {
   Pressable,
   FlatList,
   ActivityIndicator,
+  Modal,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
@@ -21,6 +23,9 @@ import {
   Clock,
   TrendingUp,
   ChevronRight,
+  Mail,
+  Lock,
+  User,
 } from "lucide-react-native";
 
 import { useSupabaseQuery } from "../../../hooks/useSupabaseQuery";
@@ -30,6 +35,7 @@ import {
   toggleStaffActive,
   type StaffMember,
   type StaffRole,
+  createStaff,
 } from "../../../lib/adminQueries";
 import AdminMoreTrigger from "../../../components/admin/AdminMoreTrigger";
 
@@ -87,6 +93,13 @@ export default function StaffScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [actionType, setActionType] = useState<"role" | "toggle" | null>(null);
+  // Add Staff Modal state
+  const [addStaffModalVisible, setAddStaffModalVisible] = useState(false);
+  const [newStaffName, setNewStaffName] = useState("");
+  const [newStaffPhone, setNewStaffPhone] = useState("");
+  const [newStaffRole, setNewStaffRole] = useState<StaffRole>("cashier");
+  const [newStaffPassword, setNewStaffPassword] = useState("");
+  const [addingStaff, setAddingStaff] = useState(false);
 
   const isRTL = i18n.dir() === "rtl";
 
@@ -126,6 +139,55 @@ export default function StaffScreen() {
     if (success) await refetch();
     setUpdatingId(null);
     setActionType(null);
+  };
+
+  // Handle Add Staff
+  const handleAddStaff = async () => {
+    if (!newStaffName.trim()) {
+      Alert.alert(
+        isRTL ? "خطأ" : "Error",
+        isRTL ? "يرجى إدخال اسم الموظف" : "Please enter the staff member's name"
+      );
+      return;
+    }
+    if (!newStaffPhone.trim()) {
+      Alert.alert(
+        isRTL ? "خطأ" : "Error",
+        isRTL ? "يرجى إدخال رقم الهاتف" : "Please enter the staff member's phone"
+      );
+      return;
+    }
+
+    setAddingStaff(true);
+    const result = await createStaff({
+      full_name: newStaffName.trim(),
+      phone: newStaffPhone.trim(),
+      role: newStaffRole,
+      password: newStaffPassword,
+    });
+
+    if (result) {
+      Alert.alert(
+        isRTL ? "نجاح" : "Success",
+        isRTL
+          ? `تم إرسافة ${result.full_name ?? newStaffName} بنجاح`
+          : `${result.full_name ?? newStaffName} has been added successfully`
+      );
+      setAddStaffModalVisible(false);
+      // Reset form
+      setNewStaffName("");
+      setNewStaffPhone("");
+      setNewStaffPassword("");
+      setNewStaffRole("cashier");
+      await refetch();
+    } else {
+      Alert.alert(
+        isRTL ? "خطأ" : "Error",
+        isRTL ? "فشل إضافة الموظف" : "Failed to add staff member"
+      );
+    }
+
+    setAddingStaff(false);
   };
 
   // Render individual staff item
@@ -258,10 +320,7 @@ export default function StaffScreen() {
           <View style={styles.headerActions}>
             <Pressable
               style={styles.addButton}
-              onPress={() => {
-                // TODO: Implement add staff modal/form
-                alert("Add Staff functionality coming soon");
-              }}
+              onPress={() => setAddStaffModalVisible(true)}
             >
               <Plus size={20} color="#FFFFFF" />
               <Text style={styles.addButtonText}>Add New Staff</Text>
@@ -346,6 +405,141 @@ export default function StaffScreen() {
           />
         )}
       </ScrollView>
+
+      {/* Add Staff Modal */}
+      <Modal
+        visible={addStaffModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setAddStaffModalVisible(false)}
+      >
+        <Pressable
+          style={styles.modalOverlay}
+          onPress={() => setAddStaffModalVisible(false)}
+        />
+        <View style={styles.modalContent}>
+          <Text style={styles.modalTitle}>
+            {isRTL ? "إضافة موظف جديد" : "Add New Staff"}
+          </Text>
+
+          {/* Name Field */}
+          <View style={styles.modalField}>
+            <Text style={styles.modalLabel}>
+              {isRTL ? "الاسم الكامل" : "Full Name"}
+            </Text>
+            <View style={styles.modalInputContainer}>
+              <User size={20} color="#878787" />
+              <TextInput
+                style={styles.modalInput}
+                value={newStaffName}
+                onChangeText={setNewStaffName}
+                placeholder={isRTL ? "أدخل الاسم الكامل" : "Enter full name"}
+                placeholderTextColor="#878787"
+              />
+            </View>
+          </View>
+
+          {/* Phone Field */}
+          <View style={styles.modalField}>
+            <Text style={styles.modalLabel}>
+              {isRTL ? "رقم الهاتف" : "Phone Number"}
+            </Text>
+            <View style={styles.modalInputContainer}>
+              <Mail size={20} color="#878787" />
+              <TextInput
+                style={styles.modalInput}
+                value={newStaffPhone}
+                onChangeText={setNewStaffPhone}
+                placeholder={isRTL ? "أدخل رقم الهاتف" : "Enter phone number"}
+                placeholderTextColor="#878787"
+                keyboardType="phone-pad"
+              />
+            </View>
+          </View>
+
+          {/* Role Dropdown */}
+          <View style={styles.modalField}>
+            <Text style={styles.modalLabel}>
+              {isRTL ? "الدور" : "Role"}
+            </Text>
+            <View style={styles.modalSelect}>
+              {["cashier", "supervisor", "admin", "delivery"].map((role) => {
+                const roleKey = role as StaffRole;
+                return (
+                  <Pressable
+                    key={roleKey}
+                    style={[
+                      styles.modalSelectOption,
+                      newStaffRole === roleKey && styles.modalSelectOptionSelected,
+                    ]}
+                    onPress={() => setNewStaffRole(roleKey)}
+                  >
+                    <Text
+                      style={[
+                        styles.modalSelectOptionText,
+                        newStaffRole === roleKey && styles.modalSelectOptionTextSelected,
+                      ]}
+                    >
+                      {ROLE_CONFIG[roleKey].label[isRTL ? "ar" : "en"]}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+
+          {/* Password Field */}
+          <View style={styles.modalField}>
+            <Text style={styles.modalLabel}>
+              {isRTL ? "كلمة المرور" : "Password"}
+            </Text>
+            <View style={styles.modalInputContainer}>
+              <Lock size={20} color="#878787" />
+              <TextInput
+                style={styles.modalInput}
+                value={newStaffPassword}
+                onChangeText={setNewStaffPassword}
+                placeholder={isRTL ? "أدخل كلمة المرور" : "Enter password"}
+                placeholderTextColor="#878787"
+                secureTextEntry
+              />
+            </View>
+          </View>
+
+          <View style={styles.modalButtons}>
+            <Pressable
+              style={styles.modalCancelButton}
+              onPress={() => {
+                setAddStaffModalVisible(false);
+                setNewStaffName("");
+                setNewStaffPhone("");
+                setNewStaffPassword("");
+                setNewStaffRole("cashier");
+              }}
+            >
+              <Text style={styles.modalCancelText}>
+                {isRTL ? "إلغاء" : "Cancel"}
+              </Text>
+            </Pressable>
+            <Pressable
+              style={[
+                styles.modalConfirmButton,
+                addingStaff && styles.modalConfirmButtonLoading,
+              ]}
+              onPress={handleAddStaff}
+              disabled={addingStaff}
+            >
+              {addingStaff ? (
+                <ActivityIndicator size={16} color="#FFFFFF" />
+              ) : (
+                <Text style={styles.modalConfirmText}>
+                  {isRTL ? "إضافة" : "Add Staff"}
+                </Text>
+              )}
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -666,5 +860,128 @@ const styles = StyleSheet.create({
   // Staff List
   staffList: {
     gap: 12,
+  },
+
+  // Add Staff Modal
+  modalOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "#00000066",
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 1000,
+  },
+  modalContent: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    padding: 24,
+    marginHorizontal: 16,
+    width: "100%",
+    maxWidth: 400,
+    shadowColor: "#181C2E",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    fontFamily: "Quicksand-Bold",
+    color: "#181C2E",
+    marginBottom: 20,
+    textAlign: "center",
+  },
+  modalField: {
+    marginBottom: 16,
+  },
+  modalLabel: {
+    fontSize: 14,
+    fontWeight: "600",
+    fontFamily: "Quicksand-Medium",
+    color: "#181C2E",
+    marginBottom: 8,
+  },
+  modalInputContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+  },
+  modalInput: {
+    flex: 1,
+    marginLeft: 12,
+    fontSize: 16,
+    fontFamily: "Quicksand-Regular",
+    color: "#181C2E",
+  },
+  modalSelect: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  modalSelectOption: {
+    backgroundColor: "#F3F4F6",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+  },
+  modalSelectOptionSelected: {
+    backgroundColor: "#C09248",
+    borderColor: "#C09248",
+  },
+  modalSelectOptionText: {
+    fontSize: 12,
+    fontFamily: "Quicksand-Medium",
+    color: "#878787",
+  },
+  modalSelectOptionTextSelected: {
+    color: "#FFFFFF",
+    fontWeight: "600",
+  },
+  modalButtons: {
+    flexDirection: "row",
+    gap: 12,
+    marginTop: 8,
+  },
+  modalCancelButton: {
+    flex: 1,
+    backgroundColor: "#F3F4F6",
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  modalCancelText: {
+    fontSize: 14,
+    fontFamily: "Quicksand-Medium",
+    color: "#181C2E",
+    fontWeight: "600",
+  },
+  modalConfirmButton: {
+    flex: 1,
+    backgroundColor: "#C09248",
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  modalConfirmButtonLoading: {
+    opacity: 0.9,
+  },
+  modalConfirmText: {
+    fontSize: 14,
+    fontFamily: "Quicksand-Bold",
+    color: "#FFFFFF",
+    fontWeight: "600",
   },
 });
