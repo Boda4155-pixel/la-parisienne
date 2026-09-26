@@ -10,7 +10,7 @@ import {
   I18nManager,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams, router } from "expo-router";
 import { useTranslation } from "react-i18next";
 import {
   TrendingUp,
@@ -72,7 +72,17 @@ export default function RevenueScreen() {
       >
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => {}} style={styles.backButton}>
+          <TouchableOpacity
+            onPress={() => {
+              if (router.canGoBack()) {
+                router.back();
+              } else {
+                router.replace("/(admin)/dashboard");
+              }
+            }}
+            hitSlop={20}
+            style={styles.backButton}
+          >
             <ArrowLeft size={24} color="#181C2E" />
           </TouchableOpacity>
           <View style={{ flex: 1 }}>
@@ -155,7 +165,11 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   backButton: {
-    padding: 8,
+    width: 40,
+    height: 40,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 12,
   },
   title: {
     fontSize: 24,
