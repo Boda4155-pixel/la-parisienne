@@ -326,7 +326,10 @@
     "settings_signedOut": "تم تسجيل الخروج بنجاح",
     "settings_failedToSignOut": "فشل تسجيل الخروج",
     "settings_comingSoon": "قريباً",
-    "settings_enabled": "مفعّل"
+    "settings_enabled": "مفعّل",
+    "settings_todaySales": "مبيعات اليوم",
+    "settings_totalOrders": "إجمالي الطلبات",
+    "settings_avgTicket": "متوسط السلة"
   },
   "home": {
     "deliverTo": "التوصيل إلى",

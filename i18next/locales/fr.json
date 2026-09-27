@@ -320,8 +320,14 @@
     "settings_signOut": "Déconnexion",
     "settings_signedOut": "Déconnecté avec succès",
     "settings_failedToSignOut": "Échec de la déconnexion",
-    "settings_comingSoon": "Bientôt",
-    "settings_enabled": "Activé"
+    "shoppingCart": "Salle des achats",
+    "confirmPayment": "Confirmer le paiement",
+    "browseProducts": "Parcourir les produits pour commencer",
+    "addProductsFirst": "Ajoutez des produits au panier d'abord",
+    "quickAdd": "+",
+    "settings_todaySales": "Ventes d'aujourd'hui",
+    "settings_totalOrders": "Total des commandes",
+    "settings_avgTicket": "Panier moyen"
   },
   "home": {
     "deliverTo": "LIVRER À",

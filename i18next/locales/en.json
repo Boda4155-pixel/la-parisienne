@@ -326,7 +326,10 @@
     "settings_signedOut": "Signed out successfully",
     "settings_failedToSignOut": "Failed to sign out",
     "settings_comingSoon": "Coming soon",
-    "settings_enabled": "Enabled"
+    "settings_enabled": "Enabled",
+    "settings_todaySales": "Today's Sales",
+    "settings_totalOrders": "Total Orders",
+    "settings_avgTicket": "Average Ticket"
   },
   "home": {
     "deliverTo": "DELIVER TO",
