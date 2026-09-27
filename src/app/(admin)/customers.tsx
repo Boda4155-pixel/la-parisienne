@@ -50,7 +50,7 @@ export default function Customers() {
   const renderItem = ({ item }: { item: AdminCustomer }) => (
     <Pressable
       style={styles.row}
-      onPress={() => router.push(`/customers/${item.id}` as any)}
+      onPress={() => router.push(`/(admin)/customers/${item.id}` as any)}
     >
       <View style={styles.rowContent}>
         <Text style={styles.customerName} numberOfLines={1}>

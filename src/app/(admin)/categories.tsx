@@ -52,7 +52,7 @@ export default function Categories() {
   const renderItem = ({ item }: { item: AdminCategory }) => (
     <Pressable
       style={styles.row}
-      onPress={() => router.push(`/categories/${item.id}` as any)}
+      onPress={() => router.push(`/(admin)/categories/${item.id}` as any)}
     >
       <View style={styles.rowContent}>
         <Text style={styles.categoryName} numberOfLines={1}>{item.name}</Text>
@@ -74,7 +74,7 @@ export default function Categories() {
       <View style={styles.actions}>
         <Pressable
           style={styles.iconButton}
-          onPress={() => router.push(`/categories/${item.id}` as any)}
+          onPress={() => router.push(`/(admin)/categories/${item.id}` as any)}
         >
           <Pencil size={16} color="#FE8C00" />
         </Pressable>
@@ -97,7 +97,7 @@ export default function Categories() {
         </View>
         <View style={styles.headerActions}>
           <AdminMoreTrigger />
-          <Pressable style={styles.addButton} onPress={() => router.push("/categories/new" as any)}>
+          <Pressable style={styles.addButton} onPress={() => router.push("/(admin)/categories/new" as any)}>
             <Plus size={18} color="#FFFFFF" />
             <Text style={styles.addButtonText}>{t("admin.categories.add")}</Text>
           </Pressable>

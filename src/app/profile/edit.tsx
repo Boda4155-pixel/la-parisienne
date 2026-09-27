@@ -30,11 +30,16 @@ export default function EditProfile() {
     setSubmitting(true);
 
     try {
-      await updateProfile({
+      const result = await updateProfile({
         userId: user.id,
         fullName: fullName.trim(),
         phone: phone.trim(),
       });
+
+      if (!result.success) {
+        Alert.alert(t("common.somethingWentWrong"), result.error?.message);
+        return;
+      }
 
       await loadProfile(user.id);
 

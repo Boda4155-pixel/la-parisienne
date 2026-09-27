@@ -15,6 +15,7 @@ import { LogOut, Mail, Calendar, Shield } from "lucide-react-native";
 
 import { useAuthStore } from "../../../store/auth.store";
 import { changeAppLanguage } from "../../../i18next/i18next";
+import { router } from "expo-router";
 import AdminMoreTrigger from "../../../components/admin/AdminMoreTrigger";
 
 type LanguageOption = {
@@ -72,7 +73,7 @@ export default function AccountScreen() {
         t("common.success") || "Success",
         t("admin.account.logoutSuccess") || "Logged out successfully"
       );
-      // Navigate to sign-in - router import would be needed
+      router.replace("/sign-in");
     } catch (err: any) {
       console.error("Logout error:", err);
       Alert.alert(t("common.error"), err?.message || t("common.somethingWentWrong"));

@@ -461,6 +461,12 @@
       "percentage": "Pourcentage (%)",
       "fixed": "Montant fixe"
     },
+    "orders": {
+      "accepted": "Commande acceptée avec succès",
+      "rejected": "Commande rejetée avec succès",
+      "acceptFailed": "Échec de l'acceptation de la commande",
+      "rejectFailed": "Échec du rejet de la commande"
+    },
     "nav": {
       "dashboard": "Tableau de bord",
       "orders": "Commandes",

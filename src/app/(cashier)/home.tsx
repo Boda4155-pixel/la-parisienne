@@ -28,12 +28,14 @@ export default function CashierHome() {
     async function fetchStats() {
       setLoading(true);
       try {
-        const todayOrders = await getTodayOrders();
-        const totalOrders = todayOrders.length;
-        const completed = todayOrders.filter((o) => o.status === "completed").length;
-        const pending = todayOrders.filter((o) => o.status === "pending").length;
-        const cancelled = todayOrders.filter((o) => o.status === "cancelled").length;
-        const totalSales = todayOrders.reduce((sum, o) => sum + (o.total ?? 0), 0);
+        const { data: todayOrders, error } = await getTodayOrders();
+        if (error) throw error;
+        const orders = todayOrders ?? [];
+        const totalOrders = orders.length;
+        const completed = orders.filter((o) => o.status === "completed").length;
+        const pending = orders.filter((o) => o.status === "pending").length;
+        const cancelled = orders.filter((o) => o.status === "cancelled").length;
+        const totalSales = orders.reduce((sum, o) => sum + (o.total ?? 0), 0);
 
         setStats({
           totalOrders,

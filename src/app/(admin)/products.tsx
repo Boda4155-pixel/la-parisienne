@@ -61,7 +61,7 @@ export default function Products() {
   const renderItem = ({ item }: { item: AdminProduct }) => (
     <Pressable
       style={styles.row}
-      onPress={() => router.push(`/products/${item.id}` as any)}
+      onPress={() => router.push(`/(admin)/products/${item.id}` as any)}
     >
       <View style={styles.rowContent}>
         <Text style={styles.productName} numberOfLines={1}>{item.name}</Text>
@@ -83,7 +83,7 @@ export default function Products() {
       <View style={styles.actions}>
         <Pressable
           style={styles.iconButton}
-          onPress={() => router.push(`/products/${item.id}` as any)}
+          onPress={() => router.push(`/(admin)/products/${item.id}` as any)}
         >
           <Pencil size={16} color="#FE8C00" />
         </Pressable>
@@ -106,7 +106,7 @@ export default function Products() {
         </View>
         <View style={styles.headerActions}>
           <AdminMoreTrigger />
-          <Pressable style={styles.addButton} onPress={() => router.push("/products/new" as any)}>
+          <Pressable style={styles.addButton} onPress={() => router.push("/(admin)/products/new" as any)}>
             <Plus size={18} color="#FFFFFF" />
             <Text style={styles.addButtonText}>{t("admin.products.add")}</Text>
           </Pressable>

@@ -51,7 +51,7 @@ export default function Coupons() {
   const renderItem = ({ item }: { item: AdminCoupon }) => (
     <Pressable
       style={styles.row}
-      onPress={() => router.push(`/coupons/${item.id}` as any)}
+      onPress={() => router.push(`/(admin)/coupons/${item.id}` as any)}
     >
       <View style={styles.rowContent}>
         <View style={styles.codeRow}>
@@ -77,7 +77,7 @@ export default function Coupons() {
       <View style={styles.actions}>
         <Pressable
           style={styles.iconButton}
-          onPress={() => router.push(`/coupons/${item.id}` as any)}
+          onPress={() => router.push(`/(admin)/coupons/${item.id}` as any)}
         >
           <Pencil size={16} color="#FE8C00" />
         </Pressable>
@@ -100,7 +100,7 @@ export default function Coupons() {
         </View>
         <View style={styles.headerActions}>
           <AdminMoreTrigger />
-          <Pressable style={styles.addButton} onPress={() => router.push("/coupons/new" as any)}>
+          <Pressable style={styles.addButton} onPress={() => router.push("/(admin)/coupons/new" as any)}>
             <Plus size={18} color="#FFFFFF" />
             <Text style={styles.addButtonText}>{t("admin.coupons.add")}</Text>
           </Pressable>

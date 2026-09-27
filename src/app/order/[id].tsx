@@ -54,6 +54,14 @@ export default function OrderDetails() {
 
   const { order, items } = data;
 
+  if (!order) {
+    return (
+      <SafeAreaView className="flex-1 bg-white items-center justify-center">
+        <Text className="paragraph-regular text-gray-100">Order not found</Text>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView className="flex-1 bg-white">
       <View className="flex-row items-center justify-between px-5 py-3">

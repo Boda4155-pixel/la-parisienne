@@ -1,6 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { getLocales } from "expo-localization";
-import * as Updates from "expo-updates";
 import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
 import { I18nManager } from "react-native";
@@ -71,28 +70,10 @@ const initI18n = async () => {
 initI18n();
 
 export const changeAppLanguage = async (lang: string) => {
-  const wasRtl = I18nManager.isRTL;
   await AsyncStorage.setItem("user-language", lang);
   await i18n.changeLanguage(lang);
 
   const isRtl = applyRtl(lang);
-
-  // I18nManager direction change only takes effect after a reload
-  if (wasRtl !== isRtl) {
-    try {
-      await Updates.reloadAsync();
-    } catch (e) {
-      // Updates.reloadAsync isn't available in dev/Expo Go — fall back silently
-      console.warn("RTL direction changed; please restart the app manually.");
-    }
-  } else {
-    try {
-      await Updates.reloadAsync();
-    } catch (e) {
-      // Updates.reloadAsync isn't available in dev/Expo Go — fall back silently
-      console.warn("LTR direction changed; please restart the app manually.");
-    }
-  }
 };
 
 export default i18n;

@@ -19,8 +19,10 @@ import {
   XCircle,
 } from "lucide-react-native";
 import { router } from "expo-router";
+import { useAuthStore } from "../../../store/auth.store";
 import { supabase } from "../../../lib/supabase";
-import { toggleProductActive } from "../../../lib/queries";
+import { supabaseAdmin } from "../../../lib/supabaseAdmin";
+import { createOrder, toggleProductActive } from "../../../lib/queries";
 
 type Product = {
   id: string;
@@ -36,6 +38,8 @@ type CartItem = Product & { quantity: number };
 type PaymentMethod = "cash" | "card";
 
 export default function CashierPos() {
+  const user = useAuthStore((state) => state.user);
+  const profile = useAuthStore((state) => state.profile);
   const [products, setProducts] = useState<Product[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [search, setSearch] = useState("");
@@ -115,12 +119,16 @@ export default function CashierPos() {
     const newActiveState = !product.is_active;
     setTogglingId(product.id);
     try {
-      await toggleProductActive(product.id, newActiveState);
-      setProducts((prev) =>
-        prev.map((p) =>
-          p.id === product.id ? { ...p, is_active: newActiveState } : p,
-        ),
-      );
+      const result = await toggleProductActive(product.id, newActiveState);
+      if (result.success) {
+        setProducts((prev) =>
+          prev.map((p) =>
+            p.id === product.id ? { ...p, is_active: newActiveState } : p,
+          ),
+        );
+      } else {
+        Alert.alert("Error", result.error?.message ?? "Failed to update product");
+      }
     } catch (error: any) {
       Alert.alert("Error", error.message ?? "Failed to update product");
     } finally {
@@ -131,31 +139,43 @@ export default function CashierPos() {
   // Handle checkout: insert order, then navigate to receipt
   const handleCheckout = async () => {
     if (cart.length === 0) {
-      Alert.alert("العربة فارغة", "الرجاء إضافة منتجات إلى العربة أولاً");
+      Alert.alert("العربة فارغة", "الرجاء إضافة منتجات إلى العربة firstly");
       return;
     }
 
     try {
-      const { data, error } = await supabase
-        .from("orders")
-        .insert({
-          items: cart,
-          total: subtotal,
-          status: "completed",
-          payment_method: payment,
-          created_at: new Date().toISOString(),
-        })
-        .select("id")
-        .single();
+      const result = await createOrder({
+        userId: user?.id ?? "",
+        addressId: profile?.id || "",
+        paymentMethod: payment,
+        subtotal,
+        deliveryFee: 0,
+        discountAmount: 0,
+        couponCode: undefined,
+        couponId: undefined,
+        total: subtotal,
+        customerNote: undefined,
+        items: cart.map((item) => ({
+          productId: item.id,
+          productName: item.name,
+          unitPrice: item.price,
+          quantity: item.quantity,
+        })),
+      });
 
-      if (error) {
-        Alert.alert("Error", error.message);
+      if (!result.success) {
+        Alert.alert("Error", result.error?.message ?? "Failed to create order");
+        return;
+      }
+
+      if (!result.data || !result.data.order) {
+        Alert.alert("Error", "Invalid order result");
         return;
       }
 
       setCart([]);
       router.push(
-        `/(cashier)/receipt?orderId=${data.id}&items=${encodeURIComponent(JSON.stringify(cart))}&total=${subtotal}&payment=${payment}&subtotal=${subtotal}&itemCount=${cart.reduce((sum, item) => sum + item.quantity, 0)}` as any,
+        `/(cashier)/receipt?orderId=${result.data.order.id}&items=${encodeURIComponent(JSON.stringify(cart))}&total=${subtotal}&payment=${payment}&subtotal=${subtotal}&itemCount=${cart.reduce((sum, item) => sum + item.quantity, 0)}` as any,
       );
     } catch (err: any) {
       Alert.alert("Error", err.message ?? "حدث خطأ غير متوقع");

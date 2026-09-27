@@ -20,7 +20,7 @@ const MenuCard = ({ item }: { item: Product }) => {
     if (!user) return;
 
     isProductFavorite({ userId: user.id, productId: item.id })
-      .then(setIsFavorite)
+      .then((result) => setIsFavorite(result.data ?? false))
       .catch(() => {});
   }, [user, item.id]);
 

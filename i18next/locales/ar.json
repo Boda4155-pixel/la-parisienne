@@ -466,6 +466,12 @@
       "percentage": "النسبة المئوية (%)",
       "fixed": "مبلغ ثابت"
     },
+    "orders": {
+      "accepted": "تم قبول الطلب بنجاح",
+      "rejected": "تم رفض الطلب بنجاح",
+      "acceptFailed": "فشل في قبول الطلب",
+      "rejectFailed": "فشل في رفض الطلب"
+    },
     "nav": {
       "dashboard": "لوحة التحكم",
       "orders": "الطلبات",

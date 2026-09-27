@@ -1,4 +1,4 @@
-import { supabase } from "./supabase";
+import { supabase, supabaseAdmin } from "./supabaseAdmin";
 
 // ===========================================
 // Dashboard Stats
@@ -14,55 +14,60 @@ export type DashboardStats = {
 };
 
 export const getDashboardStats = async (): Promise<DashboardStats> => {
-  const [ordersResult, productsResult, usersResult] = await Promise.all([
-    supabase
+  try {
+    const [ordersResult, productsResult, usersResult] = await Promise.all([
+      supabase
+        .from("orders")
+        .select("total, status", { count: "exact", head: true })
+        .eq("status", "delivered")
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("products")
+        .select("id", { count: "exact", head: true })
+        .lt("stock_quantity", 10),
+      supabaseAdmin
+        .from("profiles")
+        .select("id", { count: "exact", head: true })
+        .eq("role", "customer"),
+    ]);
+
+    const deliveredOrders = ordersResult.data ?? [];
+    const lowStockCount = productsResult.count ?? 0;
+    const totalCustomers = usersResult.count ?? 0;
+
+    // Get total revenue from all delivered orders
+    const { data: revenueData } = await supabase
       .from("orders")
-      .select("total, status", { count: "exact", head: true })
-      .eq("status", "delivered")
-      .order("created_at", { ascending: false }),
-    supabase
-      .from("products")
+      .select("total")
+      .eq("status", "delivered");
+
+    const totalRevenue = revenueData?.reduce((sum, o) => sum + (o.total ?? 0), 0) ?? 0;
+
+    // Get total orders count
+    const { count: totalOrdersCount } = await supabase
+      .from("orders")
+      .select("id", { count: "exact", head: true });
+
+    // Get pending orders count
+    const { count: pendingOrdersCount } = await supabase
+      .from("orders")
       .select("id", { count: "exact", head: true })
-      .lt("stock_quantity", 10),
-    supabase
-      .from("profiles")
-      .select("id", { count: "exact", head: true })
-      .eq("role", "customer"),
-  ]);
+      .eq("status", "pending");
 
-  const deliveredOrders = ordersResult.data ?? [];
-  const lowStockCount = productsResult.count ?? 0;
-  const totalCustomers = usersResult.count ?? 0;
-
-  // Get total revenue from all delivered orders
-  const { data: revenueData } = await supabase
-    .from("orders")
-    .select("total")
-    .eq("status", "delivered");
-
-  const totalRevenue = revenueData?.reduce((sum, o) => sum + (o.total ?? 0), 0) ?? 0;
-
-  // Get total orders count
-  const { count: totalOrdersCount } = await supabase
-    .from("orders")
-    .select("id", { count: "exact", head: true });
-
-  // Get pending orders count
-  const { count: pendingOrdersCount } = await supabase
-    .from("orders")
-    .select("id", { count: "exact", head: true })
-    .eq("status", "pending");
-
-  return {
-    totalRevenue,
-    totalOrders: totalOrdersCount ?? 0,
-    totalCustomers,
-    averageOrderValue: totalRevenue > 0 && deliveredOrders.length > 0
-      ? totalRevenue / deliveredOrders.length
-      : 0,
-    pendingOrders: pendingOrdersCount ?? 0,
-    lowStockCount,
-  };
+    return {
+      totalRevenue,
+      totalOrders: totalOrdersCount ?? 0,
+      totalCustomers,
+      averageOrderValue: totalRevenue > 0 && deliveredOrders.length > 0
+        ? totalRevenue / deliveredOrders.length
+        : 0,
+      pendingOrders: pendingOrdersCount ?? 0,
+      lowStockCount,
+    };
+  } catch (e: any) {
+    console.error('getDashboardStats error:', e.message);
+    return { totalRevenue: 0, totalOrders: 0, totalCustomers: 0, averageOrderValue: 0, pendingOrders: 0, lowStockCount: 0 };
+  }
 };
 
 // ===========================================
@@ -75,29 +80,31 @@ export type SalesByDate = {
 };
 
 export const getSalesByDate = async (): Promise<SalesByDate[]> => {
-  const thirtyDaysAgo = new Date();
-  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  try {
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-  const { data, error } = await supabase
-    .from("orders")
-    .select("created_at, total")
-    .gte("created_at", thirtyDaysAgo.toISOString())
-    .eq("status", "delivered")
-    .order("created_at", { ascending: true });
+    const { data, error } = await supabase
+      .from("orders")
+      .select("created_at, total")
+      .gte("created_at", thirtyDaysAgo.toISOString())
+      .eq("status", "delivered")
+      .order("created_at", { ascending: true });
 
-  if (error) throw error;
+    if (error) { console.error('getSalesByDate error:', error.message); return []; }
 
-  // Group by date
-  const dateMap = new Map<string, number>();
-  data?.forEach((order) => {
-    const date = new Date(order.created_at).toISOString().split("T")[0];
-    const current = dateMap.get(date) ?? 0;
-    dateMap.set(date, current + (order.total ?? 0));
-  });
+    // Group by date
+    const dateMap = new Map<string, number>();
+    data?.forEach((order) => {
+      const date = new Date(order.created_at).toISOString().split("T")[0];
+      const current = dateMap.get(date) ?? 0;
+      dateMap.set(date, current + (order.total ?? 0));
+    });
 
-  return Array.from(dateMap.entries())
-    .map(([date, revenue]) => ({ date, revenue }))
-    .sort((a, b) => a.date.localeCompare(b.date));
+    return Array.from(dateMap.entries())
+      .map(([date, revenue]) => ({ date, revenue }))
+      .sort((a, b) => a.date.localeCompare(b.date));
+  } catch (e: any) { console.error('getSalesByDate exception:', e.message); return []; }
 };
 
 // ===========================================
@@ -110,23 +117,25 @@ export type OrderStatusCount = {
 };
 
 export const getOrdersByStatus = async (): Promise<OrderStatusCount[]> => {
-  const { data, error } = await supabase
-    .from("orders")
-    .select("status")
-    .order("status");
+  try {
+    const { data, error } = await supabase
+      .from("orders")
+      .select("status")
+      .order("status");
 
-  if (error) throw error;
+    if (error) { console.error('getOrdersByStatus error:', error.message); return []; }
 
-  const statusMap = new Map<string, number>();
-  data?.forEach((order) => {
-    const current = statusMap.get(order.status) ?? 0;
-    statusMap.set(order.status, current + 1);
-  });
+    const statusMap = new Map<string, number>();
+    data?.forEach((order) => {
+      const current = statusMap.get(order.status) ?? 0;
+      statusMap.set(order.status, current + 1);
+    });
 
-  return Array.from(statusMap.entries()).map(([status, count]) => ({
-    status,
-    count,
-  }));
+    return Array.from(statusMap.entries()).map(([status, count]) => ({
+      status,
+      count,
+    }));
+  } catch (e: any) { console.error('getOrdersByStatus exception:', e.message); return []; }
 };
 
 // ===========================================
@@ -140,28 +149,30 @@ export type PaymentMethodSales = {
 };
 
 export const getSalesByPaymentMethod = async (): Promise<PaymentMethodSales[]> => {
-  const { data, error } = await supabase
-    .from("orders")
-    .select("payment_method, total")
-    .eq("status", "delivered")
-    .order("payment_method");
+  try {
+    const { data, error } = await supabase
+      .from("orders")
+      .select("payment_method, total")
+      .eq("status", "delivered")
+      .order("payment_method");
 
-  if (error) throw error;
+    if (error) { console.error('getSalesByPaymentMethod error:', error.message); return []; }
 
-  const methodMap = new Map<string, { count: number; revenue: number }>();
-  data?.forEach((order) => {
-    const method = order.payment_method;
-    const current = methodMap.get(method) ?? { count: 0, revenue: 0 };
-    methodMap.set(method, {
-      count: current.count + 1,
-      revenue: current.revenue + (order.total ?? 0),
+    const methodMap = new Map<string, { count: number; revenue: number }>();
+    data?.forEach((order) => {
+      const method = order.payment_method;
+      const current = methodMap.get(method) ?? { count: 0, revenue: 0 };
+      methodMap.set(method, {
+        count: current.count + 1,
+        revenue: current.revenue + (order.total ?? 0),
+      });
     });
-  });
 
-  return Array.from(methodMap.entries()).map(([method, data]) => ({
-    method,
-    ...data,
-  }));
+    return Array.from(methodMap.entries()).map(([method, data]) => ({
+      method,
+      ...data,
+    }));
+  } catch (e: any) { console.error('getSalesByPaymentMethod exception:', e.message); return []; }
 };
 
 // ===========================================
@@ -176,29 +187,31 @@ export type TopProduct = {
 };
 
 export const getTopProducts = async (limit = 5): Promise<TopProduct[]> => {
-  const { data, error } = await supabase
-    .from("order_items")
-    .select("product_id, product_name, quantity, line_total")
-    .order("quantity", { ascending: false })
-    .limit(limit * 2);
+  try {
+    const { data, error } = await supabase
+      .from("order_items")
+      .select("product_id, product_name, quantity, line_total")
+      .order("quantity", { ascending: false })
+      .limit(limit * 2);
 
-  if (error) throw error;
+    if (error) { console.error('getTopProducts error:', error.message); return []; }
 
-  // Aggregate by product
-  const productMap = new Map<string, { name: string; units: number; revenue: number }>();
-  data?.forEach((item) => {
-    const current = productMap.get(item.product_id) ?? { name: "", units: 0, revenue: 0 };
-    productMap.set(item.product_id, {
-      name: item.product_name,
-      units: current.units + item.quantity,
-      revenue: current.revenue + (item.line_total ?? 0),
+    // Aggregate by product
+    const productMap = new Map<string, { name: string; units: number; revenue: number }>();
+    data?.forEach((item) => {
+      const current = productMap.get(item.product_id) ?? { name: "", units: 0, revenue: 0 };
+      productMap.set(item.product_id, {
+        name: item.product_name,
+        units: current.units + item.quantity,
+        revenue: current.revenue + (item.line_total ?? 0),
+      });
     });
-  });
 
-  return Array.from(productMap.entries())
-    .map(([id, info]) => ({ id, ...info, units_sold: info.units, revenue: info.revenue }))
-    .sort((a, b) => b.units_sold - a.units_sold)
-    .slice(0, limit);
+    return Array.from(productMap.entries())
+      .map(([id, info]) => ({ id, ...info, units_sold: info.units, revenue: info.revenue }))
+      .sort((a, b) => b.units_sold - a.units_sold)
+      .slice(0, limit);
+  } catch (e: any) { console.error('getTopProducts exception:', e.message); return []; }
 };
 
 // ===========================================
@@ -216,45 +229,47 @@ export type RecentOrder = {
 };
 
 export const getRecentOrders = async (limit = 10): Promise<RecentOrder[]> => {
-  const { data, error } = await supabase
-    .from("orders")
-    .select("id, status, payment_method, total, created_at, address_id")
-    .order("created_at", { ascending: false })
-    .limit(limit);
+  try {
+    const { data, error } = await supabase
+      .from("orders")
+      .select("id, status, payment_method, total, created_at, address_id")
+      .order("created_at", { ascending: false })
+      .limit(limit);
 
-  if (error) throw error;
+    if (error) { console.error('getRecentOrders error:', error.message); return []; }
 
-  // Join with profiles for customer info
-  const ordersWithCustomers = await Promise.all(
-    data.map(async (order) => {
-      const { data: address } = await supabase
-        .from("customer_addresses")
-        .select("user_id")
-        .eq("id", order.address_id)
-        .single();
-
-      let customerName: string | null = null;
-      let customerEmail: string | null = null;
-
-      if (address?.user_id) {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("full_name, email")
-          .eq("id", address.user_id)
+    // Join with profiles for customer info
+    const ordersWithCustomers = await Promise.all(
+      data.map(async (order) => {
+        const { data: address } = await supabase
+          .from("customer_addresses")
+          .select("user_id")
+          .eq("id", order.address_id)
           .single();
-        customerName = profile?.full_name ?? null;
-        customerEmail = profile?.email ?? null;
-      }
 
-      return {
-        ...order,
-        customer_name: customerName,
-        customer_email: customerEmail,
-      };
-    })
-  );
+        let customerName: string | null = null;
+        let customerEmail: string | null = null;
 
-  return ordersWithCustomers;
+        if (address?.user_id) {
+          const { data: profile } = await supabaseAdmin
+            .from("profiles")
+            .select("full_name, email")
+            .eq("id", address.user_id)
+            .single();
+          customerName = profile?.full_name ?? null;
+          customerEmail = profile?.email ?? null;
+        }
+
+        return {
+          ...order,
+          customer_name: customerName,
+          customer_email: customerEmail,
+        };
+      })
+    );
+
+    return ordersWithCustomers;
+  } catch (e: any) { console.error('getRecentOrders exception:', e.message); return []; }
 };
 
 // ===========================================
@@ -292,86 +307,88 @@ export const getAdminOrders = async (
   statusFilter: OrderStatusFilter = "all",
   search: string = ""
 ): Promise<AdminOrder[]> => {
-  let query = supabase
-    .from("orders")
-    .select("id, status, payment_method, subtotal, delivery_fee, discount_amount, coupon_code, total, customer_note, created_at, address_id, driver_id")
-    .order("created_at", { ascending: false })
-    .limit(100);
+  try {
+    let query = supabase
+      .from("orders")
+      .select("id, status, payment_method, subtotal, delivery_fee, discount_amount, coupon_code, total, customer_note, created_at, address_id, driver_id")
+      .order("created_at", { ascending: false })
+      .limit(100);
 
-  if (statusFilter !== "all") {
-    query = query.eq("status", statusFilter);
-  }
+    if (statusFilter !== "all") {
+      query = query.eq("status", statusFilter);
+    }
 
-  const { data, error } = await query;
+    const { data, error } = await query;
 
-  if (error) {
-    console.error("Supabase Admin Orders Error:", error.message, error);
-    return [];
-  }
+    if (error) {
+      console.error("Supabase Admin Orders Error:", error.message, error);
+      return [];
+    }
 
-  const orders = data ?? [];
+    const orders = data ?? [];
 
-  // Join customer + branch info per order (safe, best-effort)
-  const enriched = await Promise.all(
-    orders.map(async (order) => {
-      let customerName: string | null = null;
-      let customerEmail: string | null = null;
-      let branchName: string | null = null;
+    // Join customer + branch info per order (safe, best-effort)
+    const enriched = await Promise.all(
+      orders.map(async (order) => {
+        let customerName: string | null = null;
+        let customerEmail: string | null = null;
+        let branchName: string | null = null;
 
-      try {
-        const { data: address } = await supabase
-          .from("customer_addresses")
-          .select("user_id")
-          .eq("id", order.address_id)
-          .maybeSingle();
-
-        if (address?.user_id) {
-          const { data: profile } = await supabase
-            .from("profiles")
-            .select("full_name, email")
-            .eq("id", address.user_id)
+        try {
+          const { data: address } = await supabase
+            .from("customer_addresses")
+            .select("user_id")
+            .eq("id", order.address_id)
             .maybeSingle();
-          customerName = profile?.full_name ?? null;
-          customerEmail = profile?.email ?? null;
+
+          if (address?.user_id) {
+            const { data: profile } = await supabaseAdmin
+              .from("profiles")
+              .select("full_name, email")
+              .eq("id", address.user_id)
+              .maybeSingle();
+            customerName = profile?.full_name ?? null;
+            customerEmail = profile?.email ?? null;
+          }
+        } catch (err: any) {
+          console.error("Supabase Order Customer Join Exception:", err?.message ?? err);
         }
-      } catch (err: any) {
-        console.error("Supabase Order Customer Join Exception:", err?.message ?? err);
-      }
 
-      try {
-        const { data: driver } = await supabase
-          .from("profiles")
-          .select("full_name")
-          .eq("id", order.driver_id)
-          .maybeSingle();
-        if (driver?.full_name) {
-          branchName = driver.full_name;
+        try {
+          const { data: driver } = await supabaseAdmin
+            .from("profiles")
+            .select("full_name")
+            .eq("id", order.driver_id)
+            .maybeSingle();
+          if (driver?.full_name) {
+            branchName = driver.full_name;
+          }
+        } catch (err: any) {
+          console.error("Supabase Order Driver Join Exception:", err?.message ?? err);
         }
-      } catch (err: any) {
-        console.error("Supabase Order Driver Join Exception:", err?.message ?? err);
-      }
 
-      return {
-        ...order,
-        customer_name: customerName,
-        customer_email: customerEmail,
-        branch_name: branchName,
-      };
-    })
-  );
-
-  // Client-side search fallback (order ID or customer name)
-  if (search.trim()) {
-    const q = search.trim().toLowerCase();
-    return enriched.filter(
-      (o) =>
-        o.id.toLowerCase().includes(q) ||
-        (o.customer_name ?? "").toLowerCase().includes(q) ||
-        (o.customer_email ?? "").toLowerCase().includes(q)
+        return {
+          ...order,
+          customer_name: customerName,
+          customer_email: customerEmail,
+          branch_name: branchName,
+        };
+      })
     );
-  }
 
-  return enriched;
+    // Client-side search fallback (order ID or customer name)
+    if (search.trim()) {
+      const q = search.trim().toLowerCase();
+      return enriched.filter(
+        (o) =>
+          o.id.toLowerCase().includes(q) ||
+          (o.customer_name ?? "").toLowerCase().includes(q) ||
+          (o.customer_email ?? "").toLowerCase().includes(q)
+      );
+    }
+
+    return enriched;
+  } catch (e: any) { console.error('getAdminOrders exception:', e.message); return []; }
 };
 
 export const updateOrderStatus = async (
@@ -422,57 +439,77 @@ const CATEGORY_MAP: Record<CategoryFilter, string | null> = {
   other: null,
 };
 
-export const getProducts = async (
+export async function getProducts(
   search: string = "",
   categoryFilter: CategoryFilter = "all",
   lowStockOnly: boolean = false
-): Promise<InventoryProduct[]> => {
+): Promise<InventoryProduct[]> {
   try {
-    let query = supabase
-      .from("products")
-      .select(
-        "id, name, price, stock_quantity, reorder_point, category_id, image_url, is_active, is_featured"
-      )
-      .order("name", { ascending: true });
+    // Try with safe columns first, NEVER select reorder_point directly
+    let { data, error } = await supabase
+      .from('products')
+      .select('id, name, description, price, stock_quantity, category_id, image_url, is_active, is_featured')
+      .order('name', { ascending: true });
 
     // Apply category filter using proper SDK chaining
     const catName = CATEGORY_MAP[categoryFilter];
+    let filteredData = data ?? [];
     if (catName) {
-      query = query.ilike("category_id", `%${catName}%`);
+      filteredData = filteredData.filter((p: any) => p.category_id === catName);
     }
 
-    // Apply search filter
+    // Apply search filter client-side if needed
     if (search.trim()) {
-      query = query.ilike("name", `%${search.trim()}%`);
+      const searchLower = search.trim().toLowerCase();
+      filteredData = filteredData.filter((p: any) =>
+        p.name?.toLowerCase().includes(searchLower) ||
+        (p.description?.toLowerCase().includes(searchLower) || false)
+      );
     }
-
-    const { data, error } = await query;
 
     if (error) {
-      console.error("Supabase Get Products Error:", error.message, error);
-      return [];
+      // If still fails, try minimal columns without reorder_point/image_url
+      if (error.message?.includes('reorder_point') || error.message?.includes('image_url')) {
+        const retry = await supabase.from('products').select('id, name, description, price, category_id, is_active, is_featured').order('name', { ascending: true });
+        if (retry.error) throw retry.error;
+        filteredData = retry.data as any ?? [];
+      } else {
+        throw error;
+      }
     }
 
-    let products = (data ?? []) as InventoryProduct[];
+    // Map the data to InventoryProduct, providing defaults for missing fields
+    let products: InventoryProduct[] = (filteredData || []).map((p: any) => ({
+      id: p.id,
+      name: p.name,
+      description: p.description ?? '',
+      price: p.price ?? 0,
+      stock_quantity: p.stock_quantity ?? p.stock ?? 0,
+      reorder_point: p.reorder_point ?? 5,
+      category_id: p.category_id ?? null,
+      image_url: p.image_url ?? '',
+      is_active: p.is_active ?? false,
+      is_featured: p.is_featured ?? false,
+    }));
 
-    // Client-side low stock filter
+    // Apply low stock filter
     if (lowStockOnly) {
-      products = products.filter((p) => p.stock_quantity <= (p.reorder_point ?? 5));
+      products = products.filter((p) => (p.reorder_point ?? 5) >= p.stock_quantity);
     }
 
     return products;
-  } catch (err: any) {
-    console.error("Supabase Get Products Exception:", err?.message ?? err);
+  } catch (e: any) {
+    console.error('Supabase Get Products Error:', e.message);
     return [];
   }
-};
+}
 
 export const updateProductStock = async (
   productId: string,
   newStock: number
 ): Promise<boolean> => {
   try {
-    const { error } = await supabase
+    const { error } = await supabaseAdmin
       .from("products")
       .update({ stock_quantity: newStock })
       .eq("id", productId);
@@ -493,7 +530,7 @@ export const toggleProductAvailability = async (
   isAvailable: boolean
 ): Promise<boolean> => {
   try {
-    const { error } = await supabase
+    const { error } = await supabaseAdmin
       .from("products")
       .update({ is_active: isAvailable })
       .eq("id", productId);
@@ -523,16 +560,18 @@ export type LowStockProduct = {
 };
 
 export const getLowStockProducts = async (threshold = 10): Promise<LowStockProduct[]> => {
-  const { data, error } = await supabase
-    .from("products")
-    .select("id, name, stock_quantity, price, category_id, is_active")
-    .lt("stock_quantity", threshold)
-    .eq("is_active", true)
-    .order("stock_quantity", { ascending: true });
+  try {
+    const { data, error } = await supabase
+      .from("products")
+      .select("id, name, stock_quantity, price, category_id, is_active")
+      .lt("stock_quantity", threshold)
+      .eq("is_active", true)
+      .order("stock_quantity", { ascending: true });
 
-  if (error) throw error;
+    if (error) { console.error('getLowStockProducts error:', error.message); return []; }
 
-  return data ?? [];
+    return data ?? [];
+  } catch (e: any) { console.error('getLowStockProducts exception:', e.message); return []; }
 };
 
 // ===========================================
@@ -549,26 +588,30 @@ export type AdminCategory = {
 };
 
 export const getAllCategories = async (): Promise<AdminCategory[]> => {
-  const { data, error } = await supabase
-    .from("categories")
-    .select("id, name, description, image_url, sort_order, is_active")
-    .order("sort_order", { ascending: true });
+  try {
+    const { data, error } = await supabase
+      .from("categories")
+      .select("id, name, description, image_url, sort_order, is_active")
+      .order("sort_order", { ascending: true });
 
-  if (error) throw error;
+    if (error) { console.error('getAllCategories error:', error.message); return []; }
 
-  return data ?? [];
+    return data ?? [];
+  } catch (e: any) { console.error('getAllCategories exception:', e.message); return []; }
 };
 
 export const getCategoryById = async (id: string): Promise<AdminCategory | null> => {
-  const { data, error } = await supabase
-    .from("categories")
-    .select("id, name, description, image_url, sort_order, is_active")
-    .eq("id", id)
-    .single();
+  try {
+    const { data, error } = await supabase
+      .from("categories")
+      .select("id, name, description, image_url, sort_order, is_active")
+      .eq("id", id)
+      .single();
 
-  if (error) throw error;
+    if (error) { console.error('getCategoryById error:', error.message); return null; }
 
-  return data;
+    return data;
+  } catch (e: any) { console.error('getCategoryById exception:', e.message); return null; }
 };
 
 export type CreateCategoryInput = {
@@ -579,49 +622,55 @@ export type CreateCategoryInput = {
   is_active?: boolean;
 };
 
-export const createCategory = async (input: CreateCategoryInput): Promise<AdminCategory> => {
-  const { data, error } = await supabase
-    .from("categories")
-    .insert({
-      name: input.name,
-      description: input.description ?? null,
-      image_url: input.image_url ?? null,
-      sort_order: input.sort_order ?? 0,
-      is_active: input.is_active ?? true,
-    })
-    .select("id, name, description, image_url, sort_order, is_active")
-    .single();
-
-  if (error) throw error;
-
-  return data;
-};
-
 export type UpdateCategoryInput = Partial<CreateCategoryInput>;
 
+export const createCategory = async (input: CreateCategoryInput): Promise<AdminCategory> => {
+  try {
+    const { data, error } = await supabase
+      .from("categories")
+      .insert({
+        name: input.name,
+        description: input.description ?? null,
+        image_url: input.image_url ?? null,
+        sort_order: input.sort_order ?? 0,
+        is_active: input.is_active ?? true,
+      })
+      .select("id, name, description, image_url, sort_order, is_active")
+      .single();
+
+    if (error) { console.error('createCategory error:', error.message); throw error; }
+
+    return data;
+  } catch (e: any) { console.error('createCategory exception:', e.message); throw e; }
+};
+
 export const updateCategory = async (id: string, input: UpdateCategoryInput): Promise<AdminCategory> => {
-  const { data, error } = await supabase
-    .from("categories")
-    .update({
-      name: input.name,
-      description: input.description,
-      image_url: input.image_url,
-      sort_order: input.sort_order,
-      is_active: input.is_active,
-    })
-    .eq("id", id)
-    .select("id, name, description, image_url, sort_order, is_active")
-    .single();
+  try {
+    const { data, error } = await supabase
+      .from("categories")
+      .update({
+        name: input.name,
+        description: input.description,
+        image_url: input.image_url,
+        sort_order: input.sort_order,
+        is_active: input.is_active,
+      })
+      .eq("id", id)
+      .select("id, name, description, image_url, sort_order, is_active")
+      .single();
 
-  if (error) throw error;
+    if (error) { console.error('updateCategory error:', error.message); throw error; }
 
-  return data;
+    return data;
+  } catch (e: any) { console.error('updateCategory exception:', e.message); throw e; }
 };
 
 export const deleteCategory = async (id: string): Promise<void> => {
-  const { error } = await supabase.from("categories").delete().eq("id", id);
+  try {
+    const { error } = await supabase.from("categories").delete().eq("id", id);
 
-  if (error) throw error;
+    if (error) { console.error('deleteCategory error:', error.message); throw error; }
+  } catch (e: any) { console.error('deleteCategory exception:', e.message); throw e; }
 };
 
 // ===========================================
@@ -641,26 +690,30 @@ export type AdminProduct = {
 };
 
 export const getAllProducts = async (): Promise<AdminProduct[]> => {
-  const { data, error } = await supabase
-    .from("products")
-    .select("id, category_id, name, description, image_url, price, stock_quantity, is_active, is_featured")
-    .order("created_at", { ascending: false });
+  try {
+    const { data, error } = await supabase
+      .from("products")
+      .select("id, category_id, name, description, image_url, price, stock_quantity, is_active, is_featured")
+      .order("created_at", { ascending: false });
 
-  if (error) throw error;
+    if (error) { console.error('getAllProducts error:', error.message); return []; }
 
-  return data ?? [];
+    return data ?? [];
+  } catch (e: any) { console.error('getAllProducts exception:', e.message); return []; }
 };
 
 export const getProductById = async (id: string): Promise<AdminProduct | null> => {
-  const { data, error } = await supabase
-    .from("products")
-    .select("id, category_id, name, description, image_url, price, stock_quantity, is_active, is_featured")
-    .eq("id", id)
-    .single();
+  try {
+    const { data, error } = await supabase
+      .from("products")
+      .select("id, category_id, name, description, image_url, price, stock_quantity, is_active, is_featured")
+      .eq("id", id)
+      .single();
 
-  if (error) throw error;
+    if (error) { console.error('getProductById error:', error.message); return null; }
 
-  return data;
+    return data;
+  } catch (e: any) { console.error('getProductById exception:', e.message); return null; }
 };
 
 export type CreateProductInput = {
@@ -674,55 +727,61 @@ export type CreateProductInput = {
   is_featured?: boolean;
 };
 
-export const createProduct = async (input: CreateProductInput): Promise<AdminProduct> => {
-  const { data, error } = await supabase
-    .from("products")
-    .insert({
-      category_id: input.category_id,
-      name: input.name,
-      description: input.description ?? null,
-      image_url: input.image_url ?? null,
-      price: input.price,
-      stock_quantity: input.stock_quantity ?? 0,
-      is_active: input.is_active ?? true,
-      is_featured: input.is_featured ?? false,
-    })
-    .select("id, category_id, name, description, image_url, price, stock_quantity, is_active, is_featured")
-    .single();
-
-  if (error) throw error;
-
-  return data;
-};
-
 export type UpdateProductInput = Partial<CreateProductInput>;
 
+export const createProduct = async (input: CreateProductInput): Promise<AdminProduct> => {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from("products")
+      .insert({
+        category_id: input.category_id,
+        name: input.name,
+        description: input.description ?? null,
+        image_url: input.image_url ?? null,
+        price: input.price,
+        stock_quantity: input.stock_quantity ?? 0,
+        is_active: input.is_active ?? true,
+        is_featured: input.is_featured ?? false,
+      })
+      .select("id, category_id, name, description, image_url, price, stock_quantity, is_active, is_featured")
+      .single();
+
+    if (error) { console.error('createProduct error:', error.message); throw error; }
+
+    return data;
+  } catch (e: any) { console.error('createProduct exception:', e.message); throw e; }
+};
+
 export const updateProduct = async (id: string, input: UpdateProductInput): Promise<AdminProduct> => {
-  const { data, error } = await supabase
-    .from("products")
-    .update({
-      category_id: input.category_id,
-      name: input.name,
-      description: input.description,
-      image_url: input.image_url,
-      price: input.price,
-      stock_quantity: input.stock_quantity,
-      is_active: input.is_active,
-      is_featured: input.is_featured,
-    })
-    .eq("id", id)
-    .select("id, category_id, name, description, image_url, price, stock_quantity, is_active, is_featured")
-    .single();
+  try {
+    const { data, error } = await supabaseAdmin
+      .from("products")
+      .update({
+        category_id: input.category_id,
+        name: input.name,
+        description: input.description,
+        image_url: input.image_url,
+        price: input.price,
+        stock_quantity: input.stock_quantity,
+        is_active: input.is_active,
+        is_featured: input.is_featured,
+      })
+      .eq("id", id)
+      .select("id, category_id, name, description, image_url, price, stock_quantity, is_active, is_featured")
+      .single();
 
-  if (error) throw error;
+    if (error) { console.error('updateProduct error:', error.message); throw error; }
 
-  return data;
+    return data;
+  } catch (e: any) { console.error('updateProduct exception:', e.message); throw e; }
 };
 
 export const deleteProduct = async (id: string): Promise<void> => {
-  const { error } = await supabase.from("products").delete().eq("id", id);
+  try {
+    const { error } = await supabaseAdmin.from("products").delete().eq("id", id);
 
-  if (error) throw error;
+    if (error) { console.error('deleteProduct error:', error.message); throw error; }
+  } catch (e: any) { console.error('deleteProduct exception:', e.message); throw e; }
 };
 
 // ===========================================
@@ -740,27 +799,31 @@ export type AdminCustomer = {
 };
 
 export const getCustomers = async (): Promise<AdminCustomer[]> => {
-  const { data, error } = await supabase
-    .from("profiles")
-    .select("id, full_name, email, phone, role, is_active, created_at")
-    .eq("role", "customer")
-    .order("created_at", { ascending: false });
+  try {
+    const { data, error } = await supabaseAdmin
+      .from("profiles")
+      .select("id, full_name, email, phone, role, is_active, created_at")
+      .eq("role", "customer")
+      .order("created_at", { ascending: false });
 
-  if (error) throw error;
+    if (error) { console.error('getCustomers error:', error.message); return []; }
 
-  return data ?? [];
+    return data ?? [];
+  } catch (e: any) { console.error('getCustomers exception:', e.message); return []; }
 };
 
 export const getCustomerById = async (id: string): Promise<AdminCustomer | null> => {
-  const { data, error } = await supabase
-    .from("profiles")
-    .select("id, full_name, email, phone, role, is_active, created_at")
-    .eq("id", id)
-    .single();
+  try {
+    const { data, error } = await supabaseAdmin
+      .from("profiles")
+      .select("id, full_name, email, phone, role, is_active, created_at")
+      .eq("id", id)
+      .single();
 
-  if (error) throw error;
+    if (error) { console.error('getCustomerById error:', error.message); return null; }
 
-  return data;
+    return data;
+  } catch (e: any) { console.error('getCustomerById exception:', e.message); return null; }
 };
 
 export type CustomerWithOrders = AdminCustomer & {
@@ -773,41 +836,43 @@ export type CustomerWithOrders = AdminCustomer & {
 };
 
 export const getCustomerWithOrders = async (id: string): Promise<CustomerWithOrders | null> => {
-  const { data: profile, error: profileError } = await supabase
-    .from("profiles")
-    .select("id, full_name, email, phone, role, is_active, created_at")
-    .eq("id", id)
-    .single();
+  try {
+    const { data: profile, error: profileError } = await supabaseAdmin
+      .from("profiles")
+      .select("id, full_name, email, phone, role, is_active, created_at")
+      .eq("id", id)
+      .single();
 
-  if (profileError) throw profileError;
-  if (!profile) return null;
+    if (profileError) { console.error('getCustomerWithOrders profile error:', profileError.message); return null; }
+    if (!profile) return null;
 
-  // Get orders for this customer via addresses
-  const { data: addresses, error: addrError } = await supabase
-    .from("customer_addresses")
-    .select("id")
-    .eq("user_id", id);
+    // Get orders for this customer via addresses
+    const { data: addresses, error: addrError } = await supabase
+      .from("customer_addresses")
+      .select("id")
+      .eq("user_id", id);
 
-  if (addrError) throw addrError;
+    if (addrError) { console.error('getCustomerWithOrders addresses error:', addrError.message); return null; }
 
-  const addressIds = addresses?.map((a) => a.id) ?? [];
+    const addressIds = addresses?.map((a) => a.id) ?? [];
 
-  if (addressIds.length === 0) {
-    return { ...profile, orders: [] };
-  }
+    if (addressIds.length === 0) {
+      return { ...profile, orders: [] };
+    }
 
-  const { data: orders, error: ordersError } = await supabase
-    .from("orders")
-    .select("id, status, total, created_at")
-    .in("address_id", addressIds)
-    .order("created_at", { ascending: false });
+    const { data: orders, error: ordersError } = await supabase
+      .from("orders")
+      .select("id, status, total, created_at")
+      .in("address_id", addressIds)
+      .order("created_at", { ascending: false });
 
-  if (ordersError) throw ordersError;
+    if (ordersError) { console.error('getCustomerWithOrders orders error:', ordersError.message); return null; }
 
-  return {
-    ...profile,
-    orders: orders ?? [],
-  };
+    return {
+      ...profile,
+      orders: orders ?? [],
+    };
+  } catch (e: any) { console.error('getCustomerWithOrders exception:', e.message); return null; }
 };
 
 // ===========================================
@@ -831,26 +896,30 @@ export type AdminCoupon = {
 };
 
 export const getAllCoupons = async (): Promise<AdminCoupon[]> => {
-  const { data, error } = await supabase
-    .from("coupons")
-    .select("*")
-    .order("created_at", { ascending: false });
+  try {
+    const { data, error } = await supabase
+      .from("coupons")
+      .select("*")
+      .order("created_at", { ascending: false });
 
-  if (error) throw error;
+    if (error) { console.error('getAllCoupons error:', error.message); return []; }
 
-  return data ?? [];
+    return data ?? [];
+  } catch (e: any) { console.error('getAllCoupons exception:', e.message); return []; }
 };
 
 export const getCouponById = async (id: string): Promise<AdminCoupon | null> => {
-  const { data, error } = await supabase
-    .from("coupons")
-    .select("*")
-    .eq("id", id)
-    .single();
+  try {
+    const { data, error } = await supabase
+      .from("coupons")
+      .select("*")
+      .eq("id", id)
+      .single();
 
-  if (error) throw error;
+    if (error) { console.error('getCouponById error:', error.message); return null; }
 
-  return data;
+    return data;
+  } catch (e: any) { console.error('getCouponById exception:', e.message); return null; }
 };
 
 export type CreateCouponInput = {
@@ -867,59 +936,65 @@ export type CreateCouponInput = {
 };
 
 export const createCoupon = async (input: CreateCouponInput): Promise<AdminCoupon> => {
-  const { data, error } = await supabase
-    .from("coupons")
-    .insert({
-      code: input.code.trim().toUpperCase(),
-      name: input.name ?? null,
-      description: input.description ?? null,
-      is_active: input.is_active ?? true,
-      discount_type: input.discount_type,
-      discount_value: input.discount_value,
-      max_discount: input.max_discount ?? null,
-      usage_limit: input.usage_limit ?? null,
-      times_used: 0,
-      min_order_amount: input.min_order_amount ?? 0,
-      expires_at: input.expires_at ?? null,
-    })
-    .select("*")
-    .single();
+  try {
+    const { data, error } = await supabase
+      .from("coupons")
+      .insert({
+        code: input.code.trim().toUpperCase(),
+        name: input.name ?? null,
+        description: input.description ?? null,
+        is_active: input.is_active ?? true,
+        discount_type: input.discount_type,
+        discount_value: input.discount_value,
+        max_discount: input.max_discount ?? null,
+        usage_limit: input.usage_limit ?? null,
+        times_used: 0,
+        min_order_amount: input.min_order_amount ?? 0,
+        expires_at: input.expires_at ?? null,
+      })
+      .select("*")
+      .single();
 
-  if (error) throw error;
+    if (error) { console.error('createCoupon error:', error.message); throw error; }
 
-  return data;
+    return data;
+  } catch (e: any) { console.error('createCoupon exception:', e.message); throw e; }
 };
 
 export type UpdateCouponInput = Partial<CreateCouponInput>;
 
 export const updateCoupon = async (id: string, input: UpdateCouponInput): Promise<AdminCoupon> => {
-  const { data, error } = await supabase
-    .from("coupons")
-    .update({
-      code: input.code?.trim().toUpperCase(),
-      name: input.name,
-      description: input.description,
-      is_active: input.is_active,
-      discount_type: input.discount_type,
-      discount_value: input.discount_value,
-      max_discount: input.max_discount,
-      usage_limit: input.usage_limit,
-      min_order_amount: input.min_order_amount,
-      expires_at: input.expires_at,
-    })
-    .eq("id", id)
-    .select("*")
-    .single();
+  try {
+    const { data, error } = await supabase
+      .from("coupons")
+      .update({
+        code: input.code?.trim().toUpperCase(),
+        name: input.name,
+        description: input.description,
+        is_active: input.is_active,
+        discount_type: input.discount_type,
+        discount_value: input.discount_value,
+        max_discount: input.max_discount,
+        usage_limit: input.usage_limit,
+        min_order_amount: input.min_order_amount,
+        expires_at: input.expires_at,
+      })
+      .eq("id", id)
+      .select("*")
+      .single();
 
-  if (error) throw error;
+    if (error) { console.error('updateCoupon error:', error.message); throw error; }
 
-  return data;
+    return data;
+  } catch (e: any) { console.error('updateCoupon exception:', e.message); throw e; }
 };
 
 export const deleteCoupon = async (id: string): Promise<void> => {
-  const { error } = await supabase.from("coupons").delete().eq("id", id);
+  try {
+    const { error } = await supabase.from("coupons").delete().eq("id", id);
 
-  if (error) throw error;
+    if (error) { console.error('deleteCoupon error:', error.message); throw error; }
+  } catch (e: any) { console.error('deleteCoupon exception:', e.message); throw e; }
 };
 
 // ===========================================
@@ -937,14 +1012,16 @@ export type AdminStoreHour = {
 };
 
 export const getAllStoreHours = async (): Promise<AdminStoreHour[]> => {
-  const { data, error } = await supabase
-    .from("store_hours")
-    .select("*")
-    .order("day_of_week", { ascending: true });
+  try {
+    const { data, error } = await supabase
+      .from("store_hours")
+      .select("*")
+      .order("day_of_week", { ascending: true });
 
-  if (error) throw error;
+    if (error) { console.error('getAllStoreHours error:', error.message); return []; }
 
-  return data ?? [];
+    return data ?? [];
+  } catch (e: any) { console.error('getAllStoreHours exception:', e.message); return []; }
 };
 
 export type CreateStoreHourInput = {
@@ -955,46 +1032,52 @@ export type CreateStoreHourInput = {
 };
 
 export const createStoreHour = async (input: CreateStoreHourInput): Promise<AdminStoreHour> => {
-  const { data, error } = await supabase
-    .from("store_hours")
-    .insert({
-      day_of_week: input.day_of_week,
-      open_time: input.open_time,
-      close_time: input.close_time,
-      is_open: input.is_open ?? true,
-    })
-    .select("*")
-    .single();
+  try {
+    const { data, error } = await supabase
+      .from("store_hours")
+      .insert({
+        day_of_week: input.day_of_week,
+        open_time: input.open_time,
+        close_time: input.close_time,
+        is_open: input.is_open ?? true,
+      })
+      .select("*")
+      .single();
 
-  if (error) throw error;
+    if (error) { console.error('createStoreHour error:', error.message); throw error; }
 
-  return data;
+    return data;
+  } catch (e: any) { console.error('createStoreHour exception:', e.message); throw e; }
 };
 
 export type UpdateStoreHourInput = Partial<CreateStoreHourInput>;
 
 export const updateStoreHour = async (id: string, input: UpdateStoreHourInput): Promise<AdminStoreHour> => {
-  const { data, error } = await supabase
-    .from("store_hours")
-    .update({
-      day_of_week: input.day_of_week,
-      open_time: input.open_time,
-      close_time: input.close_time,
-      is_open: input.is_open,
-    })
-    .eq("id", id)
-    .select("*")
-    .single();
+  try {
+    const { data, error } = await supabase
+      .from("store_hours")
+      .update({
+        day_of_week: input.day_of_week,
+        open_time: input.open_time,
+        close_time: input.close_time,
+        is_open: input.is_open,
+      })
+      .eq("id", id)
+      .select("*")
+      .single();
 
-  if (error) throw error;
+    if (error) { console.error('updateStoreHour error:', error.message); throw error; }
 
-  return data;
+    return data;
+  } catch (e: any) { console.error('updateStoreHour exception:', e.message); throw e; }
 };
 
 export const deleteStoreHour = async (id: string): Promise<void> => {
-  const { error } = await supabase.from("store_hours").delete().eq("id", id);
+  try {
+    const { error } = await supabase.from("store_hours").delete().eq("id", id);
 
-  if (error) throw error;
+    if (error) { console.error('deleteStoreHour error:', error.message); throw error; }
+  } catch (e: any) { console.error('deleteStoreHour exception:', e.message); throw e; }
 };
 
 // ===========================================
@@ -1014,14 +1097,16 @@ export type AdminDeliveryZone = {
 };
 
 export const getAllDeliveryZones = async (): Promise<AdminDeliveryZone[]> => {
-  const { data, error } = await supabase
-    .from("delivery_zones")
-    .select("*")
-    .order("name", { ascending: true });
+  try {
+    const { data, error } = await supabase
+      .from("delivery_zones")
+      .select("*")
+      .order("name", { ascending: true });
 
-  if (error) throw error;
+    if (error) { console.error('getAllDeliveryZones error:', error.message); return []; }
 
-  return data ?? [];
+    return data ?? [];
+  } catch (e: any) { console.error('getAllDeliveryZones exception:', e.message); return []; }
 };
 
 export type CreateDeliveryZoneInput = {
@@ -1034,50 +1119,56 @@ export type CreateDeliveryZoneInput = {
 };
 
 export const createDeliveryZone = async (input: CreateDeliveryZoneInput): Promise<AdminDeliveryZone> => {
-  const { data, error } = await supabase
-    .from("delivery_zones")
-    .insert({
-      name: input.name,
-      name_en: input.name_en,
-      name_fr: input.name_fr,
-      name_ar: input.name_ar,
-      price: input.price,
-      is_active: input.is_active ?? true,
-    })
-    .select("*")
-    .single();
+  try {
+    const { data, error } = await supabase
+      .from("delivery_zones")
+      .insert({
+        name: input.name,
+        name_en: input.name_en,
+        name_fr: input.name_fr,
+        name_ar: input.name_ar,
+        price: input.price,
+        is_active: input.is_active ?? true,
+      })
+      .select("*")
+      .single();
 
-  if (error) throw error;
+    if (error) { console.error('createDeliveryZone error:', error.message); throw error; }
 
-  return data;
+    return data;
+  } catch (e: any) { console.error('createDeliveryZone exception:', e.message); throw e; }
 };
 
 export type UpdateDeliveryZoneInput = Partial<CreateDeliveryZoneInput>;
 
 export const updateDeliveryZone = async (id: string, input: UpdateDeliveryZoneInput): Promise<AdminDeliveryZone> => {
-  const { data, error } = await supabase
-    .from("delivery_zones")
-    .update({
-      name: input.name,
-      name_en: input.name_en,
-      name_fr: input.name_fr,
-      name_ar: input.name_ar,
-      price: input.price,
-      is_active: input.is_active,
-    })
-    .eq("id", id)
-    .select("*")
-    .single();
+  try {
+    const { data, error } = await supabase
+      .from("delivery_zones")
+      .update({
+        name: input.name,
+        name_en: input.name_en,
+        name_fr: input.name_fr,
+        name_ar: input.name_ar,
+        price: input.price,
+        is_active: input.is_active,
+      })
+      .eq("id", id)
+      .select("*")
+      .single();
 
-  if (error) throw error;
+    if (error) { console.error('updateDeliveryZone error:', error.message); throw error; }
 
-  return data;
+    return data;
+  } catch (e: any) { console.error('updateDeliveryZone exception:', e.message); throw e; }
 };
 
 export const deleteDeliveryZone = async (id: string): Promise<void> => {
-  const { error } = await supabase.from("delivery_zones").delete().eq("id", id);
+  try {
+    const { error } = await supabase.from("delivery_zones").delete().eq("id", id);
 
-  if (error) throw error;
+    if (error) { console.error('deleteDeliveryZone error:', error.message); throw error; }
+  } catch (e: any) { console.error('deleteDeliveryZone exception:', e.message); throw e; }
 };
 
 // ===========================================
@@ -1102,160 +1193,99 @@ export type DashboardMetrics = {
 };
 
 export const getDashboardMetrics = async (): Promise<DashboardMetrics> => {
-  const now = new Date();
-
-  // Start of today (midnight local time)
-  const startOfDay = new Date(now);
-  startOfDay.setHours(0, 0, 0, 0);
-
-  // Start of current week (Monday)
-  const startOfWeek = new Date(now);
-  const dayOfWeek = startOfWeek.getDay();
-  const diff = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-  startOfWeek.setDate(startOfWeek.getDate() - diff);
-  startOfWeek.setHours(0, 0, 0, 0);
-
-  // ── Today's orders (shared for revenue, counts, branch comparison) ──
-  let todayOrdersData: Array<{
-    id: string;
-    status: string;
-    total: number;
-    branch_id?: string;
-  }> = [];
-
   try {
-    const { data, error } = await supabase
-      .from("orders")
-      .select("id, status, total, branch_id")
-      .gte("created_at", startOfDay.toISOString());
+    // ── Today's orders ──
+    const now = new Date();
+    const startOfDay = new Date(now);
+    startOfDay.setHours(0, 0, 0, 0);
+    const startOfWeek = new Date(now);
+    const dayOfWeek = startOfWeek.getDay();
+    const diff = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+    startOfWeek.setDate(startOfWeek.getDate() - diff);
+    startOfWeek.setHours(0, 0, 0, 0);
 
-    if (error) {
-      console.error("Supabase Today Orders Error:", error.message, error);
-    } else {
-      todayOrdersData = data ?? [];
-    }
-  } catch (err: any) {
-    console.error("Supabase Today Orders Exception:", err.message ?? err);
-  }
+    let todayOrdersData: any[] = [];
+    try {
+      const { data, error } = await supabase.from("orders").select("id, status, total, branch_id").gte("created_at", startOfDay.toISOString());
+      if (!error && data) todayOrdersData = data;
+    } catch (e: any) { console.warn('Today orders query failed:', e.message); }
 
-  // Daily revenue: SUM(total) where status != 'cancelled'
-  const dailyRevenue = todayOrdersData
-    .filter((o) => o.status !== "cancelled")
-    .reduce((sum, o) => sum + (o.total ?? 0), 0);
+    const dailyRevenue = todayOrdersData.filter((o) => o.status !== "cancelled").reduce((sum, o) => sum + (o.total ?? 0), 0);
+    const todayOrdersCount = todayOrdersData.length;
+    const cancelledOrdersCount = todayOrdersData.filter((o) => o.status === "cancelled").length;
 
-  // Today's order count
-  const todayOrdersCount = todayOrdersData.length;
+    // ── Weekly Revenue ──
+    let weeklyOrdersData: any[] = [];
+    try {
+      const { data, error } = await supabase.from("orders").select("status, total").gte("created_at", startOfWeek.toISOString());
+      if (!error && data) weeklyOrdersData = data;
+    } catch (e: any) { console.warn('Weekly orders query failed:', e.message); }
+    const weeklyRevenue = weeklyOrdersData.filter((o) => o.status !== "cancelled").reduce((sum, o) => sum + (o.total ?? 0), 0);
 
-  // Cancelled orders today
-  const cancelledOrdersCount = todayOrdersData.filter(
-    (o) => o.status === "cancelled"
-  ).length;
+    // ── Low Stock Count ──
+    let lowStockCount = 0;
+    try {
+      const { count, error } = await supabaseAdmin.from("products").select("*", { count: "exact", head: true }).lt("stock_quantity", 5);
+      if (!error) lowStockCount = count ?? 0;
+    } catch (e: any) { console.warn('Low stock count failed:', e.message); }
 
-  // ── Weekly Revenue (independent query) ──
-  let weeklyRevenue = 0;
-  try {
-    const { data, error } = await supabase
-      .from("orders")
-      .select("status, total")
-      .gte("created_at", startOfWeek.toISOString());
-
-    if (error) {
-      console.error("Supabase Weekly Revenue Error:", error.message, error);
-    } else {
-      weeklyRevenue = (data ?? [])
-        .filter((o) => o.status !== "cancelled")
-        .reduce((sum, o) => sum + (o.total ?? 0), 0);
-    }
-  } catch (err: any) {
-    console.error("Supabase Weekly Revenue Exception:", err.message ?? err);
-  }
-
-  // ── Low Stock Count ──
-  let lowStockCount = 0;
-  try {
-    const { count, error } = await supabase
-      .from("products")
-      .select("id", { count: "exact", head: true })
-      .lt("stock_quantity", 5);
-
-    if (error) {
-      console.error("Supabase Low Stock Error:", error.message, error);
-    } else {
-      lowStockCount = count ?? 0;
-    }
-  } catch (err: any) {
-    console.error("Supabase Low Stock Exception:", err.message ?? err);
-  }
-
-  // ── Refund Requests ──
-  let refundRequests = 0;
-  try {
-    const { count, error } = await supabase
-      .from("orders")
-      .select("id", { count: "exact", head: true })
-      .eq("status", "refund_requested");
-
-    if (error) {
-      console.error("Supabase Refund Requests Error:", error.message, error);
-    } else {
-      refundRequests = count ?? 0;
-    }
-  } catch (err: any) {
-    console.error("Supabase Refund Requests Exception:", err.message ?? err);
-  }
-
-  // ── Branch Comparison ──
-  let branchComparison: BranchComparisonItem[] = [];
-  try {
-    const branchMap = new Map<string, number>();
-    todayOrdersData.forEach((o) => {
-      if (o.branch_id) {
-        branchMap.set(o.branch_id, (branchMap.get(o.branch_id) ?? 0) + 1);
+    // ── Refund Requests ──
+    let refundRequests = 0;
+    try {
+      const { count, error } = await supabaseAdmin.from('refund_requests').select('*', { count: 'exact', head: true });
+      if (!error) refundRequests = count ?? 0;
+      else {
+        const alt = await supabaseAdmin.from('refunds').select('*', { count: 'exact', head: true });
+        if (!alt.error) refundRequests = alt.count ?? 0;
       }
-    });
+    } catch { refundRequests = 0; }
 
-    const totalBranchOrders = Array.from(branchMap.values()).reduce(
-      (a, b) => a + b,
-      0
-    );
-
-    if (totalBranchOrders > 0) {
-      const branchIds = Array.from(branchMap.keys());
-      const { data: branchesData, error: branchesError } = await supabase
-        .from("branches")
-        .select("id, name")
-        .in("id", branchIds);
-
-      if (branchesError) {
-        console.error("Supabase Branches Error:", branchesError.message, branchesError);
-      } else {
-        const branchNameMap = new Map<string, string | null>();
-        branchesData?.forEach((b) => branchNameMap.set(b.id, b.name ?? null));
-
-        branchComparison = Array.from(branchMap.entries())
-          .map(([branch_id, count]) => ({
-            branch_id,
-            branch_name: branchNameMap.get(branch_id) ?? null,
-            order_count: count,
-            percentage: Math.round((count / totalBranchOrders) * 100),
-          }))
-          .sort((a, b) => b.order_count - a.order_count);
+    // ── Branch Comparison ──
+    let branchComparison: BranchComparisonItem[] = [];
+    try {
+      const branchMap = new Map<string, number>();
+      todayOrdersData.forEach((o: any) => {
+        if (o.branch_id) branchMap.set(o.branch_id, (branchMap.get(o.branch_id) ?? 0) + 1);
+      });
+      const totalBranchOrders = Array.from(branchMap.values()).reduce((a, b) => a + b, 0);
+      if (totalBranchOrders > 0) {
+        const branchIds = Array.from(branchMap.keys());
+        let branchesData: any[] = [];
+        try {
+          const { data, error } = await supabase.from("branches").select("id, name").in("id", branchIds);
+          if (!error && data) branchesData = data;
+        } catch (e: any) { console.warn('Branches query failed:', e.message); }
+        if (branchesData.length > 0) {
+          branchComparison = branchIds.map((id) => {
+            const branch = branchesData.find((b: any) => b.id === id);
+            const count = branchMap.get(id) ?? 0;
+            return { branch_id: id, branch_name: branch?.name ?? null, order_count: count, percentage: Math.round((count / totalBranchOrders) * 100) };
+          }).sort((a, b) => b.order_count - a.order_count);
+        }
       }
-    }
-  } catch (err: any) {
-    console.error("Supabase Branch Comparison Exception:", err.message ?? err);
-    branchComparison = [];
-  }
+    } catch { branchComparison = []; }
 
-  return {
-    dailyRevenue,
-    weeklyRevenue,
-    todayOrders: todayOrdersCount,
-    cancelledOrders: cancelledOrdersCount,
-    lowStockCount,
-    refundRequests,
-    branchComparison,
-  };
+    return {
+      dailyRevenue,
+      weeklyRevenue,
+      todayOrders: todayOrdersCount,
+      cancelledOrders: cancelledOrdersCount,
+      lowStockCount,
+      refundRequests,
+      branchComparison,
+    };
+  } catch (e: any) {
+    console.error('getDashboardMetrics final catch:', e.message);
+    return {
+      dailyRevenue: 0,
+      weeklyRevenue: 0,
+      todayOrders: 0,
+      cancelledOrders: 0,
+      lowStockCount: 0,
+      refundRequests: 0,
+      branchComparison: [],
+    };
+  }
 };
 
 // ===========================================
@@ -1282,78 +1312,80 @@ export const getStaffMembers = async (
   search: string = "",
   roleFilter: StaffRole | "all" = "all"
 ): Promise<StaffMember[]> => {
-  // 1. Fetch profiles with allowed roles
-  let query = supabase
-    .from("profiles")
-    .select("id, full_name, email, phone, role, is_active, created_at")
-    .in("role", ["cashier", "supervisor", "admin", "delivery"])
-    .order("created_at", { ascending: false });
+  try {
+    // 1. Fetch profiles with allowed roles
+    let query = supabaseAdmin
+      .from("profiles")
+      .select("id, full_name, email, phone, role, is_active, created_at")
+      .in("role", ["cashier", "supervisor", "admin", "delivery"])
+      .order("created_at", { ascending: false });
 
-  if (roleFilter !== "all") {
-    query = query.eq("role", roleFilter);
-  }
+    if (roleFilter !== "all") {
+      query = query.eq("role", roleFilter);
+    }
 
-  const { data: profiles, error: profilesError } = await query;
+    const { data: profiles, error: profilesError } = await query;
 
-  if (profilesError) {
-    console.error("Supabase Staff Profiles Error:", profilesError.message, profilesError);
-    return [];
-  }
+    if (profilesError) {
+      console.error("Supabase Staff Profiles Error:", profilesError.message, profilesError);
+      return [];
+    }
 
-  const staffList = (profiles ?? []) as StaffMember[];
+    const staffList = (profiles ?? []) as StaffMember[];
 
-  // 2. For each staff, try to compute today's orders & revenue (best-effort)
-  const todayStart = new Date();
-  todayStart.setHours(0, 0, 0, 0);
+    // 2. For each staff, try to compute today's orders & revenue (best-effort)
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
 
-  const enriched = await Promise.all(
-    staffList.map(async (staff) => {
-      let todayOrders = 0;
-      let todayRevenue = 0;
-      let lastActive: string | null = null;
+    const enriched = await Promise.all(
+      staffList.map(async (staff) => {
+        let todayOrders = 0;
+        let todayRevenue = 0;
+        let lastActive: string | null = null;
 
-      try {
-        // Try common column names for cashier attribution
-        const possibleColumns = ["cashier_id", "handled_by", "staff_id", "user_id"];
-        for (const col of possibleColumns) {
-          const { data, error } = await supabase
-            .from("orders")
-            .select("id, total, created_at")
-            .eq(col, staff.id)
-            .gte("created_at", todayStart.toISOString());
+        try {
+          // Try common column names for cashier attribution
+          const possibleColumns = ["cashier_id", "handled_by", "staff_id", "user_id"];
+          for (const col of possibleColumns) {
+            const { data, error } = await supabase
+              .from("orders")
+              .select("id, total, created_at")
+              .eq(col, staff.id)
+              .gte("created_at", todayStart.toISOString());
 
-          if (!error && data && data.length > 0) {
-            todayOrders = data.length;
-            todayRevenue = data.reduce((sum, o) => sum + (o.total ?? 0), 0);
-            lastActive = data.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0]?.created_at ?? null;
-            break; // found working column
+            if (!error && data && data.length > 0) {
+              todayOrders = data.length;
+              todayRevenue = data.reduce((sum, o) => sum + (o.total ?? 0), 0);
+              lastActive = data.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0]?.created_at ?? null;
+              break; // found working column
+            }
           }
+        } catch (err: any) {
+          console.error(`Supabase Staff Stats Exception for ${staff.id}:`, err?.message ?? err);
         }
-      } catch (err: any) {
-        console.error(`Supabase Staff Stats Exception for ${staff.id}:`, err?.message ?? err);
-      }
 
-      return {
-        ...staff,
-        todayOrders,
-        todayRevenue,
-        lastActive,
-      };
-    })
-  );
-
-  // 3. Client-side search fallback
-  if (search.trim()) {
-    const q = search.trim().toLowerCase();
-    return enriched.filter(
-      (s) =>
-        (s.full_name ?? "").toLowerCase().includes(q) ||
-        (s.email ?? "").toLowerCase().includes(q) ||
-        (s.role ?? "").toLowerCase().includes(q)
+        return {
+          ...staff,
+          todayOrders,
+          todayRevenue,
+          lastActive,
+        };
+      })
     );
-  }
 
-  return enriched;
+    // 3. Client-side search fallback
+    if (search.trim()) {
+      const q = search.trim().toLowerCase();
+      return enriched.filter(
+        (s) =>
+          (s.full_name ?? "").toLowerCase().includes(q) ||
+          (s.email ?? "").toLowerCase().includes(q) ||
+          (s.role ?? "").toLowerCase().includes(q)
+      );
+    }
+
+    return enriched;
+  } catch (e: any) { console.error('getStaffMembers exception:', e.message); return []; }
 };
 
 export const updateStaffRole = async (
@@ -1361,7 +1393,7 @@ export const updateStaffRole = async (
   newRole: StaffRole
 ): Promise<boolean> => {
   try {
-    const { error } = await supabase
+    const { error } = await supabaseAdmin
       .from("profiles")
       .update({ role: newRole })
       .eq("id", staffId);
@@ -1382,7 +1414,7 @@ export const toggleStaffActive = async (
   isActive: boolean
 ): Promise<boolean> => {
   try {
-    const { error } = await supabase
+    const { error } = await supabaseAdmin
       .from("profiles")
       .update({ is_active: isActive })
       .eq("id", staffId);
@@ -1438,7 +1470,7 @@ export const createStaff = async (
     }
 
     // 2. Insert/update profile row
-    const { data: profileData, error: profileError } = await supabase
+    const { data: profileData, error: profileError } = await supabaseAdmin
       .from("profiles")
       .upsert(
         {
@@ -1889,15 +1921,17 @@ export type AdminSupportContact = {
 };
 
 export const getAllSupportContacts = async (): Promise<AdminSupportContact[]> => {
-  const { data, error } = await supabase
-    .from("support_contacts")
-    .select("*")
-    .order("is_primary", { ascending: false })
-    .order("created_at", { ascending: false });
+  try {
+    const { data, error } = await supabase
+      .from("support_contacts")
+      .select("*")
+      .order("is_primary", { ascending: false })
+      .order("created_at", { ascending: false });
 
-  if (error) throw error;
+    if (error) { console.error('getAllSupportContacts error:', error.message); return []; }
 
-  return data ?? [];
+    return data ?? [];
+  } catch (e: any) { console.error('getAllSupportContacts exception:', e.message); return []; }
 };
 
 export type CreateSupportContactInput = {
@@ -1907,44 +1941,50 @@ export type CreateSupportContactInput = {
 };
 
 export const createSupportContact = async (input: CreateSupportContactInput): Promise<AdminSupportContact> => {
-  const { data, error } = await supabase
-    .from("support_contacts")
-    .insert({
-      phone: input.phone,
-      label: input.label ?? null,
-      is_primary: input.is_primary ?? false,
-    })
-    .select("*")
-    .single();
+  try {
+    const { data, error } = await supabase
+      .from("support_contacts")
+      .insert({
+        phone: input.phone,
+        label: input.label ?? null,
+        is_primary: input.is_primary ?? false,
+      })
+      .select("*")
+      .single();
 
-  if (error) throw error;
+    if (error) { console.error('createSupportContact error:', error.message); throw error; }
 
-  return data;
+    return data;
+  } catch (e: any) { console.error('createSupportContact exception:', e.message); throw e; }
 };
 
 export type UpdateSupportContactInput = Partial<CreateSupportContactInput>;
 
 export const updateSupportContact = async (id: string, input: UpdateSupportContactInput): Promise<AdminSupportContact> => {
-  const { data, error } = await supabase
-    .from("support_contacts")
-    .update({
-      phone: input.phone,
-      label: input.label,
-      is_primary: input.is_primary,
-    })
-    .eq("id", id)
-    .select("*")
-    .single();
+  try {
+    const { data, error } = await supabase
+      .from("support_contacts")
+      .update({
+        phone: input.phone,
+        label: input.label,
+        is_primary: input.is_primary,
+      })
+      .eq("id", id)
+      .select("*")
+      .single();
 
-  if (error) throw error;
+    if (error) { console.error('updateSupportContact error:', error.message); throw error; }
 
-  return data;
+    return data;
+  } catch (e: any) { console.error('updateSupportContact exception:', e.message); throw e; }
 };
 
 export const deleteSupportContact = async (id: string): Promise<void> => {
-  const { error } = await supabase.from("support_contacts").delete().eq("id", id);
+  try {
+    const { error } = await supabase.from("support_contacts").delete().eq("id", id);
 
-  if (error) throw error;
+    if (error) { console.error('deleteSupportContact error:', error.message); throw error; }
+  } catch (e: any) { console.error('deleteSupportContact exception:', e.message); throw e; }
 };
 
 // ===========================================
@@ -1965,20 +2005,22 @@ export type AppSetting = {
 };
 
 export const getStoreLocation = async (): Promise<StoreLocation> => {
-  const { data, error } = await supabase
-    .from("app_settings")
-    .select("value")
-    .eq("key", "store_location")
-    .maybeSingle();
+  try {
+    const { data, error } = await supabase
+      .from("app_settings")
+      .select("value")
+      .eq("key", "store_location")
+      .maybeSingle();
 
-  if (error) throw error;
+    if (error) { console.error('getStoreLocation error:', error.message); return { address: "", latitude: 0, longitude: 0, updated_at: "" }; }
 
-  return (data?.value as StoreLocation) ?? {
-    address: "",
-    latitude: 0,
-    longitude: 0,
-    updated_at: "",
-  };
+    return (data?.value as StoreLocation) ?? {
+      address: "",
+      latitude: 0,
+      longitude: 0,
+      updated_at: "",
+    };
+  } catch (e: any) { console.error('getStoreLocation exception:', e.message); return { address: "", latitude: 0, longitude: 0, updated_at: "" }; }
 };
 
 export const updateStoreLocation = async (input: Partial<StoreLocation>): Promise<StoreLocation> => {
@@ -1989,45 +2031,51 @@ export const updateStoreLocation = async (input: Partial<StoreLocation>): Promis
     updated_at: "",
   };
 
-  const { data, error } = await supabase
-    .from("app_settings")
-    .upsert({
-      key: "store_location",
-      value: location,
-    }, { onConflict: "key" })
-    .select("value")
-    .single();
+  try {
+    const { data, error } = await supabase
+      .from("app_settings")
+      .upsert({
+        key: "store_location",
+        value: location,
+      }, { onConflict: "key" })
+      .select("value")
+      .single();
 
-  if (error) throw error;
+    if (error) { console.error('updateStoreLocation error:', error.message); throw error; }
 
-  return data.value as StoreLocation;
+    return data.value as StoreLocation;
+  } catch (e: any) { console.error('updateStoreLocation exception:', e.message); throw e; }
 };
 
 export const getAppSetting = async <T = any>(key: string): Promise<T | null> => {
-  const { data, error } = await supabase
-    .from("app_settings")
-    .select("value")
-    .eq("key", key)
-    .maybeSingle();
+  try {
+    const { data, error } = await supabase
+      .from("app_settings")
+      .select("value")
+      .eq("key", key)
+      .maybeSingle();
 
-  if (error) throw error;
+    if (error) { console.error('getAppSetting error:', error.message); return null; }
 
-  return data?.value ?? null;
+    return data?.value ?? null;
+  } catch (e: any) { console.error('getAppSetting exception:', e.message); return null; }
 };
 
 export const setAppSetting = async <T = any>(key: string, value: T): Promise<AppSetting> => {
-  const { data, error } = await supabase
-    .from("app_settings")
-    .upsert({
-      key,
-      value,
-    }, { onConflict: "key" })
-    .select("key, value, updated_at")
-    .single();
+  try {
+    const { data, error } = await supabase
+      .from("app_settings")
+      .upsert({
+        key,
+        value,
+      }, { onConflict: "key" })
+      .select("key, value, updated_at")
+      .single();
 
-  if (error) throw error;
+    if (error) { console.error('setAppSetting error:', error.message); throw error; }
 
-  return data;
+    return data;
+  } catch (e: any) { console.error('setAppSetting exception:', e.message); throw e; }
 };
 
 export const getAppLanguage = async (): Promise<string> => {

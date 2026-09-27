@@ -37,6 +37,15 @@ export default function OrderTracking() {
     skip: !id || !user,
   });
 
+  // Early return if no data or order
+  if (loading || !data || !data.order) {
+    return (
+      <SafeAreaView className="flex-1 bg-white items-center justify-center">
+        <ActivityIndicator color="#FE8C00" />
+      </SafeAreaView>
+    );
+  }
+
   const [status, setStatus] = useState<string | null>(null);
   const [driverLocation, setDriverLocation] = useState<{
     latitude: number;
@@ -44,10 +53,10 @@ export default function OrderTracking() {
   } | null>(null);
 
   useEffect(() => {
-    if (data?.order.status) {
+    if (data?.order?.status) {
       setStatus(data.order.status);
     }
-  }, [data?.order.status]);
+  }, [data?.order?.status]);
 
   useEffect(() => {
     if (!id) return;
@@ -83,7 +92,7 @@ export default function OrderTracking() {
         <View>
           <Text className="h2-bold text-dark-100">{t("tracking.title")}</Text>
           <Text className="paragraph-regular text-gray-100">
-            #{data.order.id.slice(0, 8).toUpperCase()}
+            #{data.order?.id?.slice(0, 8).toUpperCase()}
           </Text>
         </View>
       </View>

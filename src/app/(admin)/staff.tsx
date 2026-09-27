@@ -15,6 +15,7 @@ import {
   Platform,
   TouchableWithoutFeedback,
   Keyboard,
+  I18nManager,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
@@ -55,6 +56,7 @@ const ROLE_CONFIG: Record<
   supervisor: { label: { en: "Supervisor", ar: "مشرف" }, color: "#3B82F6", bgColor: "#DBEAFE" },
   admin: { label: { en: "Admin", ar: "مدير" }, color: "#8B5CF6", bgColor: "#EEE2FF" },
   delivery: { label: { en: "Delivery", ar: "توصيل" }, color: "#F59E0B", bgColor: "#FEF3C7" },
+  customer: { label: { en: "Customer", ar: "عميل" }, color: "#6B7280", bgColor: "#F3F4F6" },
 };
 
 // ===========================================
@@ -105,7 +107,7 @@ export default function StaffScreen() {
   const [newStaffPassword, setNewStaffPassword] = useState("");
   const [addingStaff, setAddingStaff] = useState(false);
 
-  const isRTL = i18n.dir() === "rtl";
+  const isRTL = I18nManager.isRTL;
 
   const { data: staff, loading, error, refetch } = useSupabaseQuery({
     fn: () => getStaffMembers(searchQuery, roleFilter),
@@ -174,7 +176,7 @@ export default function StaffScreen() {
       Alert.alert(
         isRTL ? "نجاح" : "Success",
         isRTL
-          ? `تم إرسافة ${result.full_name ?? newStaffName} بنجاح`
+          ? `تم إرسال ${result.full_name ?? newStaffName} بنجاح`
           : `${result.full_name ?? newStaffName} has been added successfully`
       );
       setAddStaffModalVisible(false);
@@ -225,7 +227,7 @@ export default function StaffScreen() {
             <Text style={styles.statusText}>
               {isActive
                 ? "Active now"
-                : `Last active ${timeAgo(item.lastActive)}`}
+                : `Last active ${timeAgo(item.lastActive ?? null)}`}
             </Text>
           </View>
           <View style={styles.statsContainer}>

@@ -8,38 +8,30 @@ import {
   TouchableOpacity,
   Alert,
   I18nManager,
-  Keyboard,
   Image,
+  KeyboardAvoidingView,
+  Platform,
+  Modal,
+  Pressable,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
+import { createProduct } from "../../../lib/adminQueries";
 import {
   ArrowLeft,
   Plus,
   Camera,
   Save,
   X,
-  Image as ImageIcon,
+  Check,
+  ChevronDown,
 } from "lucide-react-native";
 
 import AdminMoreTrigger from "../../../components/admin/AdminMoreTrigger";
 
 // ===========================================
 // Category Options
-// ===========================================
-
-const CATEGORIES = [
-  { value: "bakery", label: { en: "Bakery", ar: "معجنات" } },
-  { value: "cookies", label: { en: "Cookies", ar: "كوكيز" } },
-  { value: "cake", label: { en: "Cake", ar: "كيك" } },
-  { value: "drinks", label: { en: "Drinks", ar: "مشروبات" } },
-];
-
-type CategoryValue = typeof CATEGORIES[number]["value"];
-
-// ===========================================
-// Add Product Screen
 // ===========================================
 
 export default function AddProductScreen() {
@@ -50,22 +42,106 @@ export default function AddProductScreen() {
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
   const [stock, setStock] = useState("");
-  const [category, setCategory] = useState<CategoryValue>("bakery");
+  const [selectedCategory, setSelectedCategory] = useState("Bakery");
   const [description, setDescription] = useState("");
   const [supplier, setSupplier] = useState("");
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [categories, setCategories] = useState<string[]>([
+    "Bakery",
+    "Pastry",
+    "Drinks",
+    "Raw Material",
+    "Packaging",
+  ]);
 
-  const handleImagePick = useCallback(async () => {
-    // Note: expo-image-picker not installed. Using placeholder.
-    Alert.alert(
-      isRTL ? "تنبيه" : "Feature Coming Soon",
-      isRTL ? "اختيار الصورة سيضاف قريباً" : "Image selection will be added soon"
+  const handleImagePick = async () => {
+    try {
+      const ImagePicker = await import('expo-image-picker');
+      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!perm.granted) {
+        Alert.alert('صلاحية الصور', 'محتاج تسمح بالوصول للصور');
+        return;
+      }
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.7,
+      });
+      if (!result.canceled && result.assets?.[0]?.uri) {
+        setImageUri(result.assets[0].uri);
+      }
+    } catch (e: any) {
+      console.error('ImagePick error', e);
+      Alert.alert(
+        isRTL ? "خطأ" : "Error",
+        isRTL ? "فشل اختيار الصورة" : "Failed to pick image"
+      );
+    }
+  };
+
+  const handleCategorySelect = (catName: string) => {
+    setSelectedCategory(catName);
+    setShowCategoryModal(false);
+  };
+
+  const handleAddCategory = () => {
+    Alert.prompt(
+      isRTL ? "فئة جديدة" : "New Category",
+      isRTL ? "أدخل اسم الفئة" : "Enter category name",
+      (newName) => {
+        if (newName && newName.trim()) {
+          const trimmed = newName.trim();
+          if (trimmed && !categories.includes(trimmed)) {
+            setCategories((prev) => [...prev, trimmed]);
+            if (selectedCategory === "Bakery") setSelectedCategory(trimmed);
+          }
+        }
+      }
     );
-  }, [isRTL]);
+  };
+
+  const handleEditCategory = (oldName: string) => {
+    Alert.prompt(
+      isRTL ? "تعديل فئة" : "Edit Category",
+      isRTL ? "اسم جديد" : "New name",
+      (newName) => {
+        if (newName && newName.trim()) {
+          const trimmed = newName.trim();
+          setCategories(categories.map((c) => (c === oldName ? trimmed : c)));
+          if (selectedCategory === oldName) setSelectedCategory(trimmed);
+        }
+      },
+      "plain-text",
+      oldName
+    );
+  };
+
+  const handleDeleteCategory = (name: string) => {
+    if (categories.length <= 1) {
+      Alert.alert(isRTL ? "لا يمكن مسح كل الفئات" : "Cannot remove all categories");
+      return;
+    }
+    Alert.alert(
+      isRTL ? "مسح فئة" : "Remove Category",
+      isRTL ? `هل تريد مسح ${name}؟` : `Are you sure you want to remove ${name}?`,
+      [
+        { text: isRTL ? "إلغاء" : "Cancel", style: "cancel" },
+        {
+          text: isRTL ? "مسح" : "Remove",
+          style: "destructive",
+          onPress: () => {
+            setCategories(categories.filter((c) => c !== name));
+            if (selectedCategory === name) setSelectedCategory(categories[0] || "Bakery");
+          },
+        },
+      ]
+    );
+  };
 
   const handleSave = useCallback(async () => {
-    // Validate required fields
     if (!name.trim()) {
       Alert.alert(isRTL ? "خطأ" : "Error", isRTL ? "يرجى إدخال اسم المنتج" : "Please enter product name");
       return;
@@ -81,211 +157,288 @@ export default function AddProductScreen() {
 
     setSaving(true);
 
-    // Simulate API call - replace with actual Supabase insert
-    await new Promise((resolve) => setTimeout(resolve, 800));
+    try {
+      // Map selectedCategory to category_id format (lowercase, matching CATEGORY_MAP)
+      const categoryMap: Record<string, string> = {
+        "Bakery": "bakery",
+        "Pastry": "cookies",
+        "Drinks": "drinks",
+        "Raw Material": "other",
+        "Packaging": "other",
+      };
+      const categoryId = categoryMap[selectedCategory] || selectedCategory.toLowerCase();
 
-    setSaving(false);
+      const payload = {
+        category_id: categoryId,
+        name: name.trim(),
+        description: description.trim() || null,
+        image_url: imageUri,
+        price: parseFloat(price),
+        stock_quantity: parseInt(stock, 10),
+        is_active: true,
+        is_featured: false,
+      };
 
-    Alert.alert(
-      isRTL ? "تم الحفظ" : "Saved",
-      isRTL ? "تم إضافة المنتج بنجاح" : "Product added successfully",
-      [{ text: isRTL ? "حسناً" : "OK", onPress: () => router.back() }]
-    );
-  }, [name, price, stock, isRTL, router]);
+      await createProduct(payload);
+
+      Alert.alert(
+        isRTL ? "تم الحفظ" : "Saved",
+        isRTL ? "تم حفظ المنتج في الكلاود ✅" : "Product saved to cloud successfully",
+        [{ text: isRTL ? "حسناً" : "OK", onPress: () => router.back() }]
+      );
+    } catch (error: any) {
+      console.error("Save product error:", error);
+      Alert.alert(isRTL ? "خطأ" : "Error", error.message || "Failed to save product");
+    } finally {
+      setSaving(false);
+    }
+  }, [name, price, stock, description, selectedCategory, supplier, imageUri, isRTL, router]);
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <ScrollView
-        contentContainerStyle={styles.content}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={styles.keyboardAvoiding}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity
-            onPress={() => {
-              if (router.canGoBack()) {
-                router.back();
-              } else {
-                router.replace("/(admin)/inventory");
-              }
-            }}
-            hitSlop={20}
-            style={styles.backButton}
-          >
-            <ArrowLeft size={24} color="#181C2E" />
-          </TouchableOpacity>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.title}>
-              {isRTL ? "إضافة منتج جديد" : "Add New Product"}
-            </Text>
-            <Text style={styles.subtitle}>
-              {isRTL ? "املأ البيانات أدناه" : "Fill in the details below"}
-            </Text>
-          </View>
-          <AdminMoreTrigger />
-        </View>
-
-        {/* Image Picker */}
-        <View style={styles.section}>
-          <TouchableOpacity
-            activeOpacity={0.8}
-            hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
-            style={[
-              styles.imagePicker,
-              imageUri && styles.imagePickerHasImage,
-            ]}
-            onPress={handleImagePick}
-          >
-            {imageUri ? (
-              <>
-                <Image
-                  source={{ uri: imageUri }}
-                  style={styles.productImage}
-                  resizeMode="cover"
-                />
-                <View style={styles.imageOverlay}>
-                  <Camera size={28} color="#FFFFFF" />
-                </View>
-              </>
-            ) : (
-              <View style={styles.imagePickerPlaceholder}>
-                <Camera size={36} color="#C09248" />
-                <Text style={styles.imagePickerText}>
-                  {isRTL ? "اضغط لإضافة صورة المنتج" : "Tap to add product image"}
-                </Text>
-              </View>
-            )}
-          </TouchableOpacity>
-        </View>
-
-        {/* Product Name */}
-        <View style={styles.section}>
-          <Text style={styles.label}>{isRTL ? "اسم المنتج *" : "Product Name *"}</Text>
-          <TextInput
-            style={[styles.input, { textAlign: isRTL ? "right" : "left" }]}
-            value={name}
-            onChangeText={setName}
-            placeholder={isRTL ? "مثال: كرواسون بالشوكولاتة" : "e.g. Chocolate Croissant"}
-            placeholderTextColor="#878787"
-            autoCapitalize="words"
-            returnKeyType="next"
-          />
-        </View>
-
-        {/* Description */}
-        <View style={styles.section}>
-          <Text style={styles.label}>{isRTL ? "الوصف" : "Description"}</Text>
-          <TextInput
-            style={[styles.input, styles.inputMultiline, { textAlign: isRTL ? "right" : "left" }]}
-            value={description}
-            onChangeText={setDescription}
-            placeholder={isRTL ? "وصف مختصر للمنتج" : "Short product description"}
-            placeholderTextColor="#878787"
-            multiline
-            numberOfLines={3}
-            returnKeyType="next"
-          />
-        </View>
-
-        {/* Price & Stock Row */}
-        <View style={styles.twoColumnRow}>
-          <View style={styles.sectionHalf}>
-            <Text style={styles.label}>{isRTL ? "السعر (ج.م) *" : "Price (EGP) *"}</Text>
-            <TextInput
-              style={[styles.input, { textAlign: isRTL ? "right" : "left" }]}
-              value={price}
-              onChangeText={setPrice}
-              placeholder={isRTL ? "0.00" : "0.00"}
-              placeholderTextColor="#878787"
-              keyboardType="decimal-pad"
-              returnKeyType="next"
-            />
-          </View>
-          <View style={styles.sectionHalf}>
-            <Text style={styles.label}>{isRTL ? "الكمية في المخزن *" : "Stock Quantity *"}</Text>
-            <TextInput
-              style={[styles.input, { textAlign: isRTL ? "right" : "left" }]}
-              value={stock}
-              onChangeText={setStock}
-              placeholder={isRTL ? "0" : "0"}
-              placeholderTextColor="#878787"
-              keyboardType="numeric"
-              returnKeyType="next"
-            />
-          </View>
-        </View>
-
-        {/* Category Dropdown */}
-        <View style={styles.section}>
-          <Text style={styles.label}>{isRTL ? "الفئة *" : "Category *"}</Text>
-          <TouchableOpacity
-            activeOpacity={0.7}
-            hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
-            style={styles.dropdown}
-            onPress={() => Keyboard.dismiss()}
-          >
-            <View style={styles.dropdownContent}>
-              <Text style={[styles.dropdownText, { textAlign: isRTL ? "right" : "left" }]}>
-                {CATEGORIES.find((c) => c.value === category)?.label[isRTL ? "ar" : "en"]}
+        <ScrollView
+          contentContainerStyle={{ paddingBottom: 120, paddingHorizontal: 16, gap: 16 }}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Header */}
+          <View style={styles.header}>
+            <TouchableOpacity
+              onPress={() => {
+                if (router.canGoBack()) {
+                  router.back();
+                } else {
+                  router.replace("/(admin)/inventory");
+                }
+              }}
+              hitSlop={20}
+              style={styles.backButton}
+            >
+              <ArrowLeft size={24} color="#181C2E" />
+            </TouchableOpacity>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.title}>
+                {isRTL ? "إضافة منتج جديد" : "Add New Product"}
               </Text>
-              <View style={styles.dropdownArrow}>
-                <Plus size={20} color="#878787" />
-              </View>
+              <Text style={styles.subtitle}>
+                {isRTL ? "املأ البيانات أدناه" : "Fill in the details below"}
+              </Text>
             </View>
-          </TouchableOpacity>
-        </View>
+            <AdminMoreTrigger />
+          </View>
 
-        {/* Supplier */}
-        <View style={styles.section}>
-          <Text style={styles.label}>{isRTL ? "المورد" : "Supplier"}</Text>
-          <TextInput
-            style={[styles.input, { textAlign: isRTL ? "right" : "left" }]}
-            value={supplier}
-            onChangeText={setSupplier}
-            placeholder={isRTL ? "اسم المورد (اختياري)" : "Supplier name (optional)"}
-            placeholderTextColor="#878787"
-            autoCapitalize="words"
-            returnKeyType="done"
-          />
-        </View>
+          {/* Image Picker */}
+          <View style={styles.section}>
+            <TouchableOpacity
+              activeOpacity={0.8}
+              hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
+              style={[styles.imagePicker, imageUri && styles.imagePickerHasImage]}
+              onPress={handleImagePick}
+            >
+              {imageUri ? (
+                <>
+                  <Image source={{ uri: imageUri }} style={styles.productImage} resizeMode="cover" />
+                  <View style={styles.imageOverlay}>
+                    <Camera size={28} color="#FFFFFF" />
+                  </View>
+                </>
+              ) : (
+                <View style={styles.imagePickerPlaceholder}>
+                  <Camera size={36} color="#C09248" />
+                  <Text style={styles.imagePickerText}>
+                    {isRTL ? "اضغط لإضافة صورة المنتج" : "Tap to add product image"}
+                  </Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          </View>
 
-        {/* Action Buttons */}
-        <View style={styles.buttonRow}>
-          <TouchableOpacity
-            activeOpacity={0.7}
-            hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
-            style={styles.cancelButton}
-            onPress={() => router.back()}
-          >
-            <X size={20} color="#EF4444" />
-            <Text style={styles.cancelButtonText}>
-              {isRTL ? "إلغاء" : "Cancel"}
-            </Text>
-          </TouchableOpacity>
+          {/* Product Name */}
+          <View style={styles.section}>
+            <Text style={styles.label}>{isRTL ? "اسم المنتج *" : "Product Name *"}</Text>
+            <TextInput
+              style={[styles.input, { textAlign: isRTL ? "right" : "left" }]}
+              value={name}
+              onChangeText={setName}
+              placeholder={isRTL ? "مثال: كرواسون بالشوكولاتة" : "e.g. Chocolate Croissant"}
+              placeholderTextColor="#878787"
+              autoCapitalize="words"
+              returnKeyType="next"
+            />
+          </View>
 
-          <TouchableOpacity
-            activeOpacity={0.7}
-            hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
-            style={styles.saveButton}
-            onPress={handleSave}
-            disabled={saving}
-          >
-            {saving ? (
-              <View style={styles.buttonLoading}>
-                <Save size={20} color="#FFFFFF" />
+          {/* Description */}
+          <View style={styles.section}>
+            <Text style={styles.label}>{isRTL ? "الوصف" : "Description"}</Text>
+            <TextInput
+              style={[styles.input, styles.inputMultiline, { textAlign: isRTL ? "right" : "left" }]}
+              value={description}
+              onChangeText={setDescription}
+              placeholder={isRTL ? "وصف مختصر للمنتج" : "Short product description"}
+              placeholderTextColor="#878787"
+              multiline
+              numberOfLines={3}
+              returnKeyType="next"
+              // Fix icon overlap - disable any pointer events on nested elements
+              pointerEvents="box-none"
+            />
+          </View>
+
+          {/* Price & Stock Row */}
+          <View style={styles.twoColumnRow}>
+            <View style={styles.sectionHalf}>
+              <Text style={styles.label}>{isRTL ? "السعر (ج.م) *" : "Price (EGP) *"}</Text>
+              <TextInput
+                style={[styles.input, { textAlign: isRTL ? "right" : "left" }]}
+                value={price}
+                onChangeText={setPrice}
+                placeholder={isRTL ? "0.00" : "0.00"}
+                placeholderTextColor="#878787"
+                keyboardType="decimal-pad"
+                returnKeyType="next"
+              />
+            </View>
+            <View style={styles.sectionHalf}>
+              <Text style={styles.label}>{isRTL ? "الكمية في المخزن *" : "Stock Quantity *"}</Text>
+              <TextInput
+                style={[styles.input, { textAlign: isRTL ? "right" : "left" }]}
+                value={stock}
+                onChangeText={setStock}
+                placeholder={isRTL ? "0" : "0"}
+                placeholderTextColor="#878787"
+                keyboardType="numeric"
+                returnKeyType="next"
+              />
+            </View>
+          </View>
+
+          {/* Category Selector - Pressable with Modal */}
+          <View style={styles.section}>
+            <Text style={styles.label}>{isRTL ? "الفئة *" : "Category *"}</Text>
+            <TouchableOpacity
+              activeOpacity={0.7}
+              hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
+              style={styles.dropdown}
+              onPress={() => setShowCategoryModal(true)}
+            >
+              <View style={styles.dropdownContent}>
+                <Text style={[styles.dropdownText, { textAlign: isRTL ? "right" : "left" }]}>{selectedCategory}</Text>
+                <View style={styles.dropdownArrow}>
+                  <ChevronDown size={20} color="#878787" />
+                </View>
               </View>
-            ) : (
-              <>
-                <Save size={20} color="#FFFFFF" />
-                <Text style={styles.saveButtonText}>
-                  {isRTL ? "حفظ المنتج" : "Save Product"}
-                </Text>
-              </>
-            )}
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
+            </TouchableOpacity>
+          </View>
+
+          {/* Supplier - Working TextInput */}
+          <View style={styles.section}>
+            <Text style={styles.label}>{isRTL ? "المورد" : "Supplier"}</Text>
+            <TextInput
+              style={[styles.input, { textAlign: isRTL ? "right" : "left" }]}
+              value={supplier}
+              onChangeText={setSupplier}
+              placeholder={isRTL ? "اسم المورد (اختياري)" : "Supplier name (optional)"}
+              placeholderTextColor="#878787"
+              autoCapitalize="words"
+              returnKeyType="done"
+            />
+          </View>
+
+          {/* Action Buttons */}
+          <View style={styles.buttonRow}>
+            <TouchableOpacity
+              activeOpacity={0.7}
+              hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
+              style={styles.cancelButton}
+              onPress={() => router.back()}
+            >
+              <X size={20} color="#EF4444" />
+              <Text style={styles.cancelButtonText}>{isRTL ? "إلغاء" : "Cancel"}</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              activeOpacity={0.7}
+              hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
+              style={styles.saveButton}
+              onPress={handleSave}
+              disabled={saving}
+            >
+              {saving ? (
+                <View style={styles.buttonLoading}>
+                  <Save size={20} color="#FFFFFF" />
+                </View>
+              ) : (
+                <>
+                  <Save size={20} color="#FFFFFF" />
+                  <Text style={styles.saveButtonText}>{isRTL ? "حفظ المنتج" : "Save Product"}</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+
+      {/* Category Selection Modal */}
+      <Modal visible={showCategoryModal} animationType="slide" transparent={true}>
+        <TouchableOpacity
+          activeOpacity={1}
+          style={styles.modalOverlay}
+          onPress={() => setShowCategoryModal(false)}
+        >
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>
+                {isRTL ? "اختر الفئة" : "Select Category"}
+              </Text>
+              <TouchableOpacity
+                activeOpacity={0.7}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                onPress={handleAddCategory}
+              >
+                <Plus size={24} color="#C09248" />
+              </TouchableOpacity>
+            </View>
+            <ScrollView contentContainerStyle={styles.modalList} showsVerticalScrollIndicator={false}>
+              {categories.map((cat) => (
+                <TouchableOpacity
+                  key={cat}
+                  activeOpacity={0.7}
+                  hitSlop={{ top: 10, bottom: 10, left: 15, right: 15 }}
+                  style={[
+                    styles.modalItem,
+                    selectedCategory === cat && styles.modalItemSelected,
+                  ]}
+                >
+                  <TouchableOpacity
+                    onPress={() => handleCategorySelect(cat)}
+                    style={{ flex: 1 }}
+                  >
+                    <Text style={[
+                      styles.modalItemText,
+                      selectedCategory === cat && styles.modalItemTextSelected,
+                    ]}>
+                      {cat}
+                    </Text>
+                  </TouchableOpacity>
+                  <View style={{ flexDirection: "row", gap: 12 }}>
+                    <TouchableOpacity onPress={() => handleEditCategory(cat)}>
+                      <Text>✏️</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => handleDeleteCategory(cat)}>
+                      <Text>🗑️</Text>
+                    </TouchableOpacity>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -299,10 +452,8 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#FDF8F3",
   },
-  content: {
-    padding: 16,
-    paddingBottom: 40,
-    gap: 16,
+  keyboardAvoiding: {
+    flex: 1,
   },
 
   // Header
@@ -501,5 +652,69 @@ const styles = StyleSheet.create({
   buttonLoading: {
     flexDirection: "row",
     alignItems: "center",
+  },
+
+  // Category Modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.4)",
+    justifyContent: "flex-end",
+  },
+  modalContent: {
+    backgroundColor: "#FFFFFF",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 20,
+    paddingBottom: 40,
+    maxHeight: "70%",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 16,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F3F4F6",
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    fontFamily: "Quicksand-Bold",
+    color: "#181C2E",
+  },
+  modalList: {
+    gap: 8,
+  },
+  modalItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    backgroundColor: "#F9FAFB",
+    borderRadius: 12,
+  },
+  modalItemSelected: {
+    backgroundColor: "#FEF3E2",
+    borderWidth: 1,
+    borderColor: "#C09248",
+  },
+  modalItemText: {
+    fontSize: 16,
+    fontFamily: "Quicksand-Medium",
+    color: "#181C2E",
+  },
+  modalItemTextSelected: {
+    color: "#C09248",
+    fontWeight: "600",
+  },
+  modalCheck: {
+    marginLeft: 8,
   },
 });

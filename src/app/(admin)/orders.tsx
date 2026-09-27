@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
   TouchableOpacity,
   I18nManager,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, router } from "expo-router";
@@ -124,17 +125,27 @@ export default function OrdersScreen() {
   // Handle Accept
   const handleAccept = async (orderId: string) => {
     setUpdatingId(orderId);
-    await updateOrderStatus(orderId, "accepted");
+    const success = await updateOrderStatus(orderId, "accepted");
     setUpdatingId(null);
-    await refetch();
+    if (success) {
+      await refetch();
+      Alert.alert(t("common.success"), t("admin.orders.accepted"));
+    } else {
+      Alert.alert(t("common.error"), t("admin.orders.acceptFailed"));
+    }
   };
 
   // Handle Reject
   const handleReject = async (orderId: string) => {
     setUpdatingId(orderId);
-    await updateOrderStatus(orderId, "cancelled");
+    const success = await updateOrderStatus(orderId, "cancelled");
     setUpdatingId(null);
-    await refetch();
+    if (success) {
+      await refetch();
+      Alert.alert(t("common.success"), t("admin.orders.rejected"));
+    } else {
+      Alert.alert(t("common.error"), t("admin.orders.rejectFailed"));
+    }
   };
 
   // Render individual order item

@@ -146,13 +146,16 @@ export default function CashierProducts() {
     setTogglingId(product.id);
     try {
       const { toggleProductActive } = await import("../../../lib/queries");
-      await toggleProductActive(product.id, newActiveState);
-
-      setProducts((prev) =>
-        prev.map((p) =>
-          p.id === product.id ? { ...p, is_active: newActiveState } : p,
-        ),
-      );
+      const result = await toggleProductActive(product.id, newActiveState);
+      if (result.success) {
+        setProducts((prev) =>
+          prev.map((p) =>
+            p.id === product.id ? { ...p, is_active: newActiveState } : p,
+          ),
+        );
+      } else {
+        Alert.alert("Error", result.error?.message ?? "Failed to update product");
+      }
     } catch (error: any) {
       Alert.alert("Error", error.message ?? "Failed to update product");
     } finally {

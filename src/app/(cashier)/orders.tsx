@@ -50,10 +50,15 @@ export default function CashierOrders() {
   const loadOrders = async () => {
     setLoading(true);
     try {
-      const [pending, today] = await Promise.all([
+      const [pendingResult, todayResult] = await Promise.all([
         getPendingOrders(),
         getTodayOrders(),
       ]);
+
+      // Handle the new {data, error} format
+      const pending = pendingResult.data ?? [];
+      const today = todayResult.data ?? [];
+
       setPendingOrders(pending);
       setTodayOrders(today);
     } catch (error: any) {

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 type UseSupabaseQueryOptions<TParams, TData> = {
-  fn: (params: TParams) => Promise<TData>;
+  fn: (params: TParams) => Promise<{ data: TData | null; error: any } | TData>;
   params?: TParams;
   skip?: boolean;
 };
@@ -22,7 +22,18 @@ export const useSupabaseQuery = <TParams, TData>({
 
       try {
         const result = await fn(overrideParams ?? (params as TParams));
-        setData(result);
+
+        // Handle both return formats: {data, error} and direct data
+        if (result !== null && typeof result === 'object' && 'data' in result && 'error' in result) {
+          // New format: {data: TData | null, error: any}
+          setData(result.data);
+          if (result.error) {
+            setError(result.error.message || "Something went wrong");
+          }
+        } else {
+          // Old format: direct data (TData)
+          setData(result as TData);
+        }
       } catch (err: any) {
         setError(err?.message || "Something went wrong");
       } finally {

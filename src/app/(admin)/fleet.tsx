@@ -62,12 +62,14 @@ export default function FleetScreen() {
   const {
     data: drivers,
     loading: driversLoading,
+    error: driversError,
     refetch: refetchDrivers,
   } = useSupabaseQuery({ fn: () => getDeliveryDrivers() });
 
   const {
     data: orders,
     loading: ordersLoading,
+    error: ordersError,
     refetch: refetchOrders,
   } = useSupabaseQuery({ fn: () => getFleetOrders() });
 

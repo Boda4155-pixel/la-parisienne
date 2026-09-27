@@ -466,6 +466,12 @@
       "percentage": "Percentage (%)",
       "fixed": "Fixed Amount"
     },
+    "orders": {
+      "accepted": "Order accepted successfully",
+      "rejected": "Order rejected successfully",
+      "acceptFailed": "Failed to accept order",
+      "rejectFailed": "Failed to reject order"
+    },
     "nav": {
       "dashboard": "Dashboard",
       "orders": "Orders",

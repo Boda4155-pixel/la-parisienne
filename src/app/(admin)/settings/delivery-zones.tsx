@@ -53,7 +53,7 @@ export default function DeliveryZonesSettings() {
   const renderItem = ({ item }: { item: AdminDeliveryZone }) => (
     <Pressable
       style={styles.row}
-      onPress={() => router.push(`/settings/delivery-zones/${item.id}` as any)}
+      onPress={() => router.push(`/(admin)/settings/delivery-zones/${item.id}` as any)}
     >
       <View style={styles.rowContent}>
         <Text style={styles.rowTitle} numberOfLines={1}>
@@ -74,7 +74,7 @@ export default function DeliveryZonesSettings() {
       <View style={styles.actions}>
         <Pressable
           style={styles.iconButton}
-          onPress={() => router.push(`/settings/delivery-zones/${item.id}` as any)}
+          onPress={() => router.push(`/(admin)/settings/delivery-zones/${item.id}` as any)}
         >
           <Pencil size={16} color="#FE8C00" />
         </Pressable>
@@ -97,7 +97,7 @@ export default function DeliveryZonesSettings() {
         </View>
         <View style={styles.headerActions}>
           <AdminMoreTrigger />
-          <Pressable style={styles.addButton} onPress={() => router.push("/settings/delivery-zones/new" as any)}>
+          <Pressable style={styles.addButton} onPress={() => router.push("/(admin)/settings/delivery-zones/new" as any)}>
             <Plus size={18} color="#FFFFFF" />
             <Text style={styles.addButtonText}>{t("admin.settings.deliveryZones.add")}</Text>
           </Pressable>

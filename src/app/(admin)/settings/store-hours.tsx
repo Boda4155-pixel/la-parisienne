@@ -63,7 +63,7 @@ export default function StoreHoursSettings() {
   const renderItem = ({ item }: { item: AdminStoreHour }) => (
     <Pressable
       style={styles.row}
-      onPress={() => router.push(`/settings/store-hours/${item.id}` as any)}
+      onPress={() => router.push(`/(admin)/settings/store-hours/${item.id}` as any)}
     >
       <View style={styles.rowContent}>
         <Text style={styles.rowTitle}>{t(DAY_NAMES[item.day_of_week] ?? "")}</Text>
@@ -82,7 +82,7 @@ export default function StoreHoursSettings() {
       <View style={styles.actions}>
         <Pressable
           style={styles.iconButton}
-          onPress={() => router.push(`/settings/store-hours/${item.id}` as any)}
+          onPress={() => router.push(`/(admin)/settings/store-hours/${item.id}` as any)}
         >
           <Pencil size={16} color="#FE8C00" />
         </Pressable>
@@ -105,7 +105,7 @@ export default function StoreHoursSettings() {
         </View>
         <View style={styles.headerActions}>
           <AdminMoreTrigger />
-          <Pressable style={styles.addButton} onPress={() => router.push("/settings/store-hours/new" as any)}>
+          <Pressable style={styles.addButton} onPress={() => router.push("/(admin)/settings/store-hours/new" as any)}>
             <Plus size={18} color="#FFFFFF" />
             <Text style={styles.addButtonText}>{t("admin.settings.storeHours.add")}</Text>
           </Pressable>

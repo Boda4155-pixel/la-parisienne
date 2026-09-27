@@ -53,7 +53,7 @@ export default function SupportContactsSettings() {
   const renderItem = ({ item }: { item: AdminSupportContact }) => (
     <Pressable
       style={styles.row}
-      onPress={() => router.push(`/settings/support-contacts/${item.id}` as any)}
+      onPress={() => router.push(`/(admin)/settings/support-contacts/${item.id}` as any)}
     >
       <View style={styles.rowContent}>
         <Text style={styles.rowTitle}>{item.phone}</Text>
@@ -70,7 +70,7 @@ export default function SupportContactsSettings() {
       <View style={styles.actions}>
         <Pressable
           style={styles.iconButton}
-          onPress={() => router.push(`/settings/support-contacts/${item.id}` as any)}
+          onPress={() => router.push(`/(admin)/settings/support-contacts/${item.id}` as any)}
         >
           <Pencil size={16} color="#FE8C00" />
         </Pressable>
@@ -93,7 +93,7 @@ export default function SupportContactsSettings() {
         </View>
         <View style={styles.headerActions}>
           <AdminMoreTrigger />
-          <Pressable style={styles.addButton} onPress={() => router.push("/settings/support-contacts/new" as any)}>
+          <Pressable style={styles.addButton} onPress={() => router.push("/(admin)/settings/support-contacts/new" as any)}>
             <Plus size={18} color="#FFFFFF" />
             <Text style={styles.addButtonText}>{t("admin.settings.supportContacts.add")}</Text>
           </Pressable>

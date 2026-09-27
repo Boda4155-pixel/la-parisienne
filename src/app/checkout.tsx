@@ -137,7 +137,7 @@ export default function Checkout() {
     setSubmitting(true);
 
     try {
-      const order = await createOrder({
+      const result = await createOrder({
         userId: user.id,
         addressId: selectedAddressId,
         paymentMethod,
@@ -156,6 +156,20 @@ export default function Checkout() {
         })),
       });
 
+      if (!result.success) {
+        Alert.alert(
+          t("checkout.orderFailed"),
+          result.error?.message || t("common.somethingWentWrong"),
+        );
+        return;
+      }
+
+      if (!result.data || !result.data.order) {
+        Alert.alert(t("checkout.orderFailed"), t("common.somethingWentWrong"));
+        return;
+      }
+
+      const order = result.data.order;
       clearCart();
       router.replace({
         pathname: "/order/success",
@@ -196,7 +210,7 @@ export default function Checkout() {
 
               {loadingAddresses ? (
                 <ActivityIndicator color="#FE8C00" />
-              ) : !addresses || addresses.length === 0 ? (
+              ) : !addresses?.data || addresses.data.length === 0 ? (
                 <Pressable
                   onPress={() => router.push("/address/add")}
                   className="border border-dashed border-gray-200 rounded-2xl p-5 items-center"
@@ -207,7 +221,7 @@ export default function Checkout() {
                 </Pressable>
               ) : (
                 <View className="gap-y-3">
-                  {addresses.map((address) => {
+                  {addresses?.data?.map((address: any) => {
                     const isSelected = selectedAddressId === address.id;
 
                     return (
