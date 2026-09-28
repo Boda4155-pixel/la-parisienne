@@ -8,6 +8,7 @@ import {
   ScrollView,
   StyleSheet,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 import { router } from "expo-router";
 import { CheckCircle2, XCircle, MessageCircle, Clock3, Package } from "lucide-react-native";
@@ -42,6 +43,7 @@ export default function CashierNewOrders() {
   const [pendingOrders, setPendingOrders] = useState<any[]>([]);
   const [todayOrders, setTodayOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const insets = useSafeAreaInsets();
 
   const loadOrders = async () => {
     setLoading(true);
@@ -197,7 +199,7 @@ export default function CashierNewOrders() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View className="px-5 py-3">
+      <View className="px-5 py-3" style={{ paddingTop: insets.top + 8 }}>
         <Text className="h1-bold text-dark-100">{safeT(t, "cashier.orders.title", "Orders")}</Text>
       </View>
 

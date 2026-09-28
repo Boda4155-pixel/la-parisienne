@@ -11,6 +11,7 @@ import {
   StyleSheet,
   Dimensions,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 import { router } from "expo-router";
 import { useAuthStore } from "../../../store/auth.store";
@@ -61,6 +62,7 @@ export default function CashierNewHome() {
   const decreaseQty = useCartStore((s) => s.decreaseQty);
   const increaseQty = useCartStore((s) => s.increaseQty);
   const clearCart = useCartStore((s) => s.clearCart);
+  const insets = useSafeAreaInsets();
 
   const fetchAll = async () => {
     try {
@@ -121,7 +123,7 @@ export default function CashierNewHome() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 8 }]} showsVerticalScrollIndicator={false}>
         {/* Shift & Status Ribbon */}
         <View style={styles.ribbon}>
           <View style={styles.ribbonLeft}>
