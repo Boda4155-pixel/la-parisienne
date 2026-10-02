@@ -1,59 +1,34 @@
-import { Tabs } from "expo-router";
-import { ActivityIndicator, View } from "react-native";
-import { useEffect } from "react";
-import { router } from "expo-router";
-import { useAuthStore } from "../../../store/auth.store";
-import CashierTabBar from "../../../components/cashier/CashierTabBar";
+import { Ionicons } from '@expo/vector-icons';
+import { Tabs } from 'expo-router';
 
-export default function CashierLayoutRoute() {
-  const { profile, isAuthenticated, isLoading } = useAuthStore();
-  const isCashier = profile?.role === "cashier";
-
-  // Redirect non-cashiers to home
-  useEffect(() => {
-    if (!isLoading && isAuthenticated && !isCashier) {
-      router.replace("/");
-    }
-  }, [isLoading, isAuthenticated, isCashier]);
-
-  // Show loading while auth is initializing
-  if (isLoading || !isAuthenticated) {
-    return (
-      <View
-        style={{
-          flex: 1,
-          justifyContent: "center",
-          alignItems: "center",
-          backgroundColor: "#FDF8F3",
-        }}
-      >
-        <ActivityIndicator size="large" color="#FE8C00" />
-      </View>
-    );
-  }
-
-  // Non-cashier user should have been redirected
-  if (!isCashier) {
-    return null;
-  }
-
+export default function CashierLayout() {
   return (
-    <CashierTabBar>
-      <Tabs
-        screenOptions={{
-          headerShown: false,
-          tabBarShowLabel: false,
-          tabBarStyle: { height: 0, elevation: 0 },
-        }}
-      >
-        <Tabs.Screen name="home" options={{ title: "Home" }} />
-        <Tabs.Screen name="orders" options={{ title: "Orders" }} />
-        <Tabs.Screen name="products" options={{ title: "Products" }} />
-        <Tabs.Screen name="account" options={{ title: "More" }} />
-        <Tabs.Screen name="cart" options={{ title: "Cart", href: null }} />
-        <Tabs.Screen name="checkout" options={{ title: "Checkout", href: null }} />
-        <Tabs.Screen name="receipt" options={{ title: "Receipt", href: null }} />
-      </Tabs>
-    </CashierTabBar>
+    <Tabs
+      screenOptions={{
+        headerShown: false,
+        tabBarActiveTintColor: '#2D1E16',
+        tabBarInactiveTintColor: '#999',
+        tabBarStyle: { height: 65, paddingBottom: 8, backgroundColor: 'white' },
+      }}
+    >
+      {/* هنخفي index خالص */}
+      <Tabs.Screen name="index" options={{ href: null }} />
+
+      {/* دي كانت الطيارين - خليناها الطلبات */}
+      <Tabs.Screen 
+        name="drivers" 
+        options={{ 
+          title: 'الطلبات',
+          tabBarIcon: ({ color, size }) => <Ionicons name="receipt-outline" size={22} color={color} /> 
+        }} 
+      />
+
+      <Tabs.Screen name="stats" options={{ title: 'الاحصائيات', tabBarIcon: ({ color }) => <Ionicons name="bar-chart-outline" size={22} color={color} /> }} />
+      <Tabs.Screen name="menu" options={{ title: 'قائمتي', tabBarIcon: ({ color }) => <Ionicons name="restaurant-outline" size={22} color={color} /> }} />
+      <Tabs.Screen name="profile" options={{ title: 'البروفايل', tabBarIcon: ({ color }) => <Ionicons name="person-outline" size={22} color={color} /> }} />
+      
+      {/* لو عندك صفحة orders لوحدها اخفيها برضو عشان متتكررش */}
+      <Tabs.Screen name="orders" options={{ href: null }} />
+    </Tabs>
   );
 }

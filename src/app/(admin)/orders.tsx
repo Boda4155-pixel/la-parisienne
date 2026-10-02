@@ -1,642 +1,166 @@
-import React, { useState, useCallback, useEffect, useMemo } from "react";
-import {
-  View,
-  Text,
-  ScrollView,
-  RefreshControl,
-  StyleSheet,
-  TextInput,
-  Pressable,
-  FlatList,
-  ActivityIndicator,
-  TouchableOpacity,
-  I18nManager,
-  Alert,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { useLocalSearchParams, router } from "expo-router";
-import { useTranslation } from "react-i18next";
-import {
-  Search,
-  X,
-  CheckCircle,
-  Clock,
-  ChefHat,
-  Beer,
-  XCircle,
-} from "lucide-react-native";
+import { Ionicons } from '@expo/vector-icons';
+import { useEffect, useState } from 'react';
+import { Alert, Linking, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { supabase } from '../../../lib/supabase';
 
-import { useSupabaseQuery } from "../../../hooks/useSupabaseQuery";
-import {
-  getAdminOrders,
-  updateOrderStatus,
-  type AdminOrder,
-  type OrderStatusFilter,
-} from "../../../lib/adminQueries";
-import AdminMoreTrigger from "../../../components/admin/AdminMoreTrigger";
+export default function OrdersPage() {
+  const [orders, setOrders] = useState<any[]>([]);
+  const [filtered, setFiltered] = useState<any[]>([]);
+  const [status, setStatus] = useState<'all'|'pending'|'confirmed'|'delivered'|'cancelled'>('all');
+  const [search, setSearch] = useState('');
+  const [selected, setSelected] = useState<any>(null);
+  const [loadingProfile, setLoadingProfile] = useState(false);
 
-// ===========================================
-// Status Colors & Labels (Bilingual)
-// ===========================================
+  const load = async () => {
+    const { data } = await supabase.from('orders').select('*').order('created_at', {ascending:false});
+    const clean = (data||[]).filter(o=> o && o.id);
+    setOrders(clean);
+    setFiltered(clean);
+  };
 
-const STATUS_CONFIG: Record<
-  OrderStatusFilter,
-  { label: { en: string; ar: string }; color: string }
-> = {
-  all: { label: { en: "All", ar: "الكل" }, color: "#878787" },
-  pending: { label: { en: "Pending", ar: "قيد الانتظار" }, color: "#F59E0B" },
-  accepted: { label: { en: "Accepted", ar: "مقبول" }, color: "#10B981" },
-  preparing: { label: { en: "Preparing", ar: "جاري التحضير" }, color: "#3B82F6" },
-  ready: { label: { en: "Ready", ar: "جاهز" }, color: "#10B981" },
-  completed: { label: { en: "Completed", ar: "مكتمل" }, color: "#2F9B65" },
-  cancelled: { label: { en: "Cancelled", ar: "ملغى" }, color: "#EF4444" },
-};
+  useEffect(()=>{ load(); }, []);
+  useEffect(()=>{
+    let f = [...orders];
+    if(status!== 'all') f = f.filter(o=> o?.status === status);
+    if(search) f = f.filter(o=> (o?.id||'').includes(search));
+    setFiltered(f);
+  }, [status, search, orders]);
 
-// ===========================================
-// Format Functions
-// ===========================================
+  const openOrder = async (o:any) => {
+    setLoadingProfile(true);
+    setSelected({...o, items:[], profile:null, _displayName:'Loading...', _displayPhone:'...', _displayAddr: o.delivery_address || '...' });
+    
+    // هات المنتجات
+    const {data: items} = await supabase.from('order_items').select('*, products(name)').eq('order_id', o.id);
+    
+    // جرب كل الاحتمالات للـ ID بتاع العميل
+    const possibleId = o.user_id || o.customer_id || o.profile_id || o.customerId;
+    let profile = null;
+    
+    if(possibleId){
+      const { data: profData } = await supabase.from('profiles').select('*').eq('id', possibleId).single();
+      profile = profData;
+      console.log('PROFILE FOUND:', profData);
+    } else {
+      // لو مفيش ID، دور في profiles بأول واحد (مؤقتا للتجربة)
+      console.log('No user_id in order, order object:', o);
+    }
 
-const formatCurrency = (amount: number): string => {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "EGP",
-  }).format(amount);
-};
-
-const formatDate = (dateStr: string): string => {
-  try {
-    const date = new Date(dateStr);
-    return date.toLocaleString("en-US", {
-      dateStyle: "medium",
-      timeStyle: "short",
+    setSelected({
+      ...o,
+      items: items||[],
+      profile,
+      _displayName: profile?.full_name || profile?.name || profile?.email || o.customer_name || 'Guest User',
+      _displayPhone: profile?.phone || profile?.phone_number || profile?.mobile || o.customer_phone || 'No Phone',
+      _displayAddr: o.delivery_address || o.address || profile?.address || 'No Address'
     });
-  } catch {
-    return dateStr;
-  }
-};
-
-// ===========================================
-// Main Orders Screen Component
-// ===========================================
-
-export default function OrdersScreen() {
-  const { t } = useTranslation();
-  const params = useLocalSearchParams<{ filter?: string }>();
-  const filter = params?.filter ?? "all";
-  const [activeStatus, setActiveStatus] = useState<OrderStatusFilter>(
-    filter === "all" ? "all" : filter === "today" ? "pending" : "all"
-  );
-  const [searchQuery, setSearchQuery] = useState("");
-  const [refreshing, setRefreshing] = useState(false);
-  const [updatingId, setUpdatingId] = useState<string | null>(null);
-
-  const isRTL = I18nManager.isRTL;
-
-  const { data: orders, loading, error, refetch } = useSupabaseQuery({
-    fn: () => getAdminOrders(activeStatus, searchQuery),
-  });
-
-  // Re-fetch when filter or search changes
-  useEffect(() => {
-    refetch();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeStatus]);
-
-  const onRefresh = useCallback(async () => {
-    setRefreshing(true);
-    await refetch();
-    setRefreshing(false);
-  }, [refetch]);
-
-  const filteredOrders = useMemo(() => orders ?? [], [orders]);
-
-  // Status badge component
-  const StatusBadge = ({ status }: { status: string }) => {
-    const config = STATUS_CONFIG[status as OrderStatusFilter] || STATUS_CONFIG.pending;
-    return (
-      <View style={[styles.statusBadge, { backgroundColor: config.color }]}>
-        <Text style={styles.statusText}>
-          {config.label[isRTL ? "ar" : "en"]}
-        </Text>
-      </View>
-    );
+    setLoadingProfile(false);
   };
 
-  // Handle Accept
-  const handleAccept = async (orderId: string) => {
-    setUpdatingId(orderId);
-    const success = await updateOrderStatus(orderId, "accepted");
-    setUpdatingId(null);
-    if (success) {
-      await refetch();
-      Alert.alert(t("common.success"), t("admin.orders.accepted"));
-    } else {
-      Alert.alert(t("common.error"), t("admin.orders.acceptFailed"));
+  const updateStatus = async (id:string, newStatus:string) => {
+    const { error } = await supabase.from('orders').update({ status: newStatus }).eq('id', id);
+    if(error) Alert.alert('Error', error.message);
+    else { setSelected(null); load(); }
+  };
+
+  const handleCall = () => {
+    const phone = selected?._displayPhone;
+    if(!phone || phone === 'No Phone' || phone === '...' || phone.includes('No')){
+      Alert.alert('مفيش رقم', 'الاوردر ده معمول كـ Guest ومفيش رقم متسجل ليه في جدول profiles\n\nالحل: خلي العميل يسجل حساب قبل ما يطلب');
+      return;
     }
+    Linking.openURL(`tel:${phone}`);
   };
 
-  // Handle Reject
-  const handleReject = async (orderId: string) => {
-    setUpdatingId(orderId);
-    const success = await updateOrderStatus(orderId, "cancelled");
-    setUpdatingId(null);
-    if (success) {
-      await refetch();
-      Alert.alert(t("common.success"), t("admin.orders.rejected"));
-    } else {
-      Alert.alert(t("common.error"), t("admin.orders.rejectFailed"));
-    }
-  };
-
-  // Render individual order item
-  const renderOrderItem = ({ item }: { item: AdminOrder }) => {
-    const isPending = item.status === "pending";
-    const isUpdating = updatingId === item.id;
-
-    return (
-      <View style={styles.orderCard}>
-        {/* Top Row: Order ID & Status */}
-        <View style={styles.orderHeader}>
-          <Text style={styles.orderId}>#{item.id.slice(0, 8).toUpperCase()}</Text>
-          <StatusBadge status={item.status} />
-        </View>
-
-        {/* Middle Row: Customer & Order Details */}
-        <View style={styles.orderDetails}>
-          <View style={styles.customerInfo}>
-            <Text style={styles.customerName}>
-              {item.customer_name ?? (isRTL ? "عميل" : "Customer")}
-            </Text>
-            <Text style={styles.orderMeta}>
-              {isRTL ? "الفرع:" : "Branch:"}{" "}
-              {item.branch_name ?? (isRTL ? "—" : "N/A")}
-            </Text>
-          </View>
-          <Text style={styles.orderDate}>{formatDate(item.created_at)}</Text>
-        </View>
-
-        {/* Bottom Row: Total & Actions */}
-        <View style={styles.orderFooter}>
-          <Text style={styles.orderTotal}>{formatCurrency(item.total)}</Text>
-          {isPending && (
-            <View style={styles.actionButtons}>
-              <Pressable
-                style={[styles.actionButton, styles.acceptButton]}
-                onPress={() => handleAccept(item.id)}
-                disabled={isUpdating}
-              >
-                {isUpdating ? (
-                  <ActivityIndicator size={12} color="#FFFFFF" />
-                ) : (
-                  <Text style={styles.acceptButtonText}>Accept</Text>
-                )}
-              </Pressable>
-              <Pressable
-                style={[styles.actionButton, styles.rejectButton]}
-                onPress={() => handleReject(item.id)}
-                disabled={isUpdating}
-              >
-                <Text style={styles.rejectButtonText}>Reject</Text>
-              </Pressable>
-            </View>
-          )}
-        </View>
-      </View>
-    );
-  };
-
-  // Skeleton Card for loading state
-  const SkeletonCard = () => (
-    <View style={styles.orderCard}>
-      <View style={styles.skeletonHeader} />
-      <View style={styles.skeletonDetails} />
-      <View style={styles.skeletonFooter} />
-    </View>
-  );
-
-  // Show skeleton on initial load only; errors fall back gracefully
-  const showSkeleton = loading && !orders;
+  const getColor = (s:string) => s==='delivered'?'#4CAF50': s==='cancelled'?'#F44336': s==='confirmed'?'#2196F3':'#FFC107';
 
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
-      <ScrollView
-        contentContainerStyle={styles.content}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={["#C09248"]} />
-        }
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.headerTextContainer}>
-            <Text style={styles.title}>
-              {isRTL ? "إدارة الطلبات" : "Global Orders"}
-            </Text>
-            <Text style={styles.subtitle}>
-              {isRTL ? "تحكم في جميع الطلبات" : "Manage all orders"}
-            </Text>
-          </View>
-          <AdminMoreTrigger />
-        </View>
+    <View style={s.bg}>
+      <Text style={s.h1}>Orders</Text>
+      <Text style={s.sub}>{filtered.length} orders</Text>
 
-        {/* Search Bar */}
-        <View style={styles.searchContainer}>
-          <View style={styles.searchInputContainer}>
-            <Search size={20} color="#878787" />
-            <TextInput
-              style={styles.searchInput}
-              placeholder={isRTL ? "ابحث برقم الطلب..." : "Search by order ID..."}
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              placeholderTextColor="#878787"
-            />
-            {searchQuery.length > 0 && (
-              <TouchableOpacity
-                activeOpacity={0.7}
-                hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
-                onPress={() => setSearchQuery("")}
-              >
-                <X size={20} color="#878787" />
-              </TouchableOpacity>
-            )}
-          </View>
-        </View>
+      <View style={s.searchBox}>
+        <Ionicons name="search" size={18} color="#666" />
+        <TextInput placeholder="Search" placeholderTextColor="#666" style={s.searchInput} value={search} onChangeText={setSearch} />
+      </View>
 
-        {/* Status Filter Tabs */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.tabsContainer}
-          contentContainerStyle={styles.tabsContent}
-        >
-          {(Object.keys(STATUS_CONFIG) as OrderStatusFilter[]).map((status) => (
-            <TouchableOpacity
-              key={status}
-              activeOpacity={0.7}
-              hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
-              style={[
-                styles.tab,
-                activeStatus === status && styles.activeTab,
-              ]}
-              onPress={() => setActiveStatus(status)}
-            >
-              <Text
-                style={[
-                  styles.tabText,
-                  activeStatus === status && styles.activeTabText,
-                ]}
-              >
-                {STATUS_CONFIG[status].label[isRTL ? "ar" : "en"]}
-              </Text>
+      <View style={{height: 42, marginBottom: 12}}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{gap:8, paddingRight:20}}>
+          {(['all','pending','confirmed','delivered','cancelled'] as const).map(st=>(
+            <TouchableOpacity key={st} onPress={()=>setStatus(st)} style={[s.filterChip, status===st && s.filterChipActive]}>
+              <Text style={[s.filterTxt, status===st && s.filterTxtActive]}>{st}</Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
+      </View>
 
-        {/* Orders Count */}
-        <Text style={styles.countText}>
-          {filteredOrders.length} {isRTL ? "طلب" : "orders"}
-        </Text>
-
-        {/* Orders List */}
-        {showSkeleton ? (
-          <View style={styles.skeletonContainer}>
-            {[...Array(5)].map((_, i) => (
-              <SkeletonCard key={i} />
-            ))}
-          </View>
-        ) : filteredOrders.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyText}>
-              {isRTL ? "لا توجد طلبات" : "No orders found"}
-            </Text>
-          </View>
-        ) : (
-          <FlatList
-            data={filteredOrders}
-            keyExtractor={(item) => item.id}
-            renderItem={renderOrderItem}
-            scrollEnabled={false}
-            contentContainerStyle={styles.ordersList}
-          />
-        )}
+      <ScrollView contentContainerStyle={{paddingBottom:130}} showsVerticalScrollIndicator={false}>
+        {filtered.map(o=>(
+          <TouchableOpacity key={o?.id} style={s.card} onPress={()=>openOrder(o)}>
+            <View style={s.cardTop}>
+              <Text style={s.id}>#{o?.id?.slice(0,8)}</Text>
+              <Text style={s.total}>EGP {Number(o?.total||0).toFixed(0)}</Text>
+            </View>
+            <Text style={[s.badge, {backgroundColor: getColor(o?.status)+'20', color: getColor(o?.status)}]}>{o?.status}</Text>
+          </TouchableOpacity>
+        ))}
       </ScrollView>
-    </SafeAreaView>
+
+      <Modal visible={!!selected} transparent animationType="slide" onRequestClose={()=>setSelected(null)}>
+        <View style={s.overlay}>
+          <View style={s.modal}>
+            <View style={s.modalHead}>
+              <Text style={s.modalTitle}>Order #{selected?.id?.slice(0,8)}</Text>
+              <TouchableOpacity onPress={()=>setSelected(null)} style={s.closeBtn}><Ionicons name="close" size={22} color="#fff"/></TouchableOpacity>
+            </View>
+
+            {selected && (
+              <>
+                <View style={s.infoBox}>
+                  <Text style={s.row}><Text style={s.label}>Name: </Text><Text style={s.val}>{selected._displayName}</Text></Text>
+                  <Text style={s.row}><Text style={s.label}>Phone: </Text><Text style={[s.val, {color: selected._displayPhone==='No Phone' ? '#F44336' : '#fff'}]}>{selected._displayPhone}</Text></Text>
+                  <Text style={s.row}><Text style={s.label}>Address: </Text><Text style={s.val}>{selected._displayAddr}</Text></Text>
+                  <Text style={s.row}><Text style={s.label}>Total: </Text><Text style={s.val}>EGP {Number(selected.total||0).toFixed(2)}</Text></Text>
+                </View>
+
+                <Text style={s.itemsHead}>Items ({selected.items?.length})</Text>
+                {selected.items?.map((it:any,i:number)=>(
+                  <View key={i} style={s.itemRow}><Text style={s.itemName}>{it.products?.name || 'Product'} x{it.quantity}</Text><Text style={s.itemPrice}>EGP {it.price}</Text></View>
+                ))}
+
+                <View style={s.actions}>
+                  <TouchableOpacity style={[s.actBtn, {backgroundColor:'#FFC107'}]} onPress={()=>updateStatus(selected.id,'pending')}><Text style={s.actTxt}>Pending</Text></TouchableOpacity>
+                  <TouchableOpacity style={[s.actBtn, {backgroundColor:'#2196F3'}]} onPress={()=>updateStatus(selected.id,'confirmed')}><Text style={s.actTxt}>Confirm</Text></TouchableOpacity>
+                  <TouchableOpacity style={[s.actBtn, {backgroundColor:'#4CAF50'}]} onPress={()=>updateStatus(selected.id,'delivered')}><Text style={s.actTxtWhite}>Deliver</Text></TouchableOpacity>
+                </View>
+                <View style={s.actions}>
+                  <TouchableOpacity style={[s.actBtn, {backgroundColor:'#E8C87A', flexDirection:'row', gap:6, justifyContent:'center'}]} onPress={handleCall}>
+                    <Ionicons name="call" size={16} color="#000"/><Text style={s.actTxt}>Call {selected._displayPhone !== 'No Phone' ? '' : ''}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[s.actBtn, {backgroundColor:'#F44336'}]} onPress={()=>updateStatus(selected.id,'cancelled')}><Text style={s.actTxtWhite}>Cancel</Text></TouchableOpacity>
+                </View>
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
+    </View>
   );
 }
-
-// ===========================================
-// Styles
-// ===========================================
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#FDF8F3",
-  },
-  content: {
-    padding: 20,
-    paddingBottom: 40,
-  },
-
-  // Header
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: 20,
-  },
-  headerTextContainer: {
-    flex: 1,
-    marginRight: 16,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: "700",
-    fontFamily: "Quicksand-Bold",
-    color: "#181C2E",
-    lineHeight: 32,
-  },
-  subtitle: {
-    fontSize: 14,
-    fontFamily: "Quicksand-Regular",
-    color: "#878787",
-    marginTop: 4,
-  },
-
-  // Search Container
-  searchContainer: {
-    marginBottom: 16,
-  },
-  searchInputContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#FFFFFF",
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    shadowColor: "#181C2E",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 4,
-  },
-  searchInput: {
-    flex: 1,
-    marginLeft: 12,
-    fontSize: 16,
-    fontFamily: "Quicksand-Regular",
-    color: "#181C2E",
-  },
-
-  // Status Tabs
-  tabsContainer: {
-    marginBottom: 16,
-  },
-  tabsContent: {
-    gap: 12,
-  },
-  tab: {
-    backgroundColor: "#FFFFFF",
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 20,
-    marginRight: 8,
-    shadowColor: "#181C2E",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  activeTab: {
-    backgroundColor: "#C09248",
-  },
-  tabText: {
-    fontSize: 12,
-    fontFamily: "Quicksand-Medium",
-    color: "#878787",
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
-  activeTabText: {
-    color: "#FFFFFF",
-  },
-
-  // Count Text
-  countText: {
-    fontSize: 14,
-    fontFamily: "Quicksand-Regular",
-    color: "#878787",
-    marginBottom: 16,
-  },
-
-  // Order Card
-  orderCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: "#181C2E",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 4,
-  },
-  orderHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  orderId: {
-    fontSize: 14,
-    fontWeight: "600",
-    fontFamily: "Quicksand-Bold",
-    color: "#181C2E",
-  },
-
-  // Status Badge
-  statusBadge: {
-    backgroundColor: "#10B981",
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-  },
-  statusText: {
-    fontSize: 11,
-    fontFamily: "Quicksand-Bold",
-    color: "#FFFFFF",
-  },
-
-  // Order Details
-  orderDetails: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: 12,
-  },
-  customerInfo: {
-    flex: 1,
-  },
-  customerName: {
-    fontSize: 16,
-    fontWeight: "600",
-    fontFamily: "Quicksand-Bold",
-    color: "#181C2E",
-    marginBottom: 4,
-  },
-  orderMeta: {
-    fontSize: 12,
-    fontFamily: "Quicksand-Regular",
-    color: "#878787",
-  },
-  orderDate: {
-    fontSize: 12,
-    fontFamily: "Quicksand-Regular",
-    color: "#878787",
-    textAlign: "right",
-  },
-
-  // Order Footer
-  orderFooter: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  orderTotal: {
-    fontSize: 18,
-    fontWeight: "700",
-    fontFamily: "Quicksand-Bold",
-    color: "#C09248",
-  },
-  actionButtons: {
-    flexDirection: "row",
-    gap: 8,
-  },
-  actionButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-    minWidth: 70,
-    alignItems: "center",
-  },
-  acceptButton: {
-    backgroundColor: "#10B981",
-  },
-  acceptButtonText: {
-    fontSize: 12,
-    fontFamily: "Quicksand-Bold",
-    color: "#FFFFFF",
-  },
-  rejectButton: {
-    backgroundColor: "transparent",
-    borderWidth: 1,
-    borderColor: "#EF4444",
-  },
-  rejectButtonText: {
-    fontSize: 12,
-    fontFamily: "Quicksand-Bold",
-    color: "#EF4444",
-  },
-
-  // Empty State
-  emptyState: {
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 60,
-  },
-  emptyText: {
-    fontSize: 16,
-    fontFamily: "Quicksand-Regular",
-    color: "#9CA3AF",
-  },
-
-  // Error State
-  errorContainer: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 20,
-  },
-  errorText: {
-    fontSize: 16,
-    fontFamily: "Quicksand-Regular",
-    color: "#181C2E",
-    marginBottom: 16,
-  },
-  retryButton: {
-    backgroundColor: "#C09248",
-    borderRadius: 12,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-  },
-  retryButtonText: {
-    fontSize: 14,
-    fontFamily: "Quicksand-Bold",
-    color: "#FFFFFF",
-  },
-
-  // Skeleton
-  skeletonContainer: {
-    gap: 12,
-  },
-  skeletonHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  skeletonDetails: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: 12,
-  },
-  skeletonFooter: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-
-  // Skeleton specific sizes
-  skeletonOrderId: {
-    width: 80,
-    height: 16,
-    backgroundColor: "#E5E7EB",
-    borderRadius: 4,
-  },
-  skeletonStatusBadge: {
-    width: 60,
-    height: 20,
-    backgroundColor: "#E5E7EB",
-    borderRadius: 10,
-  },
-  skeletonCustomerName: {
-    width: 120,
-    height: 20,
-    backgroundColor: "#E5E7EB",
-    borderRadius: 4,
-  },
-  skeletonOrderMeta: {
-    width: 80,
-    height: 14,
-    backgroundColor: "#E5E7EB",
-    borderRadius: 4,
-  },
-  skeletonOrderDate: {
-    width: 70,
-    height: 14,
-    backgroundColor: "#E5E7EB",
-    borderRadius: 4,
-  },
-  skeletonTotal: {
-    width: 80,
-    height: 24,
-    backgroundColor: "#E5E7EB",
-    borderRadius: 4,
-  },
-
-  // Orders List
-  ordersList: {
-    gap: 12,
-  },
+const s = StyleSheet.create({
+  bg:{flex:1, backgroundColor:'#0F0F0F', padding:16, paddingTop:50},
+  h1:{color:'#fff', fontSize:28, fontWeight:'bold'}, sub:{color:'#E8C87A', fontSize:12, marginTop:4, marginBottom:10},
+  searchBox:{flexDirection:'row', alignItems:'center', backgroundColor:'#1A1A1A', borderRadius:12, paddingHorizontal:14, height: 46, borderWidth:1, borderColor:'#222', gap:10, marginBottom:12},
+  searchInput:{color:'#fff', flex:1},
+  filterChip:{paddingHorizontal:18, height: 34, justifyContent:'center', borderRadius:20, backgroundColor:'#1E1E1E', borderWidth:1, borderColor:'#2A2A2A'},
+  filterChipActive:{backgroundColor:'#E8C87A', borderColor:'#E8C87A'},
+  filterTxt:{color:'#888', fontSize:12, fontWeight:'bold'}, filterTxtActive:{color:'#000'},
+  card:{backgroundColor:'#161616', padding:14, borderRadius:16, marginBottom:10, borderWidth:1, borderColor:'#222'},
+  cardTop:{flexDirection:'row', justifyContent:'space-between'}, id:{color:'#fff', fontWeight:'bold'}, total:{color:'#E8C87A', fontWeight:'bold'}, badge:{fontSize:10, fontWeight:'bold', marginTop:6, paddingHorizontal:8, paddingVertical:3, borderRadius:10, alignSelf:'flex-start', textTransform:'uppercase', overflow:'hidden'},
+  overlay:{flex:1, backgroundColor:'rgba(0,0,0,0.85)', justifyContent:'flex-end'}, modal:{backgroundColor:'#1E1E1E', borderTopLeftRadius:24, borderTopRightRadius:24, padding:20, paddingBottom:40},
+  modalHead:{flexDirection:'row', justifyContent:'space-between', marginBottom:16}, modalTitle:{color:'#fff', fontSize:18, fontWeight:'bold'}, closeBtn:{width:34, height:34, backgroundColor:'#2A2A2A', borderRadius:17, justifyContent:'center', alignItems:'center'},
+  infoBox:{backgroundColor:'#121212', padding:12, borderRadius:12, borderWidth:1, borderColor:'#222', marginBottom:12},
+  row:{color:'#ccc', marginBottom:8, fontSize:13}, label:{color:'#888'}, val:{color:'#fff', fontWeight:'bold'},
+  itemsHead:{color:'#E8C87A', fontWeight:'bold', marginBottom:8}, itemRow:{flexDirection:'row', justifyContent:'space-between', marginBottom:6}, itemName:{color:'#aaa', fontSize:12}, itemPrice:{color:'#aaa', fontSize:12},
+  actions:{flexDirection:'row', gap:8, marginTop:12}, actBtn:{flex:1, height: 48, borderRadius:12, alignItems:'center', justifyContent:'center'}, actTxt:{color:'#000', fontWeight:'bold'}, actTxtWhite:{color:'#fff', fontWeight:'bold'},
 });

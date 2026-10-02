@@ -1,321 +1,166 @@
-import React from "react";
-import { Alert, FlatList, Pressable, StyleSheet, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { Grid, Plus, Pencil, Trash2 } from "lucide-react-native";
-import { useTranslation } from "react-i18next";
-import { router } from "expo-router";
+import { Ionicons } from '@expo/vector-icons';
+import * as FileSystem from 'expo-file-system/legacy';
+import * as ImagePicker from 'expo-image-picker';
+import { router, useLocalSearchParams } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, Image, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { supabase } from '../../../lib/supabase';
 
-import { useSupabaseQuery } from "../../../hooks/useSupabaseQuery";
-import {
-  AdminProduct,
-  deleteProduct,
-  getAllProducts,
-} from "../../../lib/adminQueries";
-import { getCategories } from "../../../lib/queries";
-import { useAdminStore } from "../../../store/admin.store";
-import AdminMoreTrigger from "../../../components/admin/AdminMoreTrigger";
+export default function ProductsPage() {
+  const { catId, catName } = useLocalSearchParams();
+  const [products, setProducts] = useState<any[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
+  const [selectedCat, setSelectedCat] = useState<string>((catId as string) || 'all');
+  const [search, setSearch] = useState('');
+  const [modal, setModal] = useState(false);
+  const [edit, setEdit] = useState<any>(null);
+  const [uploading, setUploading] = useState(false);
 
-export default function Products() {
-  const { t } = useTranslation();
-  const { refreshTrigger } = useAdminStore();
-  const { data: products, loading, error, refetch } = useSupabaseQuery({
-    fn: getAllProducts,
-    skip: false,
+  const load = async () => {
+    const { data: cats } = await supabase.from('categories').select('*').order('name');
+    const { data: prods } = await supabase.from('products').select('*').order('created_at', {ascending:false});
+    setCategories(cats||[]);
+    setProducts(prods||[]);
+  };
+  useEffect(()=>{ load(); }, []);
+  useEffect(()=>{ if(catId) setSelectedCat(catId as string); }, [catId]);
+
+  const filtered = products.filter(p=> {
+    const matchCat = selectedCat === 'all' || p.category_id === selectedCat;
+    const matchSearch = p.name.toLowerCase().includes(search.toLowerCase());
+    return matchCat && matchSearch;
   });
-  const { data: categories } = useSupabaseQuery({
-    fn: getCategories,
-    skip: false,
-  });
 
-  const handleRefresh = React.useCallback(() => {
-    refetch();
-  }, [refetch]);
-
-  const categoryMap = React.useMemo(
-    () => new Map(categories?.map((c) => [c.id, c.name]) ?? []),
-    [categories]
-  );
-
-  const handleDelete = (id: string) => {
-    Alert.alert(
-      t("admin.products.deleteTitle"),
-      t("admin.products.deleteConfirm"),
-      [
-        { text: t("common.cancel"), style: "cancel" },
-        {
-          text: t("common.delete"),
-          style: "destructive",
-          onPress: async () => {
-            try {
-              await deleteProduct(id);
-              handleRefresh();
-            } catch (deleteError: any) {
-              Alert.alert(t("common.somethingWentWrong"), deleteError?.message);
-            }
-          },
-        },
-      ],
-    );
+  const pickImage = async () => {
+    const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.5 });
+    if(!res.canceled){ setEdit({...edit, image_url: res.assets[0].uri, _isLocal: true}); }
   };
 
-  const renderItem = ({ item }: { item: AdminProduct }) => (
-    <Pressable
-      style={styles.row}
-      onPress={() => router.push(`/(admin)/products/${item.id}` as any)}
-    >
-      <View style={styles.rowContent}>
-        <Text style={styles.productName} numberOfLines={1}>{item.name}</Text>
-        <Text style={styles.productDescription} numberOfLines={2}>
-          {item.description ?? t("admin.products.noDescription")}
-        </Text>
-        <View style={styles.rowMeta}>
-          <Text style={styles.categoryName}>
-            {item.category_id ? (categoryMap.get(item.category_id) ?? t("admin.products.noCategory")) : t("admin.products.noCategory")}
-          </Text>
-          <Text style={styles.price}>
-            {item.price} {t("common.currency")}
-          </Text>
-          <Text style={styles.stock}>
-            Stock: {item.stock_quantity}
-          </Text>
-        </View>
-      </View>
-      <View style={styles.actions}>
-        <Pressable
-          style={styles.iconButton}
-          onPress={() => router.push(`/(admin)/products/${item.id}` as any)}
-        >
-          <Pencil size={16} color="#FE8C00" />
-        </Pressable>
-        <Pressable
-          style={styles.iconButton}
-          onPress={() => handleDelete(item.id)}
-        >
-          <Trash2 size={16} color="#EF4444" />
-        </Pressable>
-      </View>
-    </Pressable>
-  );
-
-  const Header = React.useCallback(() => (
-    <>
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.title}>{t("admin.products.title")}</Text>
-          <Text style={styles.subtitle}>{t("admin.products.subtitle")}</Text>
-        </View>
-        <View style={styles.headerActions}>
-          <AdminMoreTrigger />
-          <Pressable style={styles.addButton} onPress={() => router.push("/(admin)/products/new" as any)}>
-            <Plus size={18} color="#FFFFFF" />
-            <Text style={styles.addButtonText}>{t("admin.products.add")}</Text>
-          </Pressable>
-        </View>
-      </View>
-
-      <View style={styles.summaryCard}>
-        <View style={styles.summaryIcon}>
-          <Grid size={24} color="#FE8C00" />
-        </View>
-        <View style={styles.summaryContent}>
-          <Text style={styles.summaryLabel}>{t("admin.products.total")}</Text>
-          <Text style={styles.summaryValue}>{products?.length ?? 0}</Text>
-        </View>
-      </View>
-    </>
-  ), [products?.length, t]);
+  const saveProduct = async () => {
+    if(!edit.name ||!edit.price) return Alert.alert('اكمل الاسم والسعر');
+    if(!edit.category_id) return Alert.alert('اختار قسم');
+    setUploading(true);
+    try{
+      let finalImageUrl = edit.image_url;
+      if(edit._isLocal && finalImageUrl?.startsWith('file://')){
+        const base64 = await FileSystem.readAsStringAsync(finalImageUrl, { encoding: FileSystem.EncodingType.Base64 });
+        finalImageUrl = `data:image/jpeg;base64,${base64}`;
+      }
+      const catNameObj = categories.find(c=>c.id===edit.category_id)?.name || '';
+      const payload = { name: edit.name, price: Number(edit.price), category: catNameObj, category_id: edit.category_id, image_url: finalImageUrl };
+      if(edit.id){
+        const { error } = await supabase.from('products').update(payload).eq('id', edit.id);
+        if(error) throw error;
+      } else {
+        const { error } = await supabase.from('products').insert(payload);
+        if(error) throw error;
+      }
+      setModal(false); setEdit(null); load();
+    } catch(e:any){ Alert.alert('Error', e.message); }
+    setUploading(false);
+  };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <FlatList
-        data={products ?? []}
-        renderItem={renderItem}
-        keyExtractor={(item) => item.id}
-        ListHeaderComponent={Header}
-        showsVerticalScrollIndicator={false}
-        ListEmptyComponent={() => (
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>{t("admin.products.empty")}</Text>
+    <View style={s.bg}>
+      <View style={s.head}>
+        <View>
+          {catName? (
+            <TouchableOpacity onPress={()=>router.back()} style={{flexDirection:'row', alignItems:'center', marginBottom:6}}>
+              <Ionicons name="arrow-back" size={18} color="#E8C87A"/><Text style={{color:'#E8C87A', marginLeft:4}}>Catégories</Text>
+            </TouchableOpacity>
+          ) : <Text style={s.backHint}>Dashboard</Text>}
+          <Text style={s.h1}>{catName? catName as string : 'Products'}</Text>
+          <Text style={s.sub}>{filtered.length} items</Text>
+        </View>
+        <View style={{flexDirection:'row', gap:8}}>
+          <TouchableOpacity style={s.catBtn} onPress={()=>router.push('/(admin)/categories')}>
+            <Text style={s.addTxt}>Cats</Text><Ionicons name="grid" size={16} color="#000"/>
+          </TouchableOpacity>
+          <TouchableOpacity style={s.addCircle} onPress={()=>{ setEdit({name:'', price:'', category_id: selectedCat!=='all'? selectedCat : categories[0]?.id, image_url:''}); setModal(true); }}>
+            <Ionicons name="add" size={22} color="#000"/>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* FIXED ALL + SCROLLABLE CATEGORIES */}
+      <View style={s.filterRow}>
+        <TouchableOpacity onPress={()=>setSelectedCat('all')} style={[s.catChip, selectedCat==='all' && s.catChipActive]}>
+          <Text style={[s.catChipTxt, selectedCat==='all' && s.catChipTxtActive]}>ALL</Text>
+        </TouchableOpacity>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{gap:8}}>
+          {categories.map(c=>(
+            <TouchableOpacity key={c.id} onPress={()=>setSelectedCat(c.id)} style={[s.catChip, selectedCat===c.id && s.catChipActive]}>
+              <Text style={[s.catChipTxt, selectedCat===c.id && s.catChipTxtActive]}>{c.name.toUpperCase()}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
+
+      <View style={s.searchBox}>
+        <Ionicons name="search" size={18} color="#666" />
+        <TextInput placeholder="Search..." placeholderTextColor="#666" style={s.searchInput} value={search} onChangeText={setSearch}/>
+      </View>
+
+      <ScrollView contentContainerStyle={{paddingBottom:120}} showsVerticalScrollIndicator={false}>
+        <View style={s.grid}>
+          {filtered.map(p=>(
+            <View key={p.id} style={s.card}>
+              <Image source={{uri: p.image_url}} style={s.img}/>
+              <Text style={s.name} numberOfLines={1}>{p.name}</Text>
+              <Text style={s.price}>EGP {Number(p.price).toFixed(0)}</Text>
+              <View style={s.cardActions}>
+                <TouchableOpacity style={s.iconBtn} onPress={()=>{ setEdit(p); setModal(true); }}><Ionicons name="pencil" size={16} color="#E8C87A"/></TouchableOpacity>
+                <TouchableOpacity style={s.iconBtn} onPress={async()=>{ await supabase.from('products').delete().eq('id', p.id); load(); }}><Ionicons name="trash" size={16} color="#F44336"/></TouchableOpacity>
+              </View>
+            </View>
+          ))}
+        </View>
+      </ScrollView>
+
+      <Modal visible={modal} transparent animationType="slide">
+        <View style={s.overlay}>
+          <View style={s.modal}>
+            <View style={s.modalHead}><Text style={s.modalTitle}>{edit?.id? 'Edit' : 'New Product'}</Text><TouchableOpacity onPress={()=>setModal(false)}><Ionicons name="close" size={22} color="#fff"/></TouchableOpacity></View>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <TouchableOpacity style={s.imgPicker} onPress={pickImage}>
+                {edit?.image_url? <Image source={{uri: edit.image_url}} style={s.bigImg}/> : <View style={s.imgPlaceholder}><Ionicons name="camera" size={30} color="#666"/><Text style={s.imgTxt}>Pick Image</Text></View>}
+              </TouchableOpacity>
+              <Text style={s.label}>Name</Text>
+              <TextInput style={s.input} value={edit?.name} onChangeText={t=>setEdit({...edit, name:t})} placeholder="Name" placeholderTextColor="#666"/>
+              <Text style={s.label}>Price</Text>
+              <TextInput style={s.input} value={String(edit?.price||'')} onChangeText={t=>setEdit({...edit, price:t})} keyboardType="numeric" placeholder="150" placeholderTextColor="#666"/>
+              <Text style={s.label}>Catégorie</Text>
+              <View style={s.catSelector}>
+                {categories.map(c=>(
+                  <TouchableOpacity key={c.id} onPress={()=>setEdit({...edit, category_id: c.id})} style={[s.catOption, edit?.category_id===c.id && s.catOptionActive]}>
+                    <Text style={[s.catOptionTxt, edit?.category_id===c.id && s.catOptionTxtActive]}>{c.name}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <TouchableOpacity style={s.saveBtn} onPress={saveProduct} disabled={uploading}>
+                {uploading? <ActivityIndicator color="#000"/> : <Text style={s.saveTxt}>{edit?.id? 'Update' : 'Create'}</Text>}
+              </TouchableOpacity>
+            </ScrollView>
           </View>
-        )}
-        contentContainerStyle={styles.scrollContent}
-      />
-    </SafeAreaView>
+        </View>
+      </Modal>
+    </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#FDF8F3",
-  },
-  scrollContent: {
-    padding: 20,
-    paddingBottom: 40,
-  },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 24,
-  },
-  headerActions: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    flexWrap: "wrap",
-  },
-  title: {
-    fontSize: 28,
-    fontFamily: "Quicksand-Bold",
-    color: "#181C2E",
-  },
-  subtitle: {
-    fontSize: 14,
-    fontFamily: "Quicksand-Regular",
-    color: "#878787",
-    marginTop: 4,
-  },
-  addButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    backgroundColor: "#FE8C00",
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 12,
-  },
-  addButtonText: {
-    fontSize: 14,
-    fontFamily: "Quicksand-Bold",
-    color: "#FFFFFF",
-  },
-  summaryCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 20,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 16,
-    shadowColor: "#181C2E",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
-    marginBottom: 24,
-  },
-  summaryIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
-    backgroundColor: "#FE8C0022",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  summaryContent: {
-    flex: 1,
-  },
-  summaryLabel: {
-    fontSize: 12,
-    fontFamily: "Quicksand-Medium",
-    color: "#878787",
-    textTransform: "uppercase",
-  },
-  summaryValue: {
-    fontSize: 24,
-    fontFamily: "Quicksand-Bold",
-    color: "#181C2E",
-    marginTop: 2,
-  },
-  card: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 16,
-    shadowColor: "#181C2E",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F3F4F6",
-  },
-  rowContent: {
-    flex: 1,
-    minWidth: 0,
-    paddingRight: 12,
-  },
-  productName: {
-    fontSize: 15,
-    fontFamily: "Quicksand-SemiBold",
-    color: "#181C2E",
-  },
-  productDescription: {
-    fontSize: 12,
-    fontFamily: "Quicksand-Regular",
-    color: "#878787",
-    marginTop: 4,
-  },
-  rowMeta: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginTop: 10,
-    gap: 8,
-  },
-  categoryName: {
-    fontSize: 11,
-    fontFamily: "Quicksand-Medium",
-    color: "#9CA3AF",
-  },
-  price: {
-    fontSize: 14,
-    fontFamily: "Quicksand-Medium",
-    color: "#FE8C00",
-  },
-  stock: {
-    fontSize: 11,
-    fontFamily: "Quicksand-Medium",
-    color: "#6B7280",
-  },
-  actions: {
-    flexDirection: "row",
-    gap: 6,
-  },
-  iconButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    backgroundColor: "#FE8C0015",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  loadingText: {
-    fontSize: 14,
-    fontFamily: "Quicksand-Regular",
-    color: "#878787",
-    textAlign: "center",
-    paddingVertical: 24,
-  },
-  errorText: {
-    fontSize: 14,
-    fontFamily: "Quicksand-Regular",
-    color: "#EF4444",
-    textAlign: "center",
-    paddingVertical: 24,
-  },
-  emptyContainer: {
-    paddingVertical: 32,
-    alignItems: "center",
-  },
-  emptyText: {
-    fontSize: 14,
-    fontFamily: "Quicksand-Regular",
-    color: "#9CA3AF",
-    textAlign: "center",
-  },
+const s = StyleSheet.create({
+  bg:{flex:1, backgroundColor:'#0F0F0F', padding:16, paddingTop:50},
+  head:{flexDirection:'row', justifyContent:'space-between', alignItems:'center', marginBottom:14},
+  backHint:{color:'#888', fontSize:12, textAlign:'right'}, h1:{color:'#fff', fontSize:32, fontWeight:'bold', textAlign:'right'}, sub:{color:'#E8C87A', fontSize:12, marginTop:2, textAlign:'right'},
+  catBtn:{flexDirection:'row', backgroundColor:'#E8C87A', paddingHorizontal:14, height:38, borderRadius:20, alignItems:'center', gap:6}, addCircle:{width:38, height:38, backgroundColor:'#E8C87A', borderRadius:19, justifyContent:'center', alignItems:'center'}, addTxt:{color:'#000', fontWeight:'bold', fontSize:13},
+  filterRow:{flexDirection:'row', alignItems:'center', gap:8, marginBottom:12},
+  catChip:{paddingHorizontal:16, height:36, borderRadius:18, backgroundColor:'#1A1A1A', borderWidth:1, borderColor:'#2A2A2A', justifyContent:'center', alignItems:'center'}, catChipActive:{backgroundColor:'#E8C87A', borderColor:'#E8C87A'}, catChipTxt:{color:'#888', fontSize:12, fontWeight:'bold'}, catChipTxtActive:{color:'#000'},
+  searchBox:{flexDirection:'row', alignItems:'center', backgroundColor:'#1A1A1A', borderRadius:12, paddingHorizontal:14, height:48, borderWidth:1, borderColor:'#222', gap:10, marginBottom:14}, searchInput:{color:'#fff', flex:1, textAlign:'left'},
+  grid:{flexDirection:'row', flexWrap:'wrap', gap:12},
+  card:{backgroundColor:'#161616', width:'47.5%', borderRadius:16, padding:10, borderWidth:1, borderColor:'#222'}, img:{width:'100%', height:120, borderRadius:12, backgroundColor:'#222'}, name:{color:'#fff', fontWeight:'bold', marginTop:8, fontSize:12, textAlign:'center'}, price:{color:'#E8C87A', fontWeight:'bold', marginTop:2, fontSize:13, textAlign:'center'}, cardActions:{flexDirection:'row', gap:8, marginTop:10}, iconBtn:{flex:1, height:36, backgroundColor:'#1E1E1E', borderRadius:10, justifyContent:'center', alignItems:'center', borderWidth:1, borderColor:'#2A2A2A'},
+  overlay:{flex:1, backgroundColor:'rgba(0,0,0,0.85)', justifyContent:'flex-end'}, modal:{backgroundColor:'#1E1E1E', borderTopLeftRadius:24, borderTopRightRadius:24, padding:20, maxHeight:'90%', paddingBottom:40},
+  modalHead:{flexDirection:'row', justifyContent:'space-between', marginBottom:16}, modalTitle:{color:'#fff', fontSize:18, fontWeight:'bold'},
+  imgPicker:{height:150, backgroundColor:'#121212', borderRadius:16, overflow:'hidden', justifyContent:'center', alignItems:'center', borderWidth:1, borderColor:'#2A2A2A', marginBottom:14}, bigImg:{width:'100%', height:'100%'}, imgPlaceholder:{alignItems:'center'}, imgTxt:{color:'#666', marginTop:6},
+  label:{color:'#888', fontSize:11, marginBottom:6, marginTop:10}, input:{backgroundColor:'#121212', borderWidth:1, borderColor:'#2A2A2A', borderRadius:12, paddingHorizontal:14, height:46, color:'#fff'},
+  catSelector:{flexDirection:'row', flexWrap:'wrap', gap:8, marginTop:6}, catOption:{paddingHorizontal:12, height:32, borderRadius:16, backgroundColor:'#121212', borderWidth:1, borderColor:'#2A2A2A', justifyContent:'center'}, catOptionActive:{backgroundColor:'#E8C87A', borderColor:'#E8C87A'}, catOptionTxt:{color:'#888', fontSize:12}, catOptionTxtActive:{color:'#000', fontWeight:'bold'},
+  saveBtn:{backgroundColor:'#E8C87A', height:48, borderRadius:14, justifyContent:'center', alignItems:'center', marginTop:20}, saveTxt:{color:'#000', fontWeight:'bold', fontSize:15}
 });
