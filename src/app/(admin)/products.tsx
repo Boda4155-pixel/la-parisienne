@@ -3,10 +3,12 @@ import * as FileSystem from 'expo-file-system/legacy';
 import * as ImagePicker from 'expo-image-picker';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Alert, Image, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { supabase } from '../../../lib/supabase';
 
 export default function ProductsPage() {
+  const { t } = useTranslation();
   const { catId, catName } = useLocalSearchParams();
   const [products, setProducts] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
@@ -27,6 +29,7 @@ export default function ProductsPage() {
 
   const filtered = products.filter(p=> {
     const matchCat = selectedCat === 'all' || p.category_id === selectedCat;
+    // البحث يفضل انجليزي زي ما الادمن كاتب
     const matchSearch = p.name.toLowerCase().includes(search.toLowerCase());
     return matchCat && matchSearch;
   });
@@ -37,8 +40,8 @@ export default function ProductsPage() {
   };
 
   const saveProduct = async () => {
-    if(!edit.name ||!edit.price) return Alert.alert('اكمل الاسم والسعر');
-    if(!edit.category_id) return Alert.alert('اختار قسم');
+    if(!edit.name ||!edit.price) return Alert.alert(t('admin.products.nameRequired'));
+    if(!edit.category_id) return Alert.alert(t('admin.products.categoryPlaceholder'));
     setUploading(true);
     try{
       let finalImageUrl = edit.image_url;
@@ -66,15 +69,16 @@ export default function ProductsPage() {
         <View>
           {catName? (
             <TouchableOpacity onPress={()=>router.back()} style={{flexDirection:'row', alignItems:'center', marginBottom:6}}>
-              <Ionicons name="arrow-back" size={18} color="#E8C87A"/><Text style={{color:'#E8C87A', marginLeft:4}}>Catégories</Text>
+              <Ionicons name="arrow-back" size={18} color="#E8C87A"/><Text style={{color:'#E8C87A', marginLeft:4}}>{t('admin.nav.categories')}</Text>
             </TouchableOpacity>
-          ) : <Text style={s.backHint}>Dashboard</Text>}
-          <Text style={s.h1}>{catName? catName as string : 'Products'}</Text>
-          <Text style={s.sub}>{filtered.length} items</Text>
+          ) : <Text style={s.backHint}>{t('admin.nav.dashboard')}</Text>}
+          {/* catName واسم المنتج يفضلوا انجليزي زي ما هما */}
+          <Text style={s.h1}>{catName? catName as string : t('admin.products.title')}</Text>
+          <Text style={s.sub}>{filtered.length} {t('admin.categories.total')}</Text>
         </View>
         <View style={{flexDirection:'row', gap:8}}>
           <TouchableOpacity style={s.catBtn} onPress={()=>router.push('/(admin)/categories')}>
-            <Text style={s.addTxt}>Cats</Text><Ionicons name="grid" size={16} color="#000"/>
+            <Text style={s.addTxt}>{t('admin.nav.categories').slice(0,4)}</Text><Ionicons name="grid" size={16} color="#000"/>
           </TouchableOpacity>
           <TouchableOpacity style={s.addCircle} onPress={()=>{ setEdit({name:'', price:'', category_id: selectedCat!=='all'? selectedCat : categories[0]?.id, image_url:''}); setModal(true); }}>
             <Ionicons name="add" size={22} color="#000"/>
@@ -85,11 +89,12 @@ export default function ProductsPage() {
       {/* FIXED ALL + SCROLLABLE CATEGORIES */}
       <View style={s.filterRow}>
         <TouchableOpacity onPress={()=>setSelectedCat('all')} style={[s.catChip, selectedCat==='all' && s.catChipActive]}>
-          <Text style={[s.catChipTxt, selectedCat==='all' && s.catChipTxtActive]}>ALL</Text>
+          <Text style={[s.catChipTxt, selectedCat==='all' && s.catChipTxtActive]}>{t('common.all') || 'ALL'}</Text>
         </TouchableOpacity>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{gap:8}}>
           {categories.map(c=>(
             <TouchableOpacity key={c.id} onPress={()=>setSelectedCat(c.id)} style={[s.catChip, selectedCat===c.id && s.catChipActive]}>
+              {/* اسم القسم نفسه انجليزي زي ما الادمن كاتبه */}
               <Text style={[s.catChipTxt, selectedCat===c.id && s.catChipTxtActive]}>{c.name.toUpperCase()}</Text>
             </TouchableOpacity>
           ))}
@@ -98,7 +103,7 @@ export default function ProductsPage() {
 
       <View style={s.searchBox}>
         <Ionicons name="search" size={18} color="#666" />
-        <TextInput placeholder="Search..." placeholderTextColor="#666" style={s.searchInput} value={search} onChangeText={setSearch}/>
+        <TextInput placeholder={t('common.search') || "Search..."} placeholderTextColor="#666" style={s.searchInput} value={search} onChangeText={setSearch}/>
       </View>
 
       <ScrollView contentContainerStyle={{paddingBottom:120}} showsVerticalScrollIndicator={false}>
@@ -106,8 +111,9 @@ export default function ProductsPage() {
           {filtered.map(p=>(
             <View key={p.id} style={s.card}>
               <Image source={{uri: p.image_url}} style={s.img}/>
+              {/* ده المهم - اسم المنتج يفضل انجليزي اصلي */}
               <Text style={s.name} numberOfLines={1}>{p.name}</Text>
-              <Text style={s.price}>EGP {Number(p.price).toFixed(0)}</Text>
+              <Text style={s.price}>{t('common.currency')} {Number(p.price).toFixed(0)}</Text>
               <View style={s.cardActions}>
                 <TouchableOpacity style={s.iconBtn} onPress={()=>{ setEdit(p); setModal(true); }}><Ionicons name="pencil" size={16} color="#E8C87A"/></TouchableOpacity>
                 <TouchableOpacity style={s.iconBtn} onPress={async()=>{ await supabase.from('products').delete().eq('id', p.id); load(); }}><Ionicons name="trash" size={16} color="#F44336"/></TouchableOpacity>
@@ -120,16 +126,16 @@ export default function ProductsPage() {
       <Modal visible={modal} transparent animationType="slide">
         <View style={s.overlay}>
           <View style={s.modal}>
-            <View style={s.modalHead}><Text style={s.modalTitle}>{edit?.id? 'Edit' : 'New Product'}</Text><TouchableOpacity onPress={()=>setModal(false)}><Ionicons name="close" size={22} color="#fff"/></TouchableOpacity></View>
+            <View style={s.modalHead}><Text style={s.modalTitle}>{edit?.id? t('admin.products.edit') : t('admin.products.new')}</Text><TouchableOpacity onPress={()=>setModal(false)}><Ionicons name="close" size={22} color="#fff"/></TouchableOpacity></View>
             <ScrollView showsVerticalScrollIndicator={false}>
               <TouchableOpacity style={s.imgPicker} onPress={pickImage}>
-                {edit?.image_url? <Image source={{uri: edit.image_url}} style={s.bigImg}/> : <View style={s.imgPlaceholder}><Ionicons name="camera" size={30} color="#666"/><Text style={s.imgTxt}>Pick Image</Text></View>}
+                {edit?.image_url? <Image source={{uri: edit.image_url}} style={s.bigImg}/> : <View style={s.imgPlaceholder}><Ionicons name="camera" size={30} color="#666"/><Text style={s.imgTxt}>{t('admin.products.image')}</Text></View>}
               </TouchableOpacity>
-              <Text style={s.label}>Name</Text>
-              <TextInput style={s.input} value={edit?.name} onChangeText={t=>setEdit({...edit, name:t})} placeholder="Name" placeholderTextColor="#666"/>
-              <Text style={s.label}>Price</Text>
+              <Text style={s.label}>{t('admin.products.name')} (EN)</Text>
+              <TextInput style={s.input} value={edit?.name} onChangeText={t=>setEdit({...edit, name:t})} placeholder={t('admin.products.namePlaceholder')} placeholderTextColor="#666"/>
+              <Text style={s.label}>{t('admin.products.price')}</Text>
               <TextInput style={s.input} value={String(edit?.price||'')} onChangeText={t=>setEdit({...edit, price:t})} keyboardType="numeric" placeholder="150" placeholderTextColor="#666"/>
-              <Text style={s.label}>Catégorie</Text>
+              <Text style={s.label}>{t('admin.products.category')}</Text>
               <View style={s.catSelector}>
                 {categories.map(c=>(
                   <TouchableOpacity key={c.id} onPress={()=>setEdit({...edit, category_id: c.id})} style={[s.catOption, edit?.category_id===c.id && s.catOptionActive]}>
@@ -138,7 +144,7 @@ export default function ProductsPage() {
                 ))}
               </View>
               <TouchableOpacity style={s.saveBtn} onPress={saveProduct} disabled={uploading}>
-                {uploading? <ActivityIndicator color="#000"/> : <Text style={s.saveTxt}>{edit?.id? 'Update' : 'Create'}</Text>}
+                {uploading? <ActivityIndicator color="#000"/> : <Text style={s.saveTxt}>{edit?.id? t('common.save') : t('common.save')}</Text>}
               </TouchableOpacity>
             </ScrollView>
           </View>

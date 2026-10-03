@@ -1,10 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Alert, FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { supabase } from '../../../lib/supabase';
 
 export default function CategoriesPage(){
+  const { t } = useTranslation();
   const [cats, setCats] = useState<any[]>([]);
   const [counts, setCounts] = useState<Record<string, number>>({});
 
@@ -21,12 +23,12 @@ export default function CategoriesPage(){
   const onDelete = (item:any) => {
     const prodCount = counts[item.id] || 0;
     if(prodCount > 0){
-      Alert.alert('ماينفعش تمسح', `الـ Category ده فيه ${prodCount} منتجات. امسح المنتجات الأول أو انقلها.`);
+      Alert.alert(t('admin.categories.deleteBlockedTitle'), t('admin.categories.deleteBlockedMsg', { count: prodCount }));
       return;
     }
-    Alert.alert('حذف Category', `متأكد عايز تمسح "${item.name}" ؟`, [
-      {text:'إلغاء', style:'cancel'},
-      {text:'حذف', style:'destructive', onPress: async ()=>{
+    Alert.alert(t('admin.categories.deleteTitle'), t('admin.categories.deleteConfirm', { name: item.name }), [
+      {text: t('common:cancel'), style:'cancel'},
+      {text: t('common:delete'), style:'destructive', onPress: async ()=>{
         const { error } = await supabase.from('categories').delete().eq('id', item.id);
         if(error) Alert.alert('Error', error.message);
         else load();
@@ -48,18 +50,18 @@ export default function CategoriesPage(){
     <View style={s.bg}>
       <View style={s.header}>
         <TouchableOpacity style={s.newBtn} onPress={()=>setShowAdd(!showAdd)}>
-          <Ionicons name="add" size={20} color="#000"/><Text style={s.newTxt}>New</Text>
+          <Ionicons name="add" size={20} color="#000"/><Text style={s.newTxt}>{t('admin.categories.add')}</Text>
         </TouchableOpacity>
         <View style={{alignItems:'flex-end'}}>
-          <Text style={s.h1}>Catégories</Text>
-          <Text style={s.sub}>{cats.length} catégories</Text>
+          <Text style={s.h1}>{t('admin.categories.title')}</Text>
+          <Text style={s.sub}>{t('admin.categories.totalWithCount', { count: cats.length })}</Text>
         </View>
       </View>
 
       {showAdd && (
         <View style={s.addBox}>
-          <TextInput placeholder="اسم الـ Category" placeholderTextColor="#666" value={newName} onChangeText={setNewName} style={s.input}/>
-          <TouchableOpacity style={s.addBtn} onPress={onAdd}><Text style={s.addBtnTxt}>إضافة</Text></TouchableOpacity>
+          <TextInput placeholder={t('admin.categories.namePlaceholder')} placeholderTextColor="#666" value={newName} onChangeText={setNewName} style={s.input}/>
+          <TouchableOpacity style={s.addBtn} onPress={onAdd}><Text style={s.addBtnTxt}>{t('common:add')}</Text></TouchableOpacity>
         </View>
       )}
 
@@ -72,7 +74,7 @@ export default function CategoriesPage(){
             <Ionicons name="chevron-forward" size={20} color="#555" />
             <View style={{flex:1, alignItems:'flex-end'}}>
               <Text style={s.name}>{item.name}</Text>
-              <Text style={s.count}>{counts[item.id]||0} products • دوس لعرض المنتجات</Text>
+              <Text style={s.count}>{t('admin.categories.countRow', { count: counts[item.id]||0 })}</Text>
             </View>
             <View style={s.iconBox}><Ionicons name="folder" size={24} color="#E8C87A"/></View>
             <TouchableOpacity onPress={()=>onDelete(item)} style={s.trash}>

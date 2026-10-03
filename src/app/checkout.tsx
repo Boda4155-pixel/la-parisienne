@@ -1,486 +1,146 @@
 import { router } from "expo-router";
-import { ChevronLeft } from "lucide-react-native";
-import { useState } from "react";
-import { useTranslation } from "react-i18next";
-import {
-  ActivityIndicator,
-  Alert,
-  Pressable,
-  ScrollView,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
+import { ArrowLeft, Bike, MapPin } from "lucide-react-native";
+import { useEffect, useState } from "react";
+import { Image, Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import CheckoutStepper from "../../components/CheckoutStepper";
-import CustomButton from "../../components/CustomButton";
-import PaymentInfoStripe from "../../components/PaymentInfoStripe";
-import { useSupabaseQuery } from "../../hooks/useSupabaseQuery";
-import { useStoreSettings } from "../../hooks/useStoreSettings";
-import {
-  createOrder,
-  DELIVERY_OPTIONS,
-  DeliveryOption,
-  getAddresses,
-  validateCoupon,
-} from "../../lib/queries";
+import { supabase } from "../../lib/supabase";
 import { useAuthStore } from "../../store/auth.store";
 import { useCartStore } from "../../store/cart.store";
 
-type PaymentMethod = "cash" | "card" | "wallet";
+const C = { orange: "#FF6B00", bg: "#F5F5F5", white: "#fff", dark: "#1A1A1A", gray: "#8E8E93" };
+
+// 
+const DELIVERY_FEES: Record<string, number> = {
+  "مدينة نصر": 50,
+  "المعادي": 40,
+  "التجمع": 100,
+  "مصر الجديدة": 45,
+  "زايد": 80,
+  "اكتوبر": 80,
+};
+const FREE_DELIVERY_LIMIT = 500;
 
 export default function Checkout() {
-  const { t } = useTranslation();
-  const user = useAuthStore((state) => state.user);
-  const profile = useAuthStore((state) => state.profile);
+  const { items, getTotalPrice, clearCart } = useCartStore() as any;
+  const { profile } = useAuthStore() as any;
+  const subtotal = getTotalPrice();
+  const [selectedAddress, setSelectedAddress] = useState<any>(null);
+  const [addresses, setAddresses] = useState<any[]>([]);
 
-  const items = useCartStore((state) => state.items);
-  const totalPrice = useCartStore((state) => state.getTotalPrice());
-  const clearCart = useCartStore((state) => state.clearCart);
-
-  const { data: addresses, loading: loadingAddresses } = useSupabaseQuery({
-    fn: getAddresses,
-    params: { userId: user?.id ?? "" },
-    skip: !user,
-  });
-
-  const { data: deliveryOptions } = useStoreSettings();
-
-  const [step, setStep] = useState(0);
-
-  // Step 1: Address
-  const [selectedAddressId, setSelectedAddressId] = useState<string | null>(
-    null,
-  );
-  const [phone, setPhone] = useState(profile?.phone ?? "");
-
-  // Step 2: Delivery
-  const [deliveryType, setDeliveryType] =
-    useState<DeliveryOption["id"]>("standard");
-  const [notes, setNotes] = useState("");
-
-  // Step 3: Payment
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash");
-  const [couponInput, setCouponInput] = useState("");
-  const [appliedCoupon, setAppliedCoupon] = useState<{
-    id: string;
-    code: string;
-    discountAmount: number;
-  } | null>(null);
-  const [checkingCoupon, setCheckingCoupon] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-
-  const deliveryFee =
-    deliveryOptions.find((d) => d.id === deliveryType)?.fee ?? 30;
-  const discountAmount = appliedCoupon?.discountAmount ?? 0;
-  const finalTotal = totalPrice + deliveryFee - discountAmount;
-
-  const steps = [
-    t("checkout.stepAddress"),
-    t("checkout.stepDelivery"),
-    t("checkout.stepPayment"),
-  ];
-
-  const handleApplyCoupon = async () => {
-    if (!couponInput.trim()) return;
-    setCheckingCoupon(true);
-
-    try {
-      const result = await validateCoupon({
-        code: couponInput,
-        orderTotal: totalPrice,
-      });
-
-      if (!result.valid) {
-        const messages: Record<string, string> = {
-          not_found: t("checkout.couponNotFound"),
-          expired: t("checkout.couponExpired"),
-          inactive: t("checkout.couponInactive"),
-          limit_reached: t("checkout.couponLimitReached"),
-          min_order: t("checkout.couponMinOrder"),
-        };
-        Alert.alert(t("checkout.invalidCoupon"), messages[result.reason]);
-        return;
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase.from("addresses").select("*").eq("user_id", profile?.id).order("is_default", { ascending: false });
+      if (data?.length) {
+        setAddresses(data);
+        setSelectedAddress(data[0]);
       }
+    })();
+  }, []);
 
-      setAppliedCoupon({
-        id: result.coupon.id,
-        code: result.coupon.code,
-        discountAmount: result.discountAmount,
-      });
-    } catch {
-      Alert.alert(t("common.somethingWentWrong"));
-    } finally {
-      setCheckingCoupon(false);
-    }
-  };
+  const area = selectedAddress?.city || selectedAddress?.area || "مدينة نصر";
+  const deliveryFee = DELIVERY_FEES[area]?? 50;
+  const finalDeliveryFee = subtotal >= FREE_DELIVERY_LIMIT? 0 : deliveryFee;
+  const needForFree = FREE_DELIVERY_LIMIT - subtotal;
+  const total = subtotal + finalDeliveryFee;
 
-  const handleNext = () => {
-    if (step === 0 && !selectedAddressId) {
-      Alert.alert(t("checkout.error"), t("checkout.selectAddress"));
+  const placeOrder = async () => {
+    if (!selectedAddress) {
+      router.push("/addresses" as any);
       return;
     }
-    setStep((s) => Math.min(s + 1, 2));
-  };
+    const { data: order } = await supabase.from("orders").insert({
+      user_id: profile.id,
+      total_amount: total,
+      delivery_fee: finalDeliveryFee,
+      address_id: selectedAddress.id,
+      status: "pending"
+    }).select().single();
 
-  const handleBack = () => {
-    if (step === 0) {
-      router.back();
-      return;
-    }
-    setStep((s) => s - 1);
-  };
-
-  const handlePlaceOrder = async () => {
-    if (!user || !selectedAddressId) return;
-
-    setSubmitting(true);
-
-    try {
-      const result = await createOrder({
-        userId: user.id,
-        addressId: selectedAddressId,
-        paymentMethod,
-        subtotal: totalPrice,
-        deliveryFee,
-        discountAmount,
-        couponCode: appliedCoupon?.code,
-        couponId: appliedCoupon?.id,
-        total: finalTotal,
-        customerNote: notes || undefined,
-        items: items.map((item) => ({
-          productId: item.id,
-          productName: item.name,
-          unitPrice: item.price,
-          quantity: item.quantity,
-        })),
-      });
-
-      if (!result.success) {
-        Alert.alert(
-          t("checkout.orderFailed"),
-          result.error?.message || t("common.somethingWentWrong"),
-        );
-        return;
+    if (order) {
+      for (let item of items) {
+        await supabase.from("order_items").insert({ order_id: order.id, product_id: item.id, quantity: item.quantity, price: item.price });
       }
-
-      if (!result.data || !result.data.order) {
-        Alert.alert(t("checkout.orderFailed"), t("common.somethingWentWrong"));
-        return;
-      }
-
-      const order = result.data.order;
       clearCart();
-      router.replace({
-        pathname: "/order/success",
-        params: { id: order.id },
-      });
-    } catch (error: any) {
-      Alert.alert(
-        t("checkout.orderFailed"),
-        error?.message || t("common.somethingWentWrong"),
-      );
-    } finally {
-      setSubmitting(false);
+      router.replace("/(taps)/orders" as any);
     }
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
-      <View className="flex-row items-center justify-between px-5 py-3">
-        <Pressable onPress={handleBack}>
-          <ChevronLeft size={24} color="#1a1a1a" />
+    <SafeAreaView style={{ flex: 1, backgroundColor: C.white }}>
+      {/* Header */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16 }}>
+        <Pressable onPress={() => router.back()} style={{ width: 44, height: 44, borderRadius: 22, borderWidth: 1, borderColor: '#eee', justifyContent: 'center', alignItems: 'center' }}>
+          <ArrowLeft size={20} />
         </Pressable>
-
-        <Text className="h1-bold text-dark-100">{t("checkout.title")}</Text>
-
-        <View className="size-6" />
+        <View style={{ alignItems: 'flex-end' }}>
+          <Text style={{ fontWeight: '900', fontSize: 20 }}>Checkout</Text>
+          <Text style={{ color: C.gray, fontSize: 13 }}>{area}</Text>
+        </View>
       </View>
 
-      <CheckoutStepper steps={steps} currentStep={step} />
+      <ScrollView contentContainerStyle={{ padding: 16, gap: 16, paddingBottom: 120 }}>
 
-      <ScrollView contentContainerClassName="px-5 pb-6 gap-y-6">
-        {/* Step 1: Address */}
-        {step === 0 && (
-          <View className="gap-y-5">
-            <View>
-              <Text className="h3-bold text-dark-100 mb-3">
-                {t("checkout.deliveryAddress")}
-              </Text>
-
-              {loadingAddresses ? (
-                <ActivityIndicator color="#FE8C00" />
-              ) : !addresses?.data || addresses.data.length === 0 ? (
-                <Pressable
-                  onPress={() => router.push("/address/add")}
-                  className="border border-dashed border-gray-200 rounded-2xl p-5 items-center"
-                >
-                  <Text className="paragraph-bold text-primary">
-                    {t("checkout.addAddress")}
-                  </Text>
-                </Pressable>
-              ) : (
-                <View className="gap-y-3">
-                  {addresses?.data?.map((address: any) => {
-                    const isSelected = selectedAddressId === address.id;
-
-                    return (
-                      <Pressable
-                        key={address.id}
-                        onPress={() => setSelectedAddressId(address.id)}
-                        className={
-                          isSelected
-                            ? "border-2 border-primary rounded-2xl p-4"
-                            : "border border-gray-200 rounded-2xl p-4"
-                        }
-                      >
-                        <Text className="paragraph-bold text-dark-100">
-                          {address.label || t("checkout.address")}
-                        </Text>
-                        <Text className="paragraph-regular text-gray-100 mt-1">
-                          {address.address_line}
-                        </Text>
-                      </Pressable>
-                    );
-                  })}
-
-                  <Pressable
-                    onPress={() => router.push("/address/add")}
-                    className="items-center py-2"
-                  >
-                    <Text className="paragraph-bold text-primary">
-                      {t("checkout.addNewAddress")}
-                    </Text>
-                  </Pressable>
-                </View>
-              )}
-            </View>
-
-            <View>
-              <Text className="h3-bold text-dark-100 mb-3">
-                {t("checkout.contactInfo")}
-              </Text>
-
-              <View className="border border-gray-200 rounded-2xl p-4 gap-y-3">
-                <View className="flex-row items-center justify-between">
-                  <Text className="paragraph-regular text-gray-100">
-                    {t("checkout.phone")}
-                  </Text>
-                  <TextInput
-                    value={phone}
-                    onChangeText={setPhone}
-                    keyboardType="phone-pad"
-                    className="paragraph-bold text-dark-100 flex-1 text-right"
-                  />
-                </View>
-
-                <View className="flex-row items-center justify-between border-t border-gray-100 pt-3">
-                  <Text className="paragraph-regular text-gray-100">
-                    {t("checkout.email")}
-                  </Text>
-                  <Text className="paragraph-bold text-dark-100">
-                    {profile?.email}
-                  </Text>
-                </View>
-              </View>
+        {/* Address Card - زي طلبات */}
+        <View style={{ borderWidth: 1, borderColor: '#eee', borderRadius: 20, overflow: 'hidden', backgroundColor: C.white }}>
+          {/* Map Preview - شكل طلبات */}
+          <View style={{ height: 110, backgroundColor: '#E8F0E8', justifyContent: 'center', alignItems: 'center' }}>
+            <Image source={{ uri: `https://maps.googleapis.com/maps/api/staticmap?center=Cairo&zoom=12&size=600x200&markers=color:orange|Cairo&key=demo` }} style={{ width: '100%', height: '100%' }} />
+            <View style={{ position: 'absolute', backgroundColor: C.white, padding: 8, borderRadius: 20, elevation: 4 }}>
+              <MapPin size={24} color={C.orange} fill={C.orange} />
             </View>
           </View>
-        )}
-
-        {/* Step 2: Delivery */}
-        {step === 1 && (
-          <View className="gap-y-5">
-            <View>
-              <Text className="h3-bold text-dark-100 mb-3">
-                {t("checkout.deliveryMethod")}
-              </Text>
-
-              <View className="gap-y-3">
-                {(deliveryOptions ?? []).map((option) => {
-                  const isSelected = deliveryType === option.id;
-
-                  return (
-                    <Pressable
-                      key={option.id}
-                      onPress={() => setDeliveryType(option.id)}
-                      className={
-                        isSelected
-                          ? "border-2 border-primary rounded-2xl p-4 flex-row items-center justify-between"
-                          : "border border-gray-200 rounded-2xl p-4 flex-row items-center justify-between"
-                      }
-                    >
-                      <View>
-                        <Text className="paragraph-bold text-dark-100">
-                          {option.label}
-                        </Text>
-                        <Text className="paragraph-regular text-gray-100 mt-1">
-                          {option.time}
-                        </Text>
-                      </View>
-
-                      <Text className="paragraph-bold text-dark-100">
-                        {option.fee === 0
-                          ? t("checkout.free")
-                          : `${option.fee} ${t("common.currency")}`}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
+          <View style={{ padding: 14, flexDirection: 'row', justifyContent: 'space-between' }}>
+            <Pressable onPress={() => router.push("/addresses" as any)}>
+              <Text style={{ fontWeight: '800', textDecorationLine: 'underline' }}>Change</Text>
+            </Pressable>
+            <View style={{ alignItems: 'flex-end', flex: 1, marginRight: 12 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Text style={{ fontWeight: '800' }}>{selectedAddress?.label || area}</Text>
+                <MapPin size={18} color={C.orange} />
               </View>
-            </View>
-
-            <View>
-              <Text className="h3-bold text-dark-100 mb-3">
-                {t("checkout.orderNotes")}
-              </Text>
-
-              <TextInput
-                value={notes}
-                onChangeText={setNotes}
-                placeholder={t("checkout.orderNotesPlaceholder")}
-                multiline
-                numberOfLines={3}
-                className="border border-gray-200 rounded-2xl p-4 paragraph-regular text-dark-100"
-                style={{ textAlignVertical: "top" }}
-              />
+              <Text style={{ color: C.gray, marginTop: 4, textAlign: 'right' }}>{selectedAddress?.street || "لم يتم اختيار عنوان"}</Text>
+              <Text style={{ color: C.gray, fontSize: 12, marginTop: 2 }}>المنطقة: {area}</Text>
             </View>
           </View>
-        )}
+        </View>
 
-        {/* Step 3: Payment */}
-        {step === 2 && (
-          <View className="gap-y-5">
-            <View>
-              <Text className="h3-bold text-dark-100 mb-3">
-                {t("checkout.paymentMethod")}
-              </Text>
-
-              <View className="gap-y-3">
-                <Pressable
-                  onPress={() => setPaymentMethod("cash")}
-                  className={
-                    paymentMethod === "cash"
-                      ? "border-2 border-primary rounded-2xl p-4"
-                      : "border border-gray-200 rounded-2xl p-4"
-                  }
-                >
-                  <Text className="paragraph-bold text-dark-100">
-                    {t("checkout.cashOnDelivery")}
-                  </Text>
-                </Pressable>
-
-                <Pressable
-                  onPress={() => setPaymentMethod("card")}
-                  className={
-                    paymentMethod === "card"
-                      ? "border-2 border-primary rounded-2xl p-4"
-                      : "border border-gray-200 rounded-2xl p-4"
-                  }
-                >
-                  <Text className="paragraph-bold text-dark-100">
-                    {t("checkout.cardPayment")}
-                  </Text>
-                </Pressable>
-
-                <View className="border border-gray-100 rounded-2xl p-4 opacity-50">
-                  <Text className="paragraph-bold text-gray-300">
-                    {t("checkout.walletComingSoon")}
-                  </Text>
-                </View>
-              </View>
-            </View>
-
-            <View>
-              <Text className="h3-bold text-dark-100 mb-3">
-                {t("checkout.haveCoupon")}
-              </Text>
-
-              {appliedCoupon ? (
-                <View className="flex-row items-center justify-between border border-primary bg-primary/5 rounded-2xl p-4">
-                  <Text className="paragraph-bold text-primary">
-                    {appliedCoupon.code}
-                  </Text>
-                  <Pressable onPress={() => setAppliedCoupon(null)}>
-                    <Text className="paragraph-regular text-gray-100">
-                      {t("common.remove")}
-                    </Text>
-                  </Pressable>
-                </View>
-              ) : (
-                <View className="flex-row gap-x-2">
-                  <TextInput
-                    value={couponInput}
-                    onChangeText={setCouponInput}
-                    placeholder={t("checkout.couponPlaceholder")}
-                    autoCapitalize="characters"
-                    className="flex-1 border border-gray-200 rounded-2xl px-4 py-3 paragraph-regular text-dark-100"
-                  />
-                  <Pressable
-                    onPress={handleApplyCoupon}
-                    disabled={checkingCoupon}
-                    className="bg-dark-100 rounded-2xl px-5 items-center justify-center"
-                  >
-                    {checkingCoupon ? (
-                      <ActivityIndicator color="white" size="small" />
-                    ) : (
-                      <Text className="paragraph-bold text-white">
-                        {t("checkout.apply")}
-                      </Text>
-                    )}
-                  </Pressable>
-                </View>
-              )}
-            </View>
-
-            <View className="border border-gray-200 p-5 rounded-2xl">
-              <Text className="h3-bold text-dark-100 mb-4">
-                {t("checkout.paymentSummary")}
-              </Text>
-
-              <PaymentInfoStripe
-                label={t("checkout.subtotal")}
-                value={`${totalPrice} ${t("common.currency")}`}
-              />
-              <PaymentInfoStripe
-                label={t("checkout.deliveryFee")}
-                value={
-                  deliveryFee === 0
-                    ? t("checkout.free")
-                    : `${deliveryFee} ${t("common.currency")}`
-                }
-              />
-
-              {appliedCoupon && (
-                <PaymentInfoStripe
-                  label={t("checkout.discount")}
-                  value={`- ${discountAmount} ${t("common.currency")}`}
-                  valueStyle="!text-success"
-                />
-              )}
-
-              <View className="border-t border-gray-200 my-2" />
-
-              <PaymentInfoStripe
-                label={t("checkout.total")}
-                value={`${finalTotal} ${t("common.currency")}`}
-                labelStyle="base-bold !text-dark-100"
-                valueStyle="base-bold !text-dark-100"
-              />
-            </View>
+        {/* Delivery */}
+        <View style={{ borderWidth: 1, borderColor: '#eee', borderRadius: 20, padding: 14, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Bike size={24} color={C.orange} />
+          <View style={{ alignItems: 'flex-end' }}>
+            <Text style={{ fontWeight: '900' }}>Delivery</Text>
+            <Text style={{ color: C.gray, fontSize: 13 }}>Arriving in approx. 20 - 40 mins</Text>
           </View>
-        )}
+        </View>
+
+        {/* Pay */}
+        <View>
+          <Text style={{ fontWeight: '900', fontSize: 20, textAlign: 'right', marginBottom: 8 }}>Pay with</Text>
+          <View style={{ borderWidth: 1, borderColor: '#eee', borderRadius: 16, padding: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+            <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: C.orange, borderWidth: 5, borderColor: '#FFD0B0' }} />
+            <Text style={{ fontWeight: '700' }}>💵 Cash on Delivery</Text>
+          </View>
+        </View>
+
+        {/* Summary */}
+        <View>
+          <Text style={{ fontWeight: '900', fontSize: 20, textAlign: 'right', marginBottom: 12 }}>Payment summary</Text>
+          <View style={{ gap: 10 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}><Text style={{ color: C.gray }}>Subtotal ({items.length} items)</Text><Text style={{ fontWeight: '700' }}>EGP {subtotal}.00</Text></View>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}><Text style={{ color: C.gray }}>Delivery fee ({area})</Text><Text style={{ fontWeight: '700' }}>{finalDeliveryFee === 0? "FREE" : `EGP ${finalDeliveryFee}.00`}</Text></View>
+            {needForFree > 0 && needForFree < 200 && (
+              <Text style={{ color: C.orange, textAlign: 'right', fontSize: 13, marginTop: 4 }}>اطلب بـ {needForFree} جنيه كمان والتوصيل يبقى مجاني!</Text>
+            )}
+            <View style={{ height: 1, backgroundColor: '#eee', marginVertical: 8 }} />
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}><Text style={{ fontWeight: '900', fontSize: 18 }}>Total amount</Text><Text style={{ fontWeight: '900', fontSize: 18 }}>EGP {total}.00</Text></View>
+          </View>
+        </View>
       </ScrollView>
 
-      <View className="px-5 py-4 border-t border-gray-100">
-        <CustomButton
-          title={
-            step === 2
-              ? `${t("checkout.placeOrder")} - ${finalTotal} ${t("common.currency")}`
-              : t("checkout.continue")
-          }
-          isLoading={submitting}
-          onPress={step === 2 ? handlePlaceOrder : handleNext}
-        />
+      <View style={{ position: 'absolute', bottom: 30, left: 0, right: 0, padding: 16, backgroundColor: C.white, borderTopWidth: 1, borderColor: '#eee' }}>
+        <Pressable onPress={placeOrder} style={{ height: 56, borderRadius: 28, backgroundColor: C.orange, justifyContent: 'center', alignItems: 'center' }}>
+          <Text style={{ color: 'white', fontWeight: '900', fontSize: 16 }}>Place order • EGP {total}.00</Text>
+        </Pressable>
       </View>
     </SafeAreaView>
   );

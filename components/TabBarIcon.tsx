@@ -1,28 +1,20 @@
-import cn from "clsx";
-import { Text, View } from "react-native";
 import type { LucideIcon } from "lucide-react-native";
+import { Text, View } from "react-native";
 
-type TabBarIconProps = {
+type Props = {
   focused: boolean;
   icon: LucideIcon;
   title: string;
 };
 
-const TabBarIcon = ({ focused, icon: Icon, title }: TabBarIconProps) => {
+export default function TabBarIcon({ focused, icon: Icon, title }: Props) {
+  if (!Icon) return null;
   return (
-    <View className="tab-icon">
-      <Icon size={28} color={focused ? "#FE8C00" : "#5D5F6D"} strokeWidth={2} />
-
-      <Text
-        className={cn(
-          "text-sm font-bold",
-          focused ? "text-primary" : "text-gray-200",
-        )}
-      >
+    <View style={{ alignItems: 'center', justifyContent: 'center', gap: 4, minWidth: 60 }}>
+      <Icon size={24} color={focused ? "#FE8C00" : "#5D5F6D"} />
+      <Text style={{ fontSize: 10, fontWeight: '700', color: focused ? "#FE8C00" : "#5D5F6D" }}>
         {title}
       </Text>
     </View>
   );
-};
-
-export default TabBarIcon;
+}

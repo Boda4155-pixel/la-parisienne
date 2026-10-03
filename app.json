@@ -22,7 +22,12 @@
         "googleMaps": {
           "apiKey": "AIzaSyCziy3e304C8Xxz4hWNh9OIHY-5K0LKziE"
         }
-      }
+      },
+      "permissions": [
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
+      ],
+      "package": "com.mohamed34347.laparisienne"
     },
     "web": {
       "bundler": "metro",
@@ -45,7 +50,8 @@
           "imageWidth": 76
         }
       ],
-      "expo-localization"
+      "expo-localization",
+      "react-native-maps"
     ],
     "experiments": {
       "typedRoutes": true,

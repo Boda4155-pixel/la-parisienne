@@ -1,10 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { supabase } from '../../../lib/supabase';
 
 export default function TaxService(){
+  const { t } = useTranslation();
   const [tax, setTax] = useState('');
   const [service, setService] = useState('');
   const [loading, setLoading] = useState(true);
@@ -30,8 +32,8 @@ export default function TaxService(){
       updated_at: new Date().toISOString()
     });
     setSaving(false);
-    if(error) Alert.alert('خطأ', error.message);
-    else Alert.alert('تم الحفظ ✅','الضريبة والخدمة اتحفظوا من الادمن');
+    if(error) Alert.alert(t('common:error'), error.message);
+    else Alert.alert(t('admin.taxService.saved'), t('admin.taxService.savedDesc'));
   };
 
   if(loading) return <View style={[s.bg,{justifyContent:'center',alignItems:'center'}]}><ActivityIndicator color="#E8C87A"/></View>;
@@ -40,32 +42,32 @@ export default function TaxService(){
     <View style={s.bg}>
       <View style={s.header}>
         <TouchableOpacity onPress={()=>router.back()} style={s.back}><Ionicons name="chevron-forward" size={20} color="#fff"/></TouchableOpacity>
-        <Text style={s.h1}>Tax & Service</Text>
-        <TouchableOpacity onPress={save} style={s.saveBtn}><Text style={{fontWeight:'bold', fontSize:12}}>{saving?'...':'حفظ'}</Text></TouchableOpacity>
+        <Text style={s.h1}>{t('admin.taxService.title')}</Text>
+        <TouchableOpacity onPress={save} style={s.saveBtn}><Text style={{fontWeight:'bold', fontSize:12}}>{saving?'...':t('common:save')}</Text></TouchableOpacity>
       </View>
 
       <View style={{padding:16, gap:16}}>
         <View style={s.card}>
-          <View style={s.rowHead}><Ionicons name="receipt-outline" size={20} color="#E8C87A"/><Text style={s.title}>نسبة الضريبة %</Text></View>
+          <View style={s.rowHead}><Ionicons name="receipt-outline" size={20} color="#E8C87A"/><Text style={s.title}>{t('admin.taxService.taxRate')}</Text></View>
           <TextInput value={tax} onChangeText={setTax} keyboardType="numeric" placeholder="14" placeholderTextColor="#666" style={s.input}/>
-          <Text style={s.hint}>مثال: 14 تعني 14% ضريبة على الاوردر</Text>
+          <Text style={s.hint}>{t('admin.taxService.taxHint')}</Text>
         </View>
 
         <View style={s.card}>
-          <View style={s.rowHead}><Ionicons name="restaurant-outline" size={20} color="#E8C87A"/><Text style={s.title}>نسبة الخدمة %</Text></View>
+          <View style={s.rowHead}><Ionicons name="restaurant-outline" size={20} color="#E8C87A"/><Text style={s.title}>{t('admin.taxService.serviceRate')}</Text></View>
           <TextInput value={service} onChangeText={setService} keyboardType="numeric" placeholder="0" placeholderTextColor="#666" style={s.input}/>
-          <Text style={s.hint}>مثال: 12 تعني 12% خدمة</Text>
+          <Text style={s.hint}>{t('admin.taxService.serviceHint')}</Text>
         </View>
 
         <View style={s.preview}>
-          <Text style={s.prevTitle}>معاينة</Text>
-          <Text style={s.prevText}>لو الاوردر بـ 100 جنيه</Text>
-          <Text style={s.prevText}>ضريبة {tax||0}% = {(100 * Number(tax||0)/100).toFixed(0)} جنيه</Text>
-          <Text style={s.prevText}>خدمة {service||0}% = {(100 * Number(service||0)/100).toFixed(0)} جنيه</Text>
-          <Text style={s.prevTotal}>الإجمالي = {100 + 100*Number(tax||0)/100 + 100*Number(service||0)/100} جنيه</Text>
+          <Text style={s.prevTitle}>{t('admin.taxService.preview')}</Text>
+          <Text style={s.prevText}>{t('admin.taxService.previewExample')}</Text>
+          <Text style={s.prevText}>{t('admin.taxService.previewTax', { rate: tax||0, value: (100 * Number(tax||0)/100).toFixed(0) })}</Text>
+          <Text style={s.prevText}>{t('admin.taxService.previewService', { rate: service||0, value: (100 * Number(service||0)/100).toFixed(0) })}</Text>
+          <Text style={s.prevTotal}>{t('admin.taxService.previewTotal', { total: 100 + 100*Number(tax||0)/100 + 100*Number(service||0)/100 })}</Text>
         </View>
 
-        <TouchableOpacity style={s.saveBig} onPress={save}><Text style={{fontWeight:'bold'}}>✅ حفظ من الادمن</Text></TouchableOpacity>
+        <TouchableOpacity style={s.saveBig} onPress={save}><Text style={{fontWeight:'bold'}}>{t('admin.taxService.saveAdmin')}</Text></TouchableOpacity>
       </View>
     </View>
   );

@@ -1,10 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { supabase } from '../../../lib/supabase';
 
 export default function Sales() {
+  const { t } = useTranslation();
   const [orders, setOrders] = useState<any[]>([]);
   const [allOrders, setAllOrders] = useState<any[]>([]);
   const [filter, setFilter] = useState<'all'|'today'|'week'|'month'|'custom'>('all');
@@ -14,9 +16,7 @@ export default function Sales() {
   const [showDatePicker, setShowDatePicker] = useState(false);
 
   const load = async () => {
-    // بدون JOIN عشان RLS
-    const { data, error } = await supabase.from('orders').select('*').order('created_at', { ascending: false });
-    console.log('orders', error, data?.length);
+    const { data } = await supabase.from('orders').select('*').order('created_at', { ascending: false });
     if(data) {
       setAllOrders(data);
       applyFilter(data, filter, customDate);
@@ -31,7 +31,6 @@ export default function Sales() {
       return;
     }
     if(f === 'today') {
-      // هات اخر تاريخ موجود عشان الداتا بتاعتك قديمة من اغسطس
       const latest = data[0]?.created_at?.split('T')[0];
       if(!latest) { setOrders([]); return; }
       setOrders(data.filter(o => o.created_at.startsWith(latest)));
@@ -39,7 +38,6 @@ export default function Sales() {
     }
     if(f === 'week') {
       const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate()-7);
-      // لو كل الاوردرات قديمة، هات اخر 7 اوردرات
       const recent = data.filter(o => new Date(o.created_at) >= weekAgo);
       setOrders(recent.length? recent : data.slice(0,7));
       return;
@@ -70,18 +68,18 @@ export default function Sales() {
     <View style={s.bg}>
       <View style={s.header}>
         <TouchableOpacity onPress={()=> {}} style={s.gear}><Ionicons name="settings" size={22} color="#888" /></TouchableOpacity>
-        <Text style={s.h1}>Sales Report</Text>
+        <Text style={s.h1}>{t('admin.sales.title')}</Text>
       </View>
 
       <View style={s.topRow}>
         <TouchableOpacity style={s.calendarBtn} onPress={()=> setShowCalendar(true)}>
-          <Text style={s.calText}>{filter==='custom'? customDate.toLocaleDateString('en-GB') : 'Pick Date'}</Text>
+          <Text style={s.calText}>{filter==='custom'? customDate.toLocaleDateString('en-GB') : t('admin.sales.pickDate')}</Text>
           <Ionicons name="calendar" size={18} color="#000" />
         </TouchableOpacity>
         <View style={s.tabs}>
           {(['month','week','today','all'] as const).map(f => (
             <TouchableOpacity key={f} onPress={()=>setFilter(f)} style={[s.tab, filter===f && s.tabActive]}>
-              <Text style={[s.tabTxt, filter===f && s.tabTxtActive]}>{f.toUpperCase()}</Text>
+              <Text style={[s.tabTxt, filter===f && s.tabTxtActive]}>{t(`admin.sales.filters.${f}`).toUpperCase()}</Text>
             </TouchableOpacity>
           ))}
         </View>
@@ -90,19 +88,18 @@ export default function Sales() {
       <View style={s.summary}>
         <View style={s.sumHeader}>
           <Ionicons name="trending-up" size={16} color="#E8C87A" />
-          <Text style={s.sumLab}>TOTAL SALES ({orders.length})</Text>
+          <Text style={s.sumLab}>{t('admin.sales.totalSales')} ({orders.length})</Text>
         </View>
         <Text style={s.sumVal}>EGP {total.toFixed(2)}</Text>
         <View style={s.sumRow}>
-          <View style={s.sumChipGreen}><Text style={s.chipTxt}>Paid: EGP {paid.toFixed(0)}</Text></View>
-          <View style={s.sumChipYellow}><Text style={[s.chipTxt,{color:'#000'}]}>Pending: EGP {pendingPayment.toFixed(0)}</Text></View>
+          <View style={s.sumChipGreen}><Text style={s.chipTxt}>{t('admin.sales.paid')}: EGP {paid.toFixed(0)}</Text></View>
+          <View style={s.sumChipYellow}><Text style={[s.chipTxt,{color:'#000'}]}>{t('admin.sales.pending')}: EGP {pendingPayment.toFixed(0)}</Text></View>
         </View>
       </View>
 
       <ScrollView contentContainerStyle={{paddingBottom: 120}} showsVerticalScrollIndicator={false}>
         {orders.map(o => (
           <TouchableOpacity key={o.id} style={s.orderCard} onPress={async ()=>{
-            // لما تدوس، هات تفاصيله كاملة
             const {data: items} = await supabase.from('order_items').select('*, products(name)').eq('order_id', o.id);
             let profile = null;
             if(o.customer_id || o.user_id){
@@ -115,7 +112,7 @@ export default function Sales() {
               <View style={[s.statusDot, {backgroundColor: getStatusColor(o.status)}]} />
               <View>
                 <Text style={s.orderId}>#{o.id.slice(0,8)}</Text>
-                <Text style={s.orderDate}>{new Date(o.created_at).toLocaleDateString('en-GB')} - {o.status}</Text>
+                <Text style={s.orderDate}>{new Date(o.created_at).toLocaleDateString('en-GB')} - {t(`admin.orders.status.${o.status}`)}</Text>
               </View>
             </View>
             <View style={s.cardRight}>
@@ -124,13 +121,13 @@ export default function Sales() {
             </View>
           </TouchableOpacity>
         ))}
-        {orders.length===0 && <Text style={{color:'#666', textAlign:'center', marginTop:50}}>No sales for this period</Text>}
+        {orders.length===0 && <Text style={{color:'#666', textAlign:'center', marginTop:50}}>{t('admin.sales.noSales')}</Text>}
       </ScrollView>
 
       <Modal visible={showCalendar} transparent animationType="slide">
         <View style={s.modalOverlay}>
           <View style={s.calendarBox}>
-            <Text style={s.calTitle}>Pick a date to view sales</Text>
+            <Text style={s.calTitle}>{t('admin.sales.pickDateTitle')}</Text>
             <TouchableOpacity style={s.dateBtn} onPress={()=> setShowDatePicker(true)}>
               <Text style={s.dateBtnText}>{customDate.toDateString()}</Text>
               <Ionicons name="calendar-outline" size={20} color="#E8C87A" />
@@ -142,8 +139,8 @@ export default function Sales() {
               }} />
             )}
             <View style={s.modalActions}>
-              <TouchableOpacity style={s.cancelBtn} onPress={()=> setShowCalendar(false)}><Text style={s.cancelTxt}>Cancel</Text></TouchableOpacity>
-              <TouchableOpacity style={s.applyBtn} onPress={()=> { setFilter('custom'); setShowCalendar(false); }}><Text style={s.applyTxt}>Show</Text></TouchableOpacity>
+              <TouchableOpacity style={s.cancelBtn} onPress={()=> setShowCalendar(false)}><Text style={s.cancelTxt}>{t('common:cancel')}</Text></TouchableOpacity>
+              <TouchableOpacity style={s.applyBtn} onPress={()=> { setFilter('custom'); setShowCalendar(false); }}><Text style={s.applyTxt}>{t('common:show')}</Text></TouchableOpacity>
             </View>
           </View>
         </View>
@@ -153,23 +150,23 @@ export default function Sales() {
         <Pressable style={s.modalOverlay} onPress={()=> setSelectedOrder(null)}>
           <Pressable style={s.detailsBox} onPress={e=> e.stopPropagation()}>
             <View style={s.detailsHeader}>
-              <Text style={s.detailsTitle}>Order #{selectedOrder?.id.slice(0,8)}</Text>
+              <Text style={s.detailsTitle}>{t('admin.orders.order')} #{selectedOrder?.id.slice(0,8)}</Text>
               <TouchableOpacity onPress={()=> setSelectedOrder(null)}><Ionicons name="close" size={24} color="#fff" /></TouchableOpacity>
             </View>
             {selectedOrder && (
               <>
-                <Text style={s.detailRow}><Text style={s.detailLabel}>Customer: </Text>{selectedOrder.profile?.full_name || selectedOrder.customer_name || 'Guest User'}</Text>
-                <Text style={s.detailRow}><Text style={s.detailLabel}>Phone: </Text>{selectedOrder.profile?.phone || selectedOrder.customer_phone || 'N/A'}</Text>
-                <Text style={s.detailRow}><Text style={s.detailLabel}>Status: </Text><Text style={{color: getStatusColor(selectedOrder.status), fontWeight:'bold'}}>{selectedOrder.status}</Text></Text>
-                <Text style={s.detailRow}><Text style={s.detailLabel}>Payment: </Text>{selectedOrder.payment_status} • {selectedOrder.payment_method || 'COD'}</Text>
-                <Text style={s.detailRow}><Text style={s.detailLabel}>Date: </Text>{new Date(selectedOrder.created_at).toLocaleString()}</Text>
+                <Text style={s.detailRow}><Text style={s.detailLabel}>{t('admin.orders.name')}: </Text>{selectedOrder.profile?.full_name || selectedOrder.customer_name || t('admin.orders.guest')}</Text>
+                <Text style={s.detailRow}><Text style={s.detailLabel}>{t('admin.orders.phone')}: </Text>{selectedOrder.profile?.phone || selectedOrder.customer_phone || 'N/A'}</Text>
+                <Text style={s.detailRow}><Text style={s.detailLabel}>{t('admin.orders.statusLabel')}: </Text><Text style={{color: getStatusColor(selectedOrder.status), fontWeight:'bold'}}>{t(`admin.orders.status.${selectedOrder.status}`)}</Text></Text>
+                <Text style={s.detailRow}><Text style={s.detailLabel}>{t('admin.sales.payment')}: </Text>{selectedOrder.payment_status} • {selectedOrder.payment_method || 'COD'}</Text>
+                <Text style={s.detailRow}><Text style={s.detailLabel}>{t('admin.sales.date')}: </Text>{new Date(selectedOrder.created_at).toLocaleString()}</Text>
                 <View style={s.divider} />
-                <Text style={s.itemsTitle}>Items ({selectedOrder.order_items?.length || 0})</Text>
+                <Text style={s.itemsTitle}>{t('admin.sales.items', { count: selectedOrder.order_items?.length || 0 })}</Text>
                 {selectedOrder.order_items?.map((it:any, i:number)=>(
                   <View key={i} style={s.itemRow}><Text style={s.itemTxt}>{it.products?.name || 'Product'} x{it.quantity}</Text><Text style={s.itemPrice}>EGP {it.price}</Text></View>
                 ))}
                 <View style={s.divider} />
-                <Text style={s.totalTxt}>Total: EGP {Number(selectedOrder.total).toFixed(2)}</Text>
+                <Text style={s.totalTxt}>{t('admin.orders.total')}: EGP {Number(selectedOrder.total).toFixed(2)}</Text>
                 {selectedOrder.delivery_address && <Text style={s.addressTxt}>📍 {selectedOrder.delivery_address}</Text>}
               </>
             )}

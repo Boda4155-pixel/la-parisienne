@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Dimensions, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { BarChart } from 'react-native-chart-kit';
 import { supabase } from '../../../lib/supabase';
 
 export default function Dashboard() {
+  const { t } = useTranslation();
   const [stats, setStats] = useState({ today:0, todayCount:0, total:0, totalCount:0, pending:0, delivered:0, users:0, products:0 });
   const [chart, setChart] = useState({ labels: [''], data: [0] });
   const [loading, setLoading] = useState(true);
@@ -27,7 +29,7 @@ export default function Dashboard() {
     });
 
     setChart({
-      labels: Object.keys(grouped).reverse().length? Object.keys(grouped).reverse() : ['No data'],
+      labels: Object.keys(grouped).reverse().length? Object.keys(grouped).reverse() : [t('admin.dashboard.noData')],
       data: Object.values(grouped).reverse().length? Object.values(grouped).reverse() as number[] : [0]
     });
 
@@ -55,18 +57,18 @@ export default function Dashboard() {
   return (
     <View style={s.bg}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{paddingBottom: 120}}>
-        <Text style={s.h1}>Dashboard</Text>
-        <Text style={s.sub}>La Parisienne • {stats.totalCount} orders • Live</Text>
+        <Text style={s.h1}>{t('admin.nav.dashboard')}</Text>
+        <Text style={s.sub}>La Parisienne • {t('admin.dashboard.ordersCount', { count: stats.totalCount })} • Live</Text>
 
         <View style={s.grid}>
-          <View style={[s.card, {backgroundColor:'#E8C87A'}]}><Text style={[s.lab,{color:'#000'}]}>PENDING</Text><Text style={[s.val,{color:'#000'}]}>{stats.pending}</Text><Text style={[s.sm,{color:'#333'}]}>Need action</Text></View>
-          <View style={s.card}><Text style={s.lab}>TODAY SALES</Text><Text style={s.val}>EGP {stats.today}</Text><Text style={s.sm}>{stats.todayCount} orders</Text></View>
-          <View style={s.card}><Text style={s.lab}>TOTAL REVENUE</Text><Text style={s.val}>EGP {stats.total}</Text><Text style={s.sm}>{stats.totalCount} total</Text></View>
-          <View style={s.card}><Text style={s.lab}>DELIVERED</Text><Text style={s.val}>{stats.delivered}</Text><Text style={s.sm}>Completed</Text></View>
+          <View style={[s.card, {backgroundColor:'#E8C87A'}]}><Text style={[s.lab,{color:'#000'}]}>{t('admin.dashboard.pending')}</Text><Text style={[s.val,{color:'#000'}]}>{stats.pending}</Text><Text style={[s.sm,{color:'#333'}]}>{t('admin.dashboard.needAction')}</Text></View>
+          <View style={s.card}><Text style={s.lab}>{t('admin.dashboard.todaySales')}</Text><Text style={s.val}>EGP {stats.today}</Text><Text style={s.sm}>{t('admin.dashboard.ordersToday', { count: stats.todayCount })}</Text></View>
+          <View style={s.card}><Text style={s.lab}>{t('admin.dashboard.totalRevenue')}</Text><Text style={s.val}>EGP {stats.total}</Text><Text style={s.sm}>{t('admin.dashboard.totalOrders', { count: stats.totalCount })}</Text></View>
+          <View style={s.card}><Text style={s.lab}>{t('admin.dashboard.delivered')}</Text><Text style={s.val}>{stats.delivered}</Text><Text style={s.sm}>{t('admin.dashboard.completed')}</Text></View>
         </View>
 
         <View style={s.chartBox}>
-          <Text style={s.chartTitle}>Sales Last 7 Days</Text>
+          <Text style={s.chartTitle}>{t('admin.dashboard.salesLast7Days')}</Text>
           <BarChart
             data={{ labels: chart.labels, datasets: [{ data: chart.data }] }}
             width={Dimensions.get('window').width - 50}
@@ -90,9 +92,9 @@ export default function Dashboard() {
         </View>
 
         <View style={s.rowStats}>
-          <View style={s.miniCard}><Text style={s.miniLab}>USERS</Text><Text style={s.miniVal}>{stats.users}</Text></View>
-          <View style={s.miniCard}><Text style={s.miniLab}>PRODUCTS</Text><Text style={s.miniVal}>{stats.products}</Text></View>
-          <View style={s.miniCard}><Text style={s.miniLab}>ORDERS</Text><Text style={s.miniVal}>{stats.totalCount}</Text></View>
+          <View style={s.miniCard}><Text style={s.miniLab}>{t('admin.dashboard.users')}</Text><Text style={s.miniVal}>{stats.users}</Text></View>
+          <View style={s.miniCard}><Text style={s.miniLab}>{t('admin.dashboard.products')}</Text><Text style={s.miniVal}>{stats.products}</Text></View>
+          <View style={s.miniCard}><Text style={s.miniLab}>{t('admin.dashboard.ordersLabel')}</Text><Text style={s.miniVal}>{stats.totalCount}</Text></View>
         </View>
       </ScrollView>
     </View>

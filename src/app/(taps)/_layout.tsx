@@ -1,33 +1,38 @@
 import { Tabs } from "expo-router";
-import {
-  ClipboardList,
-  Heart,
-  Home,
-  LayoutGrid,
-  User,
-} from "lucide-react-native";
-import TabBarIcon from "../../../components/TabBarIcon";
-export default function TabLayout() {
+import { ClipboardList, House, LayoutGrid, ShoppingCart, User } from "lucide-react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+export default function TapsLayout() {
+  const insets = useSafeAreaInsets();
+
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarShowLabel: false,
+        tabBarShowLabel: true,
+        tabBarActiveTintColor: "#f59e0b",
+        tabBarInactiveTintColor: "#6b7280",
         tabBarStyle: {
-          borderTopLeftRadius: 50,
-          borderTopRightRadius: 50,
-          borderBottomLeftRadius: 50,
-          borderBottomRightRadius: 50,
-          marginHorizontal: 20,
-          height: 80,
           position: "absolute",
-          bottom: 40,
+          bottom: insets.bottom + 8, // <- ده اللي بيخليه فوق زراير الموبايل بالظبط
+          left: 16,
+          right: 16,
+          height: 70,
           backgroundColor: "white",
-          shadowColor: "#1a1a1a",
-          shadowOffset: { width: 0, height: 2 },
+          borderRadius: 32,
+          paddingTop: 8,
+          paddingBottom: 8,
+          borderTopWidth: 0,
+          elevation: 10,
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: 4 },
           shadowOpacity: 0.1,
-          shadowRadius: 4,
-          elevation: 5,
+          shadowRadius: 10,
+        },
+        tabBarLabelStyle: {
+          fontSize: 11,
+          fontWeight: "600",
+          marginTop: 2,
         },
       }}
     >
@@ -35,63 +40,44 @@ export default function TabLayout() {
         name="index"
         options={{
           title: "Home",
-          tabBarIcon: ({ focused }) => (
-            <TabBarIcon title="Home" icon={Home} focused={focused} />
+          tabBarIcon: ({ color, focused }) => (
+            <House color={color} size={26} fill={focused ? color : "transparent"} />
           ),
         }}
       />
       <Tabs.Screen
         name="categories"
         options={{
-          title: "categories",
-          tabBarIcon: ({ focused }) => (
-            <TabBarIcon
-              title="Categories"
-              icon={LayoutGrid}
-              focused={focused}
-            />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="favorite"
-        options={{
-          title: "favorite",
-          tabBarIcon: ({ focused }) => (
-            <TabBarIcon title="favorite" icon={Heart} focused={focused} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="search"
-        options={{
-          href: null,
+          title: "Categories",
+          tabBarIcon: ({ color }) => <LayoutGrid color={color} size={24} />,
         }}
       />
       <Tabs.Screen
         name="cart"
         options={{
-          href: null,
+          title: "Cart",
+          tabBarIcon: ({ color, focused }) => (
+            <ShoppingCart color={color} size={24} fill={focused ? color : "transparent"} />
+          ),
         }}
       />
       <Tabs.Screen
         name="orders"
         options={{
           title: "Orders",
-          tabBarIcon: ({ focused }) => (
-            <TabBarIcon title="Orders" icon={ClipboardList} focused={focused} />
-          ),
+          tabBarIcon: ({ color }) => <ClipboardList color={color} size={24} />,
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
-          title: "Profile",
-          tabBarIcon: ({ focused }) => (
-            <TabBarIcon title="profile" icon={User} focused={focused} />
-          ),
+          title: "profile",
+          tabBarIcon: ({ color }) => <User color={color} size={24} />,
         }}
       />
+      {/* هنخفي دول من الـ Tab Bar بس هيفضلوا شغالين */}
+      <Tabs.Screen name="favorite" options={{ href: null }} />
+      <Tabs.Screen name="search" options={{ href: null }} />
     </Tabs>
   );
 }

@@ -1,15 +1,16 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Alert, Linking, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { supabase } from '../../../lib/supabase';
 
 export default function OrdersPage() {
+  const { t } = useTranslation();
   const [orders, setOrders] = useState<any[]>([]);
   const [filtered, setFiltered] = useState<any[]>([]);
   const [status, setStatus] = useState<'all'|'pending'|'confirmed'|'delivered'|'cancelled'>('all');
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<any>(null);
-  const [loadingProfile, setLoadingProfile] = useState(false);
 
   const load = async () => {
     const { data } = await supabase.from('orders').select('*').order('created_at', {ascending:false});
@@ -27,34 +28,22 @@ export default function OrdersPage() {
   }, [status, search, orders]);
 
   const openOrder = async (o:any) => {
-    setLoadingProfile(true);
     setSelected({...o, items:[], profile:null, _displayName:'Loading...', _displayPhone:'...', _displayAddr: o.delivery_address || '...' });
-    
-    // هات المنتجات
     const {data: items} = await supabase.from('order_items').select('*, products(name)').eq('order_id', o.id);
-    
-    // جرب كل الاحتمالات للـ ID بتاع العميل
     const possibleId = o.user_id || o.customer_id || o.profile_id || o.customerId;
     let profile = null;
-    
     if(possibleId){
       const { data: profData } = await supabase.from('profiles').select('*').eq('id', possibleId).single();
       profile = profData;
-      console.log('PROFILE FOUND:', profData);
-    } else {
-      // لو مفيش ID، دور في profiles بأول واحد (مؤقتا للتجربة)
-      console.log('No user_id in order, order object:', o);
     }
-
     setSelected({
       ...o,
       items: items||[],
       profile,
-      _displayName: profile?.full_name || profile?.name || profile?.email || o.customer_name || 'Guest User',
-      _displayPhone: profile?.phone || profile?.phone_number || profile?.mobile || o.customer_phone || 'No Phone',
-      _displayAddr: o.delivery_address || o.address || profile?.address || 'No Address'
+      _displayName: profile?.full_name || profile?.name || profile?.email || o.customer_name || t('admin.orders.guest'),
+      _displayPhone: profile?.phone || profile?.phone_number || profile?.mobile || o.customer_phone || t('admin.orders.noPhone'),
+      _displayAddr: o.delivery_address || o.address || profile?.address || t('admin.orders.noAddress')
     });
-    setLoadingProfile(false);
   };
 
   const updateStatus = async (id:string, newStatus:string) => {
@@ -65,8 +54,8 @@ export default function OrdersPage() {
 
   const handleCall = () => {
     const phone = selected?._displayPhone;
-    if(!phone || phone === 'No Phone' || phone === '...' || phone.includes('No')){
-      Alert.alert('مفيش رقم', 'الاوردر ده معمول كـ Guest ومفيش رقم متسجل ليه في جدول profiles\n\nالحل: خلي العميل يسجل حساب قبل ما يطلب');
+    if(!phone || phone === t('admin.orders.noPhone') || phone === '...' || phone.includes('No')){
+      Alert.alert(t('admin.orders.noNumberTitle'), t('admin.orders.noNumberDesc'));
       return;
     }
     Linking.openURL(`tel:${phone}`);
@@ -76,19 +65,19 @@ export default function OrdersPage() {
 
   return (
     <View style={s.bg}>
-      <Text style={s.h1}>Orders</Text>
-      <Text style={s.sub}>{filtered.length} orders</Text>
+      <Text style={s.h1}>{t('admin.orders.title')}</Text>
+      <Text style={s.sub}>{t('admin.orders.count', { count: filtered.length })}</Text>
 
       <View style={s.searchBox}>
         <Ionicons name="search" size={18} color="#666" />
-        <TextInput placeholder="Search" placeholderTextColor="#666" style={s.searchInput} value={search} onChangeText={setSearch} />
+        <TextInput placeholder={t('common:search')} placeholderTextColor="#666" style={s.searchInput} value={search} onChangeText={setSearch} />
       </View>
 
       <View style={{height: 42, marginBottom: 12}}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{gap:8, paddingRight:20}}>
           {(['all','pending','confirmed','delivered','cancelled'] as const).map(st=>(
             <TouchableOpacity key={st} onPress={()=>setStatus(st)} style={[s.filterChip, status===st && s.filterChipActive]}>
-              <Text style={[s.filterTxt, status===st && s.filterTxtActive]}>{st}</Text>
+              <Text style={[s.filterTxt, status===st && s.filterTxtActive]}>{t(`admin.orders.status.${st}`)}</Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
@@ -101,7 +90,7 @@ export default function OrdersPage() {
               <Text style={s.id}>#{o?.id?.slice(0,8)}</Text>
               <Text style={s.total}>EGP {Number(o?.total||0).toFixed(0)}</Text>
             </View>
-            <Text style={[s.badge, {backgroundColor: getColor(o?.status)+'20', color: getColor(o?.status)}]}>{o?.status}</Text>
+            <Text style={[s.badge, {backgroundColor: getColor(o?.status)+'20', color: getColor(o?.status)}]}>{t(`admin.orders.status.${o?.status}`)}</Text>
           </TouchableOpacity>
         ))}
       </ScrollView>
@@ -110,34 +99,34 @@ export default function OrdersPage() {
         <View style={s.overlay}>
           <View style={s.modal}>
             <View style={s.modalHead}>
-              <Text style={s.modalTitle}>Order #{selected?.id?.slice(0,8)}</Text>
+              <Text style={s.modalTitle}>{t('admin.orders.order')} #{selected?.id?.slice(0,8)}</Text>
               <TouchableOpacity onPress={()=>setSelected(null)} style={s.closeBtn}><Ionicons name="close" size={22} color="#fff"/></TouchableOpacity>
             </View>
 
             {selected && (
               <>
                 <View style={s.infoBox}>
-                  <Text style={s.row}><Text style={s.label}>Name: </Text><Text style={s.val}>{selected._displayName}</Text></Text>
-                  <Text style={s.row}><Text style={s.label}>Phone: </Text><Text style={[s.val, {color: selected._displayPhone==='No Phone' ? '#F44336' : '#fff'}]}>{selected._displayPhone}</Text></Text>
-                  <Text style={s.row}><Text style={s.label}>Address: </Text><Text style={s.val}>{selected._displayAddr}</Text></Text>
-                  <Text style={s.row}><Text style={s.label}>Total: </Text><Text style={s.val}>EGP {Number(selected.total||0).toFixed(2)}</Text></Text>
+                  <Text style={s.row}><Text style={s.label}>{t('admin.orders.name')}: </Text><Text style={s.val}>{selected._displayName}</Text></Text>
+                  <Text style={s.row}><Text style={s.label}>{t('admin.orders.phone')}: </Text><Text style={[s.val, {color: selected._displayPhone===t('admin.orders.noPhone') ? '#F44336' : '#fff'}]}>{selected._displayPhone}</Text></Text>
+                  <Text style={s.row}><Text style={s.label}>{t('admin.orders.address')}: </Text><Text style={s.val}>{selected._displayAddr}</Text></Text>
+                  <Text style={s.row}><Text style={s.label}>{t('admin.orders.total')}: </Text><Text style={s.val}>EGP {Number(selected.total||0).toFixed(2)}</Text></Text>
                 </View>
 
-                <Text style={s.itemsHead}>Items ({selected.items?.length})</Text>
+                <Text style={s.itemsHead}>{t('admin.orders.items', { count: selected.items?.length })}</Text>
                 {selected.items?.map((it:any,i:number)=>(
                   <View key={i} style={s.itemRow}><Text style={s.itemName}>{it.products?.name || 'Product'} x{it.quantity}</Text><Text style={s.itemPrice}>EGP {it.price}</Text></View>
                 ))}
 
                 <View style={s.actions}>
-                  <TouchableOpacity style={[s.actBtn, {backgroundColor:'#FFC107'}]} onPress={()=>updateStatus(selected.id,'pending')}><Text style={s.actTxt}>Pending</Text></TouchableOpacity>
-                  <TouchableOpacity style={[s.actBtn, {backgroundColor:'#2196F3'}]} onPress={()=>updateStatus(selected.id,'confirmed')}><Text style={s.actTxt}>Confirm</Text></TouchableOpacity>
-                  <TouchableOpacity style={[s.actBtn, {backgroundColor:'#4CAF50'}]} onPress={()=>updateStatus(selected.id,'delivered')}><Text style={s.actTxtWhite}>Deliver</Text></TouchableOpacity>
+                  <TouchableOpacity style={[s.actBtn, {backgroundColor:'#FFC107'}]} onPress={()=>updateStatus(selected.id,'pending')}><Text style={s.actTxt}>{t('admin.orders.status.pending')}</Text></TouchableOpacity>
+                  <TouchableOpacity style={[s.actBtn, {backgroundColor:'#2196F3'}]} onPress={()=>updateStatus(selected.id,'confirmed')}><Text style={s.actTxt}>{t('admin.orders.status.confirmed')}</Text></TouchableOpacity>
+                  <TouchableOpacity style={[s.actBtn, {backgroundColor:'#4CAF50'}]} onPress={()=>updateStatus(selected.id,'delivered')}><Text style={s.actTxtWhite}>{t('admin.orders.deliver')}</Text></TouchableOpacity>
                 </View>
                 <View style={s.actions}>
                   <TouchableOpacity style={[s.actBtn, {backgroundColor:'#E8C87A', flexDirection:'row', gap:6, justifyContent:'center'}]} onPress={handleCall}>
-                    <Ionicons name="call" size={16} color="#000"/><Text style={s.actTxt}>Call {selected._displayPhone !== 'No Phone' ? '' : ''}</Text>
+                    <Ionicons name="call" size={16} color="#000"/><Text style={s.actTxt}>{t('admin.orders.call')}</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity style={[s.actBtn, {backgroundColor:'#F44336'}]} onPress={()=>updateStatus(selected.id,'cancelled')}><Text style={s.actTxtWhite}>Cancel</Text></TouchableOpacity>
+                  <TouchableOpacity style={[s.actBtn, {backgroundColor:'#F44336'}]} onPress={()=>updateStatus(selected.id,'cancelled')}><Text style={s.actTxtWhite}>{t('admin.orders.cancel')}</Text></TouchableOpacity>
                 </View>
               </>
             )}

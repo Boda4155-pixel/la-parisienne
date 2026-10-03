@@ -1,11 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Alert, FlatList, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { supabase } from '../../../lib/supabase';
 
 export default function DeliveryZonesMap(){
+  const { t } = useTranslation();
   const [zones, setZones] = useState<any[]>([]);
   const [show, setShow] = useState(false);
   const [editing, setEditing] = useState<any>(null);
@@ -52,18 +54,18 @@ export default function DeliveryZonesMap(){
   };
 
   const save = async () => {
-    if(!name ||!fee) return Alert.alert('اكمل البيانات');
+    if(!name ||!fee) return Alert.alert(t('admin.zones.fillRequired'));
     const payload = { name, fee: Number(fee), radius_km: Number(radius), lat: coord.lat, lng: coord.lng };
     let res;
     if(editing) res = await supabase.from('delivery_zones').update(payload).eq('id', editing.id);
     else res = await supabase.from('delivery_zones').insert(payload);
 
     if(res.error){
-      Alert.alert('خطأ في الحفظ', res.error.message);
+      Alert.alert(t('admin.zones.saveError'), res.error.message);
       console.log(res.error);
       return;
     }
-    Alert.alert('تم الحفظ ✅');
+    Alert.alert(t('admin.zones.saved'));
     setShow(false);
     await load();
   };
@@ -85,7 +87,7 @@ export default function DeliveryZonesMap(){
       if(data.type==='fly'){ map.flyTo([data.lat, data.lng], 16); return; }
       if(data.type==='search'){
         fetch('https://nominatim.openstreetmap.org/search?format=json&q='+encodeURIComponent(data.q)+'&countrycodes=eg&limit=5&accept-language=ar')
-       .then(r=>r.json()).then(res=>{
+      .then(r=>r.json()).then(res=>{
             window.ReactNativeWebView.postMessage(JSON.stringify({type:'results', results: res}));
             if(res.length>0){ map.flyTo([res[0].lat, res[0].lon], 15); }
           }).catch(()=>{
@@ -122,13 +124,13 @@ export default function DeliveryZonesMap(){
     <View style={s.bg}>
       <View style={s.header}>
         <TouchableOpacity onPress={()=>router.back()} style={s.back}><Ionicons name="chevron-forward" size={20} color="#fff"/></TouchableOpacity>
-        <Text style={s.h1}>Delivery Map - {zones.length} منطقة</Text>
+        <Text style={s.h1}>{t('admin.zones.mapTitle')} - {t('admin.zones.zoneCount', { count: zones.length })}</Text>
         <TouchableOpacity onPress={openNew} style={s.add}><Ionicons name="add" size={22} color="#000"/></TouchableOpacity>
       </View>
 
       <View style={s.searchWrap}>
         <TouchableOpacity onPress={doSearch} style={s.searchBtn}>{searching?<ActivityIndicator size="small" color="#000"/>:<Ionicons name="search" size={18} color="#000"/>}</TouchableOpacity>
-        <TextInput value={search} onChangeText={setSearch} placeholder="ابحث: المعادي، التجمع، زايد..." placeholderTextColor="#666" style={s.searchInput} onSubmitEditing={doSearch} returnKeyType="search"/>
+        <TextInput value={search} onChangeText={setSearch} placeholder={t('admin.zones.searchPlaceholder')} placeholderTextColor="#666" style={s.searchInput} onSubmitEditing={doSearch} returnKeyType="search"/>
       </View>
 
       {results.length>0 && (
@@ -142,7 +144,6 @@ export default function DeliveryZonesMap(){
         </View>
       )}
 
-      {/* هنا بقت تشوف كل المناطق المحفوظة */}
       {zones.length>0 && (
         <View style={s.savedList}>
           <FlatList data={zones} horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{gap:8, padding:10}}
@@ -169,24 +170,24 @@ export default function DeliveryZonesMap(){
       />
 
       <View style={s.bottomHint}>
-        <Text style={s.hint}>📍 {coord.lat.toFixed(4)}, {coord.lng.toFixed(4)} • دوس على الخريطة لتحديد</Text>
+        <Text style={s.hint}>📍 {coord.lat.toFixed(4)}, {coord.lng.toFixed(4)} • {t('admin.zones.tapHint')}</Text>
       </View>
 
       <Modal visible={show} transparent animationType="slide">
         <View style={s.modalBg}><View style={s.modal}>
           <View style={{flexDirection:'row', justifyContent:'space-between', marginBottom:10}}>
             <TouchableOpacity onPress={()=>setShow(false)}><Ionicons name="close" size={24} color="#fff"/></TouchableOpacity>
-            <Text style={{color:'#fff', fontWeight:'bold'}}>{editing?'تعديل':'منطقة جديدة'}</Text>
+            <Text style={{color:'#fff', fontWeight:'bold'}}>{editing? t('admin.zones.edit'): t('admin.zones.newZone')}</Text>
             {editing? <TouchableOpacity onPress={del}><Ionicons name="trash" size={20} color="#ff5555"/></TouchableOpacity> : <View style={{width:20}}/>}
           </View>
           <Text style={s.coord}>📍 {coord.lat.toFixed(5)}, {coord.lng.toFixed(5)}</Text>
-          <Text style={s.label}>اسم المنطقة</Text>
-          <TextInput value={name} onChangeText={setName} placeholder="المعادي" style={s.input} placeholderTextColor="#666"/>
+          <Text style={s.label}>{t('admin.zones.zoneName')}</Text>
+          <TextInput value={name} onChangeText={setName} placeholder={t('admin.zones.zoneNamePlaceholder')} style={s.input} placeholderTextColor="#666"/>
           <View style={{flexDirection:'row', gap:8}}>
-            <View style={{flex:1}}><Text style={s.label}>سعر التوصيل</Text><TextInput value={fee} onChangeText={setFee} keyboardType="numeric" placeholder="30" style={s.input} placeholderTextColor="#666"/></View>
-            <View style={{flex:1}}><Text style={s.label}>نصف القطر (كم)</Text><TextInput value={radius} onChangeText={setRadius} keyboardType="numeric" placeholder="2" style={s.input} placeholderTextColor="#666"/></View>
+            <View style={{flex:1}}><Text style={s.label}>{t('admin.zones.deliveryFee')}</Text><TextInput value={fee} onChangeText={setFee} keyboardType="numeric" placeholder="30" style={s.input} placeholderTextColor="#666"/></View>
+            <View style={{flex:1}}><Text style={s.label}>{t('admin.zones.radius')}</Text><TextInput value={radius} onChangeText={setRadius} keyboardType="numeric" placeholder="2" style={s.input} placeholderTextColor="#666"/></View>
           </View>
-          <TouchableOpacity style={s.save} onPress={save}><Text style={{fontWeight:'bold'}}>حفظ المنطقة ✅</Text></TouchableOpacity>
+          <TouchableOpacity style={s.save} onPress={save}><Text style={{fontWeight:'bold'}}>{t('admin.zones.saveZone')}</Text></TouchableOpacity>
         </View></View>
       </Modal>
     </View>

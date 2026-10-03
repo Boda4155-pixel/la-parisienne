@@ -1,15 +1,16 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Alert, FlatList, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { supabase } from '../../../lib/supabase';
 
 export default function CouponsPage(){
+  const { t } = useTranslation();
   const [coupons, setCoupons] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
 
-  // form
   const [editing, setEditing] = useState<any>(null);
   const [showModal, setShowModal] = useState(false);
   const [code, setCode] = useState('');
@@ -19,7 +20,7 @@ export default function CouponsPage(){
   const [type, setType] = useState<'percent'|'fixed'>('percent');
   const [appType, setAppType] = useState<'all'|'category'|'product'>('all');
   const [appId, setAppId] = useState<string|null>(null);
-  const [appName, setAppName] = useState('الكل');
+  const [appName, setAppName] = useState('All');
 
   const load = async () => {
     const { data } = await supabase.from('coupons').select('*').order('created_at', {ascending:false});
@@ -32,21 +33,21 @@ export default function CouponsPage(){
 
   const openNew = () => {
     setEditing(null); setCode(''); setValue(''); setMinOrder(''); setExpiry('');
-    setType('percent'); setAppType('all'); setAppId(null); setAppName('الكل');
+    setType('percent'); setAppType('all'); setAppId(null); setAppName(t('common:all'));
     setShowModal(true);
   };
   const openEdit = (item:any) => {
     setEditing(item);
     setCode(item.code); setValue(String(item.discount_value)); setMinOrder(String(item.min_order_amount||''));
     setExpiry(item.expires_at||''); setType(item.discount_type); setAppType(item.applicable_type||'all'); setAppId(item.applicable_id||null);
-    if(item.applicable_type==='product') setAppName(products.find(p=>p.id===item.applicable_id)?.name || 'منتج');
+    if(item.applicable_type==='product') setAppName(products.find(p=>p.id===item.applicable_id)?.name || 'product');
     else if(item.applicable_type==='category') setAppName(categories.find(c=>c.id===item.applicable_id)?.name || 'category');
-    else setAppName('الكل');
+    else setAppName(t('common:all'));
     setShowModal(true);
   };
 
   const save = async () => {
-    if(!code ||!value) return Alert.alert('اكمل البيانات');
+    if(!code ||!value) return Alert.alert(t('admin.coupons.fillRequired'));
     let finalDate = expiry? (expiry.includes('-') && expiry.split('-')[0].length===2? (()=>{const [d,m,y]=expiry.split('-'); return `${y}-${m}-${d}`})() : expiry) : null;
 
     const payload:any = {
@@ -71,7 +72,7 @@ export default function CouponsPage(){
   };
 
   const del = async (id:string) => {
-    Alert.alert('حذف؟','متأكد؟',[{text:'إلغاء', style:'cancel'},{text:'حذف', style:'destructive', onPress: async()=>{ await supabase.from('coupons').delete().eq('id',id); load(); }}]);
+    Alert.alert(t('common:delete')+'?',t('admin.coupons.deleteConfirm'),[{text:t('common:cancel'), style:'cancel'},{text:t('common:delete'), style:'destructive', onPress: async()=>{ await supabase.from('coupons').delete().eq('id',id); load(); }}]);
   };
 
   const renderCoupon = ({item}:any) => (
@@ -80,7 +81,7 @@ export default function CouponsPage(){
       <View style={{flex:1, alignItems:'flex-end'}}>
         <Text style={s.code}>{item.code} <Text style={{color:'#E8C87A'}}>{item.discount_type==='percent'?`${item.discount_value}%`:`${item.discount_value}EGP`}</Text></Text>
         <Text style={s.desc} numberOfLines={1}>
-          {item.applicable_type==='all'? 'الكل' : item.applicable_type==='product'? `منتج: ${products.find(p=>p.id===item.applicable_id)?.name||'...'}` : `Category: ${categories.find(c=>c.id===item.applicable_id)?.name||'...'}`} • حد {item.min_order_amount} • {item.expires_at? `ينتهي ${item.expires_at}`: 'بدون انتهاء'}
+          {item.applicable_type==='all'? t('common:all') : item.applicable_type==='product'? `${t('admin.coupons.product')}: ${products.find(p=>p.id===item.applicable_id)?.name||'...'}` : `Category: ${categories.find(c=>c.id===item.applicable_id)?.name||'...'}`} • {t('admin.coupons.min')} {item.min_order_amount} • {item.expires_at? `${t('admin.coupons.expires')} ${item.expires_at}`: t('admin.coupons.noExpiry')}
         </Text>
       </View>
       <View style={s.tag}><Ionicons name="pricetag" size={20} color="#E8C87A"/></View>
@@ -92,10 +93,10 @@ export default function CouponsPage(){
     <View style={s.bg}>
       <View style={s.header}>
         <TouchableOpacity onPress={()=>router.back()} style={s.back}><Ionicons name="chevron-forward" size={20} color="#fff"/></TouchableOpacity>
-        <View style={{alignItems:'flex-end'}}><Text style={s.h1}>Coupons</Text><Text style={s.sub}>{coupons.length} codes • دوس للتعديل</Text></View>
+        <View style={{alignItems:'flex-end'}}><Text style={s.h1}>{t('admin.coupons.title')}</Text><Text style={s.sub}>{t('admin.coupons.tapToEdit', { count: coupons.length })}</Text></View>
       </View>
 
-      <TouchableOpacity style={s.newBtn} onPress={openNew}><Text style={{fontWeight:'bold'}}>New Coupon</Text><Ionicons name="add" size={20} color="#000"/></TouchableOpacity>
+      <TouchableOpacity style={s.newBtn} onPress={openNew}><Text style={{fontWeight:'bold'}}>{t('admin.coupons.add')}</Text><Ionicons name="add" size={20} color="#000"/></TouchableOpacity>
 
       <FlatList data={coupons} keyExtractor={i=>i.id} renderItem={renderCoupon} contentContainerStyle={{padding:16, gap:10, paddingBottom:100}} />
 
@@ -104,32 +105,32 @@ export default function CouponsPage(){
           <View style={s.modal}>
             <View style={{flexDirection:'row', justifyContent:'space-between', alignItems:'center', marginBottom:12}}>
               <TouchableOpacity onPress={()=>setShowModal(false)}><Ionicons name="close" size={24} color="#fff"/></TouchableOpacity>
-              <Text style={{color:'#fff', fontWeight:'bold', fontSize:18}}>{editing?'تعديل الكوبون':'كوبون جديد'}</Text>
+              <Text style={{color:'#fff', fontWeight:'bold', fontSize:18}}>{editing? t('admin.coupons.edit'): t('admin.coupons.new')}</Text>
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false}>
-              <Text style={s.label}>كود الخصم</Text>
+              <Text style={s.label}>{t('admin.coupons.code')}</Text>
               <TextInput placeholder="SAVE20" value={code} onChangeText={setCode} style={s.input} autoCapitalize="characters" placeholderTextColor="#666"/>
 
               <View style={{flexDirection:'row', gap:8}}>
-                <View style={{flex:1}}><Text style={s.label}>قيمة الخصم</Text><TextInput placeholder="20" value={value} onChangeText={setValue} keyboardType="numeric" style={s.input} placeholderTextColor="#666"/></View>
+                <View style={{flex:1}}><Text style={s.label}>{t('admin.coupons.discountValue')}</Text><TextInput placeholder="20" value={value} onChangeText={setValue} keyboardType="numeric" style={s.input} placeholderTextColor="#666"/></View>
                 <View style={{flexDirection:'row', gap:6, alignItems:'flex-end', marginBottom:8}}>
                   <TouchableOpacity style={[s.typeBtn, type==='percent' && {backgroundColor:'#E8C87A'}]} onPress={()=>setType('percent')}><Text style={s.typeTxt}>%</Text></TouchableOpacity>
                   <TouchableOpacity style={[s.typeBtn, type==='fixed' && {backgroundColor:'#E8C87A'}]} onPress={()=>setType('fixed')}><Text style={s.typeTxt}>EGP</Text></TouchableOpacity>
                 </View>
               </View>
 
-              <Text style={s.label}>الحد الأدنى للطلب</Text>
+              <Text style={s.label}>{t('admin.coupons.minOrder')}</Text>
               <TextInput placeholder="200" value={minOrder} onChangeText={setMinOrder} keyboardType="numeric" style={s.input} placeholderTextColor="#666"/>
 
-              <Text style={s.label}>تاريخ الانتهاء YYYY-MM-DD</Text>
+              <Text style={s.label}>{t('admin.coupons.expiresAt')}</Text>
               <TextInput placeholder="2026-12-31" value={expiry} onChangeText={setExpiry} style={s.input} placeholderTextColor="#666"/>
 
-              <Text style={s.label}>يطبق على</Text>
+              <Text style={s.label}>{t('admin.coupons.applicableTo')}</Text>
               <View style={{flexDirection:'row', gap:6, marginBottom:10}}>
-                <TouchableOpacity style={[s.typeBtn, {flex:1}, appType==='all'&&{backgroundColor:'#E8C87A'}]} onPress={()=>{setAppType('all'); setAppId(null); setAppName('الكل')}}><Text style={s.typeTxt}>الكل</Text></TouchableOpacity>
+                <TouchableOpacity style={[s.typeBtn, {flex:1}, appType==='all'&&{backgroundColor:'#E8C87A'}]} onPress={()=>{setAppType('all'); setAppId(null); setAppName(t('common:all'))}}><Text style={s.typeTxt}>{t('common:all')}</Text></TouchableOpacity>
                 <TouchableOpacity style={[s.typeBtn, {flex:1}, appType==='category'&&{backgroundColor:'#E8C87A'}]} onPress={()=>setAppType('category')}><Text style={s.typeTxt}>Category</Text></TouchableOpacity>
-                <TouchableOpacity style={[s.typeBtn, {flex:1}, appType==='product'&&{backgroundColor:'#E8C87A'}]} onPress={()=>setAppType('product')}><Text style={s.typeTxt}>منتج</Text></TouchableOpacity>
+                <TouchableOpacity style={[s.typeBtn, {flex:1}, appType==='product'&&{backgroundColor:'#E8C87A'}]} onPress={()=>setAppType('product')}><Text style={s.typeTxt}>{t('admin.products.title')}</Text></TouchableOpacity>
               </View>
 
               {appType==='category' && (
@@ -150,9 +151,9 @@ export default function CouponsPage(){
                   ))}
                 </View>
               )}
-              <Text style={{color:'#E8C87A', textAlign:'right', fontSize:12, marginBottom:12}}>المختار: {appName}</Text>
+              <Text style={{color:'#E8C87A', textAlign:'right', fontSize:12, marginBottom:12}}>{t('admin.coupons.selected')}: {appName}</Text>
 
-              <TouchableOpacity style={s.saveBtn} onPress={save}><Text style={{fontWeight:'bold', color:'#000'}}>{editing?'حفظ التعديل':'إنشاء الكوبون'}</Text></TouchableOpacity>
+              <TouchableOpacity style={s.saveBtn} onPress={save}><Text style={{fontWeight:'bold', color:'#000'}}>{editing? t('common:save'): t('admin.coupons.create')}</Text></TouchableOpacity>
               <View style={{height:40}}/>
             </ScrollView>
           </View>
