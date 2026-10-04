@@ -25,23 +25,41 @@ export default function NotificationsPage(){
     if(error) Alert.alert(error.message); else Alert.alert(t('admin.notifications.saved'));
   };
 
-  if(loading) return <View style={{flex:1, backgroundColor:'#0F0F0F', justifyContent:'center', alignItems:'center'}}><ActivityIndicator color="#E8C87A"/></View>;
+  if(loading) return <View style={{flex:1, backgroundColor:'#FFFFFF', justifyContent:'center', alignItems:'center'}}><ActivityIndicator color="#16A34A"/></View>;
 
   return (
-    <View style={{flex:1, backgroundColor:'#0F0F0F', paddingTop:50}}>
-      <View style={{flexDirection:'row', justifyContent:'space-between', padding:16, alignItems:'center'}}>
-        <TouchableOpacity onPress={()=>router.back()} style={{width:36,height:36,borderRadius:18,backgroundColor:'#1A1A1A',justifyContent:'center',alignItems:'center',borderWidth:1,borderColor:'#222'}}><Ionicons name="chevron-forward" size={20} color="#fff"/></TouchableOpacity>
-        <Text style={{color:'#fff', fontWeight:'bold', fontSize:18}}>{t('admin.notifications.title')}</Text>
-        <TouchableOpacity onPress={save} style={{backgroundColor:'#E8C87A', paddingHorizontal:16, height:36, borderRadius:18, justifyContent:'center'}}><Text style={{fontWeight:'bold', fontSize:12}}>{saving?'...':t('common:save')}</Text></TouchableOpacity>
+    <View style={{flex:1, backgroundColor:'#FFFFFF', paddingTop:50}}>
+      <View style={{flexDirection:'row', justifyContent:'space-between', padding:16, alignItems:'center', borderBottomWidth:1, borderBottomColor:'#F0F0F0', backgroundColor:'#FFF'}}>
+        <TouchableOpacity onPress={()=>router.back()} style={{width:36,height:36,borderRadius:18,backgroundColor:'#FFFFFF',justifyContent:'center',alignItems:'center',borderWidth:1,borderColor:'#E5E5E5'}}><Ionicons name="chevron-forward" size={20} color="#111"/></TouchableOpacity>
+        <Text style={{color:'#111', fontWeight:'800', fontSize:18}}>{t('admin.notifications.title')}</Text>
+        <TouchableOpacity onPress={save} style={{backgroundColor:'#16A34A', paddingHorizontal:18, height:36, borderRadius:18, justifyContent:'center'}}><Text style={{fontWeight:'800', fontSize:12, color:'#FFFFFF'}}>{saving?'...':t('common:save')}</Text></TouchableOpacity>
       </View>
       <ScrollView contentContainerStyle={{padding:16, gap:10}}>
-        <View style={card}><Switch value={cfg.new_orders} onValueChange={v=>setCfg({...cfg,new_orders:v})} trackColor={{true:'#E8C87A', false:'#333'}}/><View style={{alignItems:'flex-end'}}><Text style={label}>{t('admin.notifications.newOrders')}</Text><Text style={sub}>{t('admin.notifications.newOrdersDesc')}</Text></View></View>
-        <View style={card}><Switch value={cfg.sound} onValueChange={v=>setCfg({...cfg,sound:v})} trackColor={{true:'#E8C87A', false:'#333'}}/><View style={{alignItems:'flex-end'}}><Text style={label}>{t('admin.notifications.soundAlert')}</Text><Text style={sub}>{t('admin.notifications.soundAlertDesc')}</Text></View></View>
-        <View style={card}><Switch value={cfg.low_stock} onValueChange={v=>setCfg({...cfg,low_stock:v})} trackColor={{true:'#E8C87A', false:'#333'}}/><View style={{alignItems:'flex-end'}}><Text style={label}>{t('admin.notifications.lowStock')}</Text><Text style={sub}>{t('admin.notifications.lowStockDesc')}</Text></View></View>
+        <View style={card}>
+          <Switch value={cfg.new_orders} onValueChange={v=>setCfg({...cfg,new_orders:v})} trackColor={{true:'#16A34A', false:'#E5E5E5'}} thumbColor={'#FFFFFF'} />
+          <View style={{alignItems:'flex-end', flex:1, marginLeft:10}}>
+            <Text style={label}>{t('admin.notifications.newOrders')}</Text>
+            <Text style={sub}>{t('admin.notifications.newOrdersDesc')}</Text>
+          </View>
+        </View>
+        <View style={card}>
+          <Switch value={cfg.sound} onValueChange={v=>setCfg({...cfg,sound:v})} trackColor={{true:'#16A34A', false:'#E5E5E5'}} thumbColor={'#FFFFFF'} />
+          <View style={{alignItems:'flex-end', flex:1, marginLeft:10}}>
+            <Text style={label}>{t('admin.notifications.soundAlert')}</Text>
+            <Text style={sub}>{t('admin.notifications.soundAlertDesc')}</Text>
+          </View>
+        </View>
+        <View style={card}>
+          <Switch value={cfg.low_stock} onValueChange={v=>setCfg({...cfg,low_stock:v})} trackColor={{true:'#16A34A', false:'#E5E5E5'}} thumbColor={'#FFFFFF'} />
+          <View style={{alignItems:'flex-end', flex:1, marginLeft:10}}>
+            <Text style={label}>{t('admin.notifications.lowStock')}</Text>
+            <Text style={sub}>{t('admin.notifications.lowStockDesc')}</Text>
+          </View>
+        </View>
       </ScrollView>
     </View>
   );
 }
-const card = {backgroundColor:'#161616', borderRadius:14, padding:16, flexDirection:'row', justifyContent:'space-between', alignItems:'center', borderWidth:1, borderColor:'#222'} as any
-const label = {color:'#fff', fontWeight:'bold'} as any
-const sub = {color:'#888', fontSize:11} as any
+const card = {backgroundColor:'#FFFFFF', borderRadius:14, padding:16, flexDirection:'row', justifyContent:'space-between', alignItems:'center', borderWidth:1, borderColor:'#E5E5E5'} as any
+const label = {color:'#111', fontWeight:'700', fontSize:14, textAlign:'right'} as any
+const sub = {color:'#555', fontSize:11, marginTop:3, textAlign:'right', fontWeight:'500'} as any

@@ -52,7 +52,7 @@ export default function Dashboard() {
     return () => { supabase.removeChannel(ch); }
   }, []);
 
-  if(loading) return <View style={s.center}><ActivityIndicator color="#E8C87A" size="large"/></View>;
+  if(loading) return <View style={s.center}><ActivityIndicator color="#16A34A" size="large"/></View>;
 
   return (
     <View style={s.bg}>
@@ -61,7 +61,7 @@ export default function Dashboard() {
         <Text style={s.sub}>La Parisienne • {t('admin.dashboard.ordersCount', { count: stats.totalCount })} • Live</Text>
 
         <View style={s.grid}>
-          <View style={[s.card, {backgroundColor:'#E8C87A'}]}><Text style={[s.lab,{color:'#000'}]}>{t('admin.dashboard.pending')}</Text><Text style={[s.val,{color:'#000'}]}>{stats.pending}</Text><Text style={[s.sm,{color:'#333'}]}>{t('admin.dashboard.needAction')}</Text></View>
+          <View style={[s.card, {backgroundColor:'#16A34A', borderColor:'#16A34A'}]}><Text style={[s.lab,{color:'#FFFFFF', opacity:0.9}]}>{t('admin.dashboard.pending')}</Text><Text style={[s.val,{color:'#FFFFFF'}]}>{stats.pending}</Text><Text style={[s.sm,{color:'#DCFCE7'}]}>{t('admin.dashboard.needAction')}</Text></View>
           <View style={s.card}><Text style={s.lab}>{t('admin.dashboard.todaySales')}</Text><Text style={s.val}>EGP {stats.today}</Text><Text style={s.sm}>{t('admin.dashboard.ordersToday', { count: stats.todayCount })}</Text></View>
           <View style={s.card}><Text style={s.lab}>{t('admin.dashboard.totalRevenue')}</Text><Text style={s.val}>EGP {stats.total}</Text><Text style={s.sm}>{t('admin.dashboard.totalOrders', { count: stats.totalCount })}</Text></View>
           <View style={s.card}><Text style={s.lab}>{t('admin.dashboard.delivered')}</Text><Text style={s.val}>{stats.delivered}</Text><Text style={s.sm}>{t('admin.dashboard.completed')}</Text></View>
@@ -76,12 +76,12 @@ export default function Dashboard() {
             yAxisLabel="EGP "
             yAxisSuffix=""
             chartConfig={{
-              backgroundColor: '#1E1E1E',
-              backgroundGradientFrom: '#1E1E1E',
-              backgroundGradientTo: '#1E1E1E',
+              backgroundColor: '#FFFFFF',
+              backgroundGradientFrom: '#FFFFFF',
+              backgroundGradientTo: '#FFFFFF',
               decimalPlaces: 0,
-              color: (opacity = 1) => `rgba(232, 200, 122, ${opacity})`,
-              labelColor: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
+              color: (opacity = 1) => `rgba(22, 163, 74, ${opacity})`,
+              labelColor: (opacity = 1) => `rgba(17, 17, 17, ${opacity})`,
               style: { borderRadius: 16 },
               barPercentage: 0.6,
             }}
@@ -102,16 +102,16 @@ export default function Dashboard() {
 }
 
 const s = StyleSheet.create({
-  bg:{flex:1, backgroundColor:'#121212', padding:16, paddingTop:50},
-  center:{flex:1, backgroundColor:'#121212', justifyContent:'center', alignItems:'center'},
-  h1:{color:'#fff', fontSize:30, fontWeight:'bold'},
-  sub:{color:'#E8C87A', marginBottom:20, marginTop:4},
+  bg:{flex:1, backgroundColor:'#FFFFFF', padding:16, paddingTop:50},
+  center:{flex:1, backgroundColor:'#FFFFFF', justifyContent:'center', alignItems:'center'},
+  h1:{color:'#16A34A', fontSize:30, fontWeight:'800'},
+  sub:{color:'#16A34A', marginBottom:20, marginTop:4, fontWeight:'700'},
   grid:{flexDirection:'row', flexWrap:'wrap', gap:12},
-  card:{backgroundColor:'#1E1E1E', width:'47%', padding:18, borderRadius:18, borderWidth:1, borderColor:'#2A2A2A'},
-  lab:{color:'#888', fontSize:10, letterSpacing:1}, val:{color:'#E8C87A', fontSize:20, fontWeight:'bold', marginTop:8}, sm:{color:'#666', fontSize:11, marginTop:4},
-  chartBox:{backgroundColor:'#1E1E1E', borderRadius:18, padding:16, marginTop:16, borderWidth:1, borderColor:'#2A2A2A'},
-  chartTitle:{color:'#fff', fontWeight:'bold', fontSize:14},
+  card:{backgroundColor:'#FFFFFF', width:'47%', padding:18, borderRadius:18, borderWidth:1, borderColor:'#E5E5E5'},
+  lab:{color:'#888', fontSize:10, letterSpacing:1, fontWeight:'700', textTransform:'uppercase'}, val:{color:'#16A34A', fontSize:20, fontWeight:'800', marginTop:8}, sm:{color:'#666', fontSize:11, marginTop:4},
+  chartBox:{backgroundColor:'#FFFFFF', borderRadius:18, padding:16, marginTop:16, borderWidth:1, borderColor:'#E5E5E5'},
+  chartTitle:{color:'#111', fontWeight:'800', fontSize:14},
   rowStats:{flexDirection:'row', gap:12, marginTop:16, marginBottom:40},
-  miniCard:{flex:1, backgroundColor:'#1E1E1E', padding:14, borderRadius:14, borderWidth:1, borderColor:'#2A2A2A', alignItems:'center'},
-  miniLab:{color:'#888', fontSize:10}, miniVal:{color:'#E8C87A', fontSize:18, fontWeight:'bold', marginTop:4}
+  miniCard:{flex:1, backgroundColor:'#FFFFFF', padding:14, borderRadius:14, borderWidth:1, borderColor:'#E5E5E5', alignItems:'center'},
+  miniLab:{color:'#888', fontSize:10, fontWeight:'700', textTransform:'uppercase'}, miniVal:{color:'#16A34A', fontSize:18, fontWeight:'800', marginTop:4}
 });

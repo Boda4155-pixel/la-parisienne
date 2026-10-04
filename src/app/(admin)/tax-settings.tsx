@@ -36,26 +36,26 @@ export default function TaxService(){
     else Alert.alert(t('admin.taxService.saved'), t('admin.taxService.savedDesc'));
   };
 
-  if(loading) return <View style={[s.bg,{justifyContent:'center',alignItems:'center'}]}><ActivityIndicator color="#E8C87A"/></View>;
+  if(loading) return <View style={[s.bg,{justifyContent:'center',alignItems:'center'}]}><ActivityIndicator color="#16A34A"/></View>;
 
   return (
     <View style={s.bg}>
       <View style={s.header}>
-        <TouchableOpacity onPress={()=>router.back()} style={s.back}><Ionicons name="chevron-forward" size={20} color="#fff"/></TouchableOpacity>
+        <TouchableOpacity onPress={()=>router.back()} style={s.back}><Ionicons name="chevron-forward" size={20} color="#111"/></TouchableOpacity>
         <Text style={s.h1}>{t('admin.taxService.title')}</Text>
-        <TouchableOpacity onPress={save} style={s.saveBtn}><Text style={{fontWeight:'bold', fontSize:12}}>{saving?'...':t('common:save')}</Text></TouchableOpacity>
+        <TouchableOpacity onPress={save} style={s.saveBtn}><Text style={{fontWeight:'800', fontSize:12, color:'#FFFFFF'}}>{saving?'...':t('common:save')}</Text></TouchableOpacity>
       </View>
 
       <View style={{padding:16, gap:16}}>
         <View style={s.card}>
-          <View style={s.rowHead}><Ionicons name="receipt-outline" size={20} color="#E8C87A"/><Text style={s.title}>{t('admin.taxService.taxRate')}</Text></View>
-          <TextInput value={tax} onChangeText={setTax} keyboardType="numeric" placeholder="14" placeholderTextColor="#666" style={s.input}/>
+          <View style={s.rowHead}><Ionicons name="receipt-outline" size={20} color="#16A34A"/><Text style={s.title}>{t('admin.taxService.taxRate')}</Text></View>
+          <TextInput value={tax} onChangeText={setTax} keyboardType="numeric" placeholder="14" placeholderTextColor="#999" style={s.input}/>
           <Text style={s.hint}>{t('admin.taxService.taxHint')}</Text>
         </View>
 
         <View style={s.card}>
-          <View style={s.rowHead}><Ionicons name="restaurant-outline" size={20} color="#E8C87A"/><Text style={s.title}>{t('admin.taxService.serviceRate')}</Text></View>
-          <TextInput value={service} onChangeText={setService} keyboardType="numeric" placeholder="0" placeholderTextColor="#666" style={s.input}/>
+          <View style={s.rowHead}><Ionicons name="restaurant-outline" size={20} color="#16A34A"/><Text style={s.title}>{t('admin.taxService.serviceRate')}</Text></View>
+          <TextInput value={service} onChangeText={setService} keyboardType="numeric" placeholder="0" placeholderTextColor="#999" style={s.input}/>
           <Text style={s.hint}>{t('admin.taxService.serviceHint')}</Text>
         </View>
 
@@ -67,21 +67,25 @@ export default function TaxService(){
           <Text style={s.prevTotal}>{t('admin.taxService.previewTotal', { total: 100 + 100*Number(tax||0)/100 + 100*Number(service||0)/100 })}</Text>
         </View>
 
-        <TouchableOpacity style={s.saveBig} onPress={save}><Text style={{fontWeight:'bold'}}>{t('admin.taxService.saveAdmin')}</Text></TouchableOpacity>
+        <TouchableOpacity style={s.saveBig} onPress={save}><Text style={{fontWeight:'800', color:'#FFFFFF', fontSize:14}}>{t('admin.taxService.saveAdmin')}</Text></TouchableOpacity>
       </View>
     </View>
   );
 }
 const s = StyleSheet.create({
-  bg:{flex:1, backgroundColor:'#0F0F0F'},
-  header:{flexDirection:'row', justifyContent:'space-between', alignItems:'center', padding:16, paddingTop:50},
-  h1:{color:'#fff', fontWeight:'bold', fontSize:18}, back:{width:36, height:36, borderRadius:18, backgroundColor:'#1A1A1A', justifyContent:'center', alignItems:'center', borderWidth:1, borderColor:'#222'},
-  saveBtn:{backgroundColor:'#E8C87A', paddingHorizontal:16, height:36, borderRadius:18, justifyContent:'center'},
-  card:{backgroundColor:'#161616', borderRadius:16, padding:16, borderWidth:1, borderColor:'#222'},
-  rowHead:{flexDirection:'row', alignItems:'center', gap:8, justifyContent:'flex-end', marginBottom:12}, title:{color:'#fff', fontWeight:'bold'},
-  input:{backgroundColor:'#0F0F0F', borderWidth:1, borderColor:'#222', borderRadius:10, color:'#fff', height:50, textAlign:'center', fontSize:18, fontWeight:'bold'},
-  hint:{color:'#666', fontSize:11, textAlign:'center', marginTop:8},
-  preview:{backgroundColor:'#1E1E1E', borderRadius:16, padding:16, borderWidth:1, borderColor:'#E8C87A33', borderStyle:'dashed'},
-  prevTitle:{color:'#E8C87A', fontWeight:'bold', textAlign:'center', marginBottom:8}, prevText:{color:'#AAA', fontSize:12, textAlign:'center'}, prevTotal:{color:'#fff', fontWeight:'bold', textAlign:'center', marginTop:8, fontSize:16},
-  saveBig:{backgroundColor:'#E8C87A', height:52, borderRadius:14, justifyContent:'center', alignItems:'center', marginTop:10}
+  bg:{flex:1, backgroundColor:'#FFFFFF'},
+  header:{flexDirection:'row', justifyContent:'space-between', alignItems:'center', padding:16, paddingTop:50, borderBottomWidth:1, borderBottomColor:'#F0F0F0', backgroundColor:'#FFF'},
+  h1:{color:'#111', fontWeight:'800', fontSize:18},
+  back:{width:36, height:36, borderRadius:18, backgroundColor:'#FFFFFF', justifyContent:'center', alignItems:'center', borderWidth:1, borderColor:'#E5E5E5'},
+  saveBtn:{backgroundColor:'#16A34A', paddingHorizontal:18, height:36, borderRadius:18, justifyContent:'center'},
+  card:{backgroundColor:'#FFFFFF', borderRadius:16, padding:16, borderWidth:1, borderColor:'#E5E5E5'},
+  rowHead:{flexDirection:'row', alignItems:'center', gap:8, justifyContent:'flex-end', marginBottom:12},
+  title:{color:'#111', fontWeight:'800', fontSize:13},
+  input:{backgroundColor:'#F9F9F9', borderWidth:1, borderColor:'#E5E5E5', borderRadius:10, color:'#111', height:52, textAlign:'center', fontSize:18, fontWeight:'800'},
+  hint:{color:'#555', fontSize:11, textAlign:'center', marginTop:8, fontWeight:'500'},
+  preview:{backgroundColor:'#F0FDF4', borderRadius:16, padding:16, borderWidth:1, borderColor:'#BBF7D0', borderStyle:'dashed'},
+  prevTitle:{color:'#111', fontWeight:'800', textAlign:'center', marginBottom:8},
+  prevText:{color:'#555', fontSize:12, textAlign:'center', fontWeight:'600', lineHeight:18},
+  prevTotal:{color:'#FFFFFF', fontWeight:'800', textAlign:'center', marginTop:10, fontSize:16, backgroundColor:'#16A34A', paddingVertical:6, borderRadius:8},
+  saveBig:{backgroundColor:'#16A34A', height:52, borderRadius:14, justifyContent:'center', alignItems:'center', marginTop:10}
 });

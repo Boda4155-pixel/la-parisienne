@@ -1,8 +1,10 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from "expo-haptics";
-import { router } from "expo-router";
-import { Check, Gift, ShoppingBag } from "lucide-react-native";
-import { useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Animated, Dimensions, FlatList, Image, Modal, Pressable, ScrollView, Text, TouchableOpacity, View } from "react-native";
+import * as Location from 'expo-location';
+import { router, useFocusEffect } from "expo-router";
+import { Check, Gift, MapPin, ShoppingBag } from "lucide-react-native";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { ActivityIndicator, Animated, AppState, Dimensions, FlatList, Image, Modal, Pressable, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { supabase } from "../../../lib/supabase";
 import { useCartStore } from "../../../store/cart.store";
@@ -27,6 +29,64 @@ export default function HomeScreen() {
   const cartItems = useCartStore(s => s.items);
   const addToCartStore = useCartStore(s => s.addItem);
   const cartCount = cartItems.reduce((a,b) => a + b.quantity, 0);
+
+  const [userLoc, setUserLoc] = useState<{lat:number, lng:number, text:string} | null>(null);
+  const [locLoading, setLocLoading] = useState(true);
+
+  // اللوجيك الجديد - فريش كل مرة
+  const fetchFreshLocation = async () => {
+    setLocLoading(true);
+    try{
+      let { status } = await Location.getForegroundPermissionsAsync();
+      if(status!== 'granted'){
+        const req = await Location.requestForegroundPermissionsAsync();
+        status = req.status;
+      }
+
+      if(status!== 'granted'){
+        await AsyncStorage.removeItem('user_location');
+        setUserLoc(null);
+        setLocLoading(false);
+        return;
+      }
+
+      const enabled = await Location.hasServicesEnabledAsync();
+      if(!enabled){
+        await AsyncStorage.removeItem('user_location');
+        setUserLoc(null);
+        setLocLoading(false);
+        return;
+      }
+
+      let pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+      let [addr] = await Location.reverseGeocodeAsync({ latitude: pos.coords.latitude, longitude: pos.coords.longitude });
+
+      const locObj = {
+        lat: pos.coords.latitude,
+        lng: pos.coords.longitude,
+        text: addr? `${addr.district || addr.subregion || addr.city || ''} - ${addr.street || addr.name || ''}`.trim() : `${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}`
+      };
+      setUserLoc(locObj);
+      await AsyncStorage.setItem('user_location', JSON.stringify(locObj));
+    }catch(e){
+      console.log('loc error', e);
+      // لو الـ GPS مقفول او حصل error امسح القديم
+      const saved = await AsyncStorage.getItem('user_location');
+      if(!saved) setUserLoc(null);
+    }finally{
+      setLocLoading(false);
+    }
+  };
+
+  useFocusEffect(
+    useCallback(()=>{
+      fetchFreshLocation();
+      const sub = AppState.addEventListener('change', (state)=>{
+        if(state === 'active') fetchFreshLocation();
+      });
+      return ()=> sub.remove();
+    },[])
+  );
 
   useEffect(() => {
     const load = async () => {
@@ -55,7 +115,7 @@ export default function HomeScreen() {
     return () => clearInterval(it);
   }, [activeBanner, banners.length]);
 
-  const filtered = activeCat === 'all' ? products : products.filter(p => p.category_id === activeCat);
+  const filtered = activeCat === 'all'? products : products.filter(p => p.category_id === activeCat);
 
   const handleAddToCart = async (product: any) => {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
@@ -65,11 +125,8 @@ export default function HomeScreen() {
       price: product.price,
       image_url: product.image_url || product.image,
     } as any);
-
-    // نفس حركة categories
     setAddedId(product.id);
     setTimeout(() => setAddedId(null), 1500);
-
     setShowToast(true);
     Animated.sequence([
       Animated.timing(toastAnim, { toValue: 1, duration: 250, useNativeDriver: true }),
@@ -83,18 +140,16 @@ export default function HomeScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: COLORS.cream }}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 130 }}>
-        
+
         <View style={{ paddingHorizontal: 24, paddingTop: insets.top + 10, paddingBottom: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
           <TouchableOpacity onPress={() => setShowOffers(true)} style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'white', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: COLORS.beige }}>
             <Gift size={18} color={COLORS.black} />
             {offers.length > 0 && <View style={{ position: 'absolute', top: -2, right: -2, width: 10, height: 10, borderRadius: 5, backgroundColor: COLORS.gold }} />}
           </TouchableOpacity>
-
           <View style={{ alignItems: 'center' }}>
             <Text style={{ fontWeight: '900', fontSize: 16, letterSpacing: 3, color: COLORS.gold }}>LA PARISIENNE</Text>
             <Text style={{ fontSize: 9, letterSpacing: 1.5, color: COLORS.gray, marginTop: 2 }}>FRENCH BAKERY</Text>
           </View>
-
           <TouchableOpacity onPress={() => router.navigate('/cart' as any)} style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'white', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: COLORS.beige }}>
             <ShoppingBag size={18} color={COLORS.black} />
             {cartCount > 0 && (
@@ -105,8 +160,14 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </View>
 
+        <TouchableOpacity onPress={()=> router.push('/select-location' as any)} style={{ marginHorizontal: 24, marginBottom: 14, backgroundColor:'white', borderRadius:14, padding:12, flexDirection:'row', alignItems:'center', borderWidth:1, borderColor:COLORS.beige, gap:8 }}>
+          <MapPin size={16} color={COLORS.gold}/>
+          {locLoading? <ActivityIndicator size="small" color={COLORS.gold}/> : <Text numberOfLines={1} style={{flex:1, fontSize:12, fontWeight:'600'}}>{userLoc?.text || 'حدد موقعك للتوصيل - افتح الـ GPS'}</Text>}
+          <Text style={{color:COLORS.gold, fontSize:11, fontWeight:'700'}}>تغيير</Text>
+        </TouchableOpacity>
+
         <View>
-          {banners.length > 0 ? (
+          {banners.length > 0? (
             <FlatList
               ref={bannerRef}
               data={banners}
@@ -123,7 +184,7 @@ export default function HomeScreen() {
                   <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, padding: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' }}>
                     <View style={{ backgroundColor: 'rgba(255,255,255,0.92)', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 14, maxWidth: '65%' }}>
                       <Text style={{ color: COLORS.black, fontWeight: '800', fontSize: 18 }} numberOfLines={2}>{item.title}</Text>
-                      {item.subtitle ? <Text style={{ color: COLORS.gray, fontSize: 11, marginTop: 3 }} numberOfLines={1}>{item.subtitle}</Text> : null}
+                      {item.subtitle? <Text style={{ color: COLORS.gray, fontSize: 11, marginTop: 3 }} numberOfLines={1}>{item.subtitle}</Text> : null}
                     </View>
                     <View style={{ backgroundColor: COLORS.black, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20 }}>
                       <Text style={{ color: 'white', fontSize: 10, fontWeight: '800' }}>{item.button_text || 'SHOP NOW'}</Text>
@@ -169,14 +230,14 @@ export default function HomeScreen() {
           {filtered.map(item => {
             const isAdded = addedId === item.id;
             return (
-              <TouchableOpacity key={item.id} onPress={() => router.push(`/product/${item.id}` as any)} activeOpacity={0.8} style={{ flexDirection: 'row', backgroundColor: 'white', borderRadius: 20, padding: 12, marginBottom: 12, alignItems: 'center', borderWidth: 1, borderColor: isAdded ? COLORS.gold : 'transparent' }}>
+              <TouchableOpacity key={item.id} onPress={() => router.push(`/product/${item.id}` as any)} activeOpacity={0.8} style={{ flexDirection: 'row', backgroundColor: 'white', borderRadius: 20, padding: 12, marginBottom: 12, alignItems: 'center', borderWidth: 1, borderColor: isAdded? COLORS.gold : 'transparent' }}>
                 <Image source={{ uri: item.image_url || item.image }} style={{ width: 72, height: 72, borderRadius: 16, backgroundColor: COLORS.beige }} />
                 <View style={{ flex: 1, marginLeft: 14 }}>
                   <Text style={{ fontWeight: '700', fontSize: 13 }}>{item.name}</Text>
                   <Text style={{ fontSize: 11, color: COLORS.gray, marginTop: 2 }}>{item.price} EGP</Text>
                 </View>
-                <TouchableOpacity onPress={() => handleAddToCart(item)} style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: isAdded ? COLORS.gold : COLORS.black, justifyContent: 'center', alignItems: 'center' }}>
-                  {isAdded ? <Check size={18} color="white" /> : <Text style={{ color: 'white', fontSize: 18 }}>+</Text>}
+                <TouchableOpacity onPress={() => handleAddToCart(item)} style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: isAdded? COLORS.gold : COLORS.black, justifyContent: 'center', alignItems: 'center' }}>
+                  {isAdded? <Check size={18} color="white" /> : <Text style={{ color: 'white', fontSize: 18 }}>+</Text>}
                 </TouchableOpacity>
               </TouchableOpacity>
             );

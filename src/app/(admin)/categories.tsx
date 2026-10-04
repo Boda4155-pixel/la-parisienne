@@ -50,7 +50,7 @@ export default function CategoriesPage(){
     <View style={s.bg}>
       <View style={s.header}>
         <TouchableOpacity style={s.newBtn} onPress={()=>setShowAdd(!showAdd)}>
-          <Ionicons name="add" size={20} color="#000"/><Text style={s.newTxt}>{t('admin.categories.add')}</Text>
+          <Ionicons name="add" size={20} color="#FFF"/><Text style={s.newTxt}>{t('admin.categories.add')}</Text>
         </TouchableOpacity>
         <View style={{alignItems:'flex-end'}}>
           <Text style={s.h1}>{t('admin.categories.title')}</Text>
@@ -60,7 +60,7 @@ export default function CategoriesPage(){
 
       {showAdd && (
         <View style={s.addBox}>
-          <TextInput placeholder={t('admin.categories.namePlaceholder')} placeholderTextColor="#666" value={newName} onChangeText={setNewName} style={s.input}/>
+          <TextInput placeholder={t('admin.categories.namePlaceholder')} placeholderTextColor="#999" value={newName} onChangeText={setNewName} style={s.input}/>
           <TouchableOpacity style={s.addBtn} onPress={onAdd}><Text style={s.addBtnTxt}>{t('common:add')}</Text></TouchableOpacity>
         </View>
       )}
@@ -71,14 +71,14 @@ export default function CategoriesPage(){
         contentContainerStyle={{padding:16, paddingBottom:120, gap:12}}
         renderItem={({item})=>(
           <TouchableOpacity style={s.card} onPress={()=>router.push(`/(admin)/products?cat=${item.id}` as any)}>
-            <Ionicons name="chevron-forward" size={20} color="#555" />
+            <Ionicons name="chevron-forward" size={20} color="#999" />
             <View style={{flex:1, alignItems:'flex-end'}}>
               <Text style={s.name}>{item.name}</Text>
               <Text style={s.count}>{t('admin.categories.countRow', { count: counts[item.id]||0 })}</Text>
             </View>
-            <View style={s.iconBox}><Ionicons name="folder" size={24} color="#E8C87A"/></View>
+            <View style={s.iconBox}><Ionicons name="folder" size={24} color="#16A34A"/></View>
             <TouchableOpacity onPress={()=>onDelete(item)} style={s.trash}>
-              <Ionicons name="trash-outline" size={18} color="#ff5c5c"/>
+              <Ionicons name="trash-outline" size={18} color="#D92D20"/>
             </TouchableOpacity>
           </TouchableOpacity>
         )}
@@ -87,13 +87,19 @@ export default function CategoriesPage(){
   );
 }
 const s = StyleSheet.create({
-  bg:{flex:1, backgroundColor:'#0F0F0F'},
+  bg:{flex:1, backgroundColor:'#FFFFFF'},
   header:{flexDirection:'row', justifyContent:'space-between', alignItems:'center', padding:16, paddingTop:60},
-  h1:{color:'#fff', fontSize:30, fontWeight:'bold'}, sub:{color:'#E8C87A', fontSize:13, marginTop:2},
-  newBtn:{backgroundColor:'#E8C87A', flexDirection:'row', paddingHorizontal:16, height:40, borderRadius:20, alignItems:'center', gap:4}, newTxt:{color:'#000', fontWeight:'bold'},
-  addBox:{flexDirection:'row', gap:8, paddingHorizontal:16, marginBottom:8}, input:{flex:1, backgroundColor:'#161616', borderWidth:1, borderColor:'#222', borderRadius:12, color:'#fff', paddingHorizontal:12, height:44}, addBtn:{backgroundColor:'#E8C87A', paddingHorizontal:20, borderRadius:12, justifyContent:'center'}, addBtnTxt:{color:'#000', fontWeight:'bold'},
-  card:{backgroundColor:'#161616', borderRadius:16, padding:14, flexDirection:'row', alignItems:'center', gap:10, borderWidth:1, borderColor:'#222'},
-  iconBox:{width:44, height:44, borderRadius:10, backgroundColor:'#1E1E1E', justifyContent:'center', alignItems:'center', borderWidth:1, borderColor:'#2A2A2A'},
-  name:{color:'#fff', fontWeight:'bold', fontSize:16}, count:{color:'#888', fontSize:11, marginTop:2},
-  trash:{width:36, height:36, borderRadius:10, backgroundColor:'#1A1A1A', justifyContent:'center', alignItems:'center', borderWidth:1, borderColor:'#2A1A1A'}
+  h1:{color:'#111', fontSize:30, fontWeight:'bold'}, 
+  sub:{color:'#16A34A', fontSize:13, marginTop:2, fontWeight:'700', backgroundColor:'#F0FDF4', paddingHorizontal:8, paddingVertical:3, borderRadius:8, borderWidth:1, borderColor:'#BBF7D0'},
+  newBtn:{backgroundColor:'#16A34A', flexDirection:'row', paddingHorizontal:16, height:40, borderRadius:20, alignItems:'center', gap:4}, 
+  newTxt:{color:'#FFFFFF', fontWeight:'bold'},
+  addBox:{flexDirection:'row', gap:8, paddingHorizontal:16, marginBottom:8}, 
+  input:{flex:1, backgroundColor:'#F9F9F9', borderWidth:1, borderColor:'#E5E5E5', borderRadius:12, color:'#111', paddingHorizontal:12, height:44}, 
+  addBtn:{backgroundColor:'#111', paddingHorizontal:20, borderRadius:12, justifyContent:'center'}, 
+  addBtnTxt:{color:'#FFFFFF', fontWeight:'bold'},
+  card:{backgroundColor:'#FFFFFF', borderRadius:16, padding:14, flexDirection:'row', alignItems:'center', gap:10, borderWidth:1, borderColor:'#E5E5E5'},
+  iconBox:{width:44, height:44, borderRadius:10, backgroundColor:'#F0FDF4', justifyContent:'center', alignItems:'center', borderWidth:1, borderColor:'#BBF7D0'},
+  name:{color:'#111', fontWeight:'bold', fontSize:16}, 
+  count:{color:'#666', fontSize:11, marginTop:2},
+  trash:{width:36, height:36, borderRadius:10, backgroundColor:'#FEF2F2', justifyContent:'center', alignItems:'center', borderWidth:1, borderColor:'#FECACA'}
 });

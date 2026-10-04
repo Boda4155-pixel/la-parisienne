@@ -30,15 +30,15 @@ export default function AboutApp(){
   return (
     <View style={s.bg}>
       <View style={[s.header, {paddingTop: insets.top + 12}]}>
-        <TouchableOpacity onPress={()=>router.back()} style={s.back}><Ionicons name="chevron-forward" size={22} color="#fff"/></TouchableOpacity>
+        <TouchableOpacity onPress={()=>router.back()} style={s.back}><Ionicons name="chevron-forward" size={22} color="#111"/></TouchableOpacity>
         <Text style={s.h1}>حول التطبيق</Text>
         <TouchableOpacity onPress={save} style={s.saveTop}>
-          {saving? <ActivityIndicator size="small" color="#000"/> : <Ionicons name="checkmark" size={22} color="#000"/>}
+          {saving? <ActivityIndicator size="small" color="#fff"/> : <Ionicons name="checkmark" size={22} color="#fff"/>}
         </TouchableOpacity>
       </View>
 
-      <KeyboardAvoidingView style={{flex:1}} behavior={Platform.OS==='ios'?'padding':undefined}>
-        {loading? <ActivityIndicator color="#E8C87A" style={{marginTop:60}}/> : (
+      <KeyboardAvoidingView style={{flex:1, backgroundColor:'#F9F9F9'}} behavior={Platform.OS==='ios'?'padding':undefined}>
+        {loading? <ActivityIndicator color="#16A34A" style={{marginTop:60}}/> : (
           <ScrollView
             contentContainerStyle={{padding:16, paddingBottom: insets.bottom + 120}}
             showsVerticalScrollIndicator={false}
@@ -52,7 +52,7 @@ export default function AboutApp(){
 
             <View style={s.card}>
               <Text style={s.label}>رقم الاصدار</Text>
-              <TextInput value={version} onChangeText={setVersion} style={s.input} placeholder="1.0.0" placeholderTextColor="#555"/>
+              <TextInput value={version} onChangeText={setVersion} style={s.input} placeholder="1.0.0" placeholderTextColor="#999"/>
 
               <Text style={[s.label,{marginTop:16}]}>وصف التطبيق</Text>
               <TextInput
@@ -62,18 +62,17 @@ export default function AboutApp(){
                 style={s.textArea}
                 textAlignVertical="top"
                 placeholder="اكتب وصف التطبيق هنا..."
-                placeholderTextColor="#555"
+                placeholderTextColor="#999"
               />
             </View>
 
             <View style={s.cardRow}>
-              <Ionicons name="heart" size={18} color="#E8C87A"/>
+              <Ionicons name="heart" size={18} color="#16A34A"/>
               <Text style={s.byTxt}>by Abdelrahman ❤️</Text>
             </View>
 
-            {/* الزرار ده كان نازل تحت - دلوقتي فوق و ظاهر */}
             <TouchableOpacity onPress={save} style={s.saveBig}>
-              {saving? <ActivityIndicator color="#000"/> : <><Ionicons name="save-outline" size={20} color="#000"/><Text style={s.saveBigTxt}>حفظ التغييرات</Text></>}
+              {saving? <ActivityIndicator color="#fff"/> : <><Ionicons name="save-outline" size={20} color="#fff"/><Text style={s.saveBigTxt}>حفظ التغييرات</Text></>}
             </TouchableOpacity>
           </ScrollView>
         )}
@@ -82,17 +81,17 @@ export default function AboutApp(){
   );
 }
 const s = StyleSheet.create({
-  bg:{flex:1, backgroundColor:'#0F0F0F'},
-  header:{flexDirection:'row', justifyContent:'space-between', alignItems:'center', padding:12, borderBottomWidth:1, borderBottomColor:'#1A1A1A', backgroundColor:'#0F0F0F'},
-  h1:{color:'#fff', fontWeight:'bold', fontSize:17}, back:{width:42, height:42, borderRadius:21, backgroundColor:'#1A1A1A', justifyContent:'center', alignItems:'center', borderWidth:1, borderColor:'#222'},
-  saveTop:{width:42, height:42, borderRadius:21, backgroundColor:'#E8C87A', justifyContent:'center', alignItems:'center'},
-  hero:{backgroundColor:'#1A1A1A', borderRadius:20, padding:24, alignItems:'center', borderWidth:1, borderColor:'#222', marginBottom:12},
-  logo:{width:90, height:90, borderRadius:45, backgroundColor:'#E8C87A', justifyContent:'center', alignItems:'center'}, logoTxt:{color:'#000', fontWeight:'bold', fontSize:32},
-  appName:{color:'#fff', fontWeight:'bold', fontSize:18, marginTop:12}, verBadge:{backgroundColor:'#222', paddingHorizontal:12, paddingVertical:5, borderRadius:20, marginTop:8}, verTxt:{color:'#888', fontSize:11},
-  card:{backgroundColor:'#161616', borderRadius:16, padding:16, borderWidth:1, borderColor:'#222', marginBottom:12},
-  label:{color:'#888', fontSize:12, marginBottom:8, textAlign:'right'}, input:{backgroundColor:'#0F0F0F', borderWidth:1, borderColor:'#222', borderRadius:12, color:'#fff', paddingHorizontal:14, height:52, textAlign:'right'},
-  textArea:{backgroundColor:'#0F0F0F', borderWidth:1, borderColor:'#222', borderRadius:12, color:'#fff', padding:14, minHeight:180, textAlign:'right'},
-  cardRow:{backgroundColor:'#161616', borderRadius:14, padding:14, borderWidth:1, borderColor:'#222', flexDirection:'row', alignItems:'center', gap:8, justifyContent:'center', marginBottom:12},
-  byTxt:{color:'#888', fontSize:12},
-  saveBig:{backgroundColor:'#E8C87A', height:56, borderRadius:16, flexDirection:'row', justifyContent:'center', alignItems:'center', gap:8}, saveBigTxt:{color:'#000', fontWeight:'bold', fontSize:15}
+  bg:{flex:1, backgroundColor:'#FFFFFF'},
+  header:{flexDirection:'row', justifyContent:'space-between', alignItems:'center', padding:12, borderBottomWidth:1, borderBottomColor:'#E5E5E5', backgroundColor:'#FFFFFF'},
+  h1:{color:'#111', fontWeight:'800', fontSize:17}, back:{width:42, height:42, borderRadius:21, backgroundColor:'#FFFFFF', justifyContent:'center', alignItems:'center', borderWidth:1, borderColor:'#E5E5E5'},
+  saveTop:{width:42, height:42, borderRadius:21, backgroundColor:'#16A34A', justifyContent:'center', alignItems:'center'},
+  hero:{backgroundColor:'#FFFFFF', borderRadius:20, padding:24, alignItems:'center', borderWidth:1, borderColor:'#E5E5E5', marginBottom:12, shadowColor:'#000', shadowOpacity:0.03, shadowRadius:6, elevation:1},
+  logo:{width:90, height:90, borderRadius:45, backgroundColor:'#16A34A', justifyContent:'center', alignItems:'center'}, logoTxt:{color:'#FFFFFF', fontWeight:'800', fontSize:32},
+  appName:{color:'#111', fontWeight:'800', fontSize:18, marginTop:12}, verBadge:{backgroundColor:'#F0FDF4', paddingHorizontal:12, paddingVertical:5, borderRadius:20, marginTop:8, borderWidth:1, borderColor:'#BBF7D0'}, verTxt:{color:'#16A34A', fontSize:11, fontWeight:'700'},
+  card:{backgroundColor:'#FFFFFF', borderRadius:16, padding:16, borderWidth:1, borderColor:'#E5E5E5', marginBottom:12},
+  label:{color:'#111', fontSize:12, marginBottom:8, textAlign:'right', fontWeight:'700'}, input:{backgroundColor:'#F9F9F9', borderWidth:1, borderColor:'#E5E5E5', borderRadius:12, color:'#111', paddingHorizontal:14, height:52, textAlign:'right'},
+  textArea:{backgroundColor:'#F9F9F9', borderWidth:1, borderColor:'#E5E5E5', borderRadius:12, color:'#111', padding:14, minHeight:180, textAlign:'right'},
+  cardRow:{backgroundColor:'#FFFFFF', borderRadius:14, padding:14, borderWidth:1, borderColor:'#E5E5E5', flexDirection:'row', alignItems:'center', gap:8, justifyContent:'center', marginBottom:12},
+  byTxt:{color:'#666', fontSize:12, fontWeight:'600'},
+  saveBig:{backgroundColor:'#16A34A', height:56, borderRadius:16, flexDirection:'row', justifyContent:'center', alignItems:'center', gap:8}, saveBigTxt:{color:'#FFFFFF', fontWeight:'800', fontSize:15}
 });

@@ -61,7 +61,7 @@ export default function OrdersPage() {
     Linking.openURL(`tel:${phone}`);
   };
 
-  const getColor = (s:string) => s==='delivered'?'#4CAF50': s==='cancelled'?'#F44336': s==='confirmed'?'#2196F3':'#FFC107';
+  const getColor = (s:string) => s==='delivered'?'#16A34A': s==='cancelled'?'#EF4444': s==='confirmed'?'#2563EB':'#D97706';
 
   return (
     <View style={s.bg}>
@@ -90,7 +90,7 @@ export default function OrdersPage() {
               <Text style={s.id}>#{o?.id?.slice(0,8)}</Text>
               <Text style={s.total}>EGP {Number(o?.total||0).toFixed(0)}</Text>
             </View>
-            <Text style={[s.badge, {backgroundColor: getColor(o?.status)+'20', color: getColor(o?.status)}]}>{t(`admin.orders.status.${o?.status}`)}</Text>
+            <Text style={[s.badge, {backgroundColor: getColor(o?.status)+'15', color: getColor(o?.status), borderColor: getColor(o?.status)+'30'}]}>{t(`admin.orders.status.${o?.status}`)}</Text>
           </TouchableOpacity>
         ))}
       </ScrollView>
@@ -100,14 +100,14 @@ export default function OrdersPage() {
           <View style={s.modal}>
             <View style={s.modalHead}>
               <Text style={s.modalTitle}>{t('admin.orders.order')} #{selected?.id?.slice(0,8)}</Text>
-              <TouchableOpacity onPress={()=>setSelected(null)} style={s.closeBtn}><Ionicons name="close" size={22} color="#fff"/></TouchableOpacity>
+              <TouchableOpacity onPress={()=>setSelected(null)} style={s.closeBtn}><Ionicons name="close" size={22} color="#111"/></TouchableOpacity>
             </View>
 
             {selected && (
               <>
                 <View style={s.infoBox}>
                   <Text style={s.row}><Text style={s.label}>{t('admin.orders.name')}: </Text><Text style={s.val}>{selected._displayName}</Text></Text>
-                  <Text style={s.row}><Text style={s.label}>{t('admin.orders.phone')}: </Text><Text style={[s.val, {color: selected._displayPhone===t('admin.orders.noPhone') ? '#F44336' : '#fff'}]}>{selected._displayPhone}</Text></Text>
+                  <Text style={s.row}><Text style={s.label}>{t('admin.orders.phone')}: </Text><Text style={[s.val, {color: selected._displayPhone===t('admin.orders.noPhone') ? '#EF4444' : '#111'}]}>{selected._displayPhone}</Text></Text>
                   <Text style={s.row}><Text style={s.label}>{t('admin.orders.address')}: </Text><Text style={s.val}>{selected._displayAddr}</Text></Text>
                   <Text style={s.row}><Text style={s.label}>{t('admin.orders.total')}: </Text><Text style={s.val}>EGP {Number(selected.total||0).toFixed(2)}</Text></Text>
                 </View>
@@ -118,15 +118,15 @@ export default function OrdersPage() {
                 ))}
 
                 <View style={s.actions}>
-                  <TouchableOpacity style={[s.actBtn, {backgroundColor:'#FFC107'}]} onPress={()=>updateStatus(selected.id,'pending')}><Text style={s.actTxt}>{t('admin.orders.status.pending')}</Text></TouchableOpacity>
-                  <TouchableOpacity style={[s.actBtn, {backgroundColor:'#2196F3'}]} onPress={()=>updateStatus(selected.id,'confirmed')}><Text style={s.actTxt}>{t('admin.orders.status.confirmed')}</Text></TouchableOpacity>
-                  <TouchableOpacity style={[s.actBtn, {backgroundColor:'#4CAF50'}]} onPress={()=>updateStatus(selected.id,'delivered')}><Text style={s.actTxtWhite}>{t('admin.orders.deliver')}</Text></TouchableOpacity>
+                  <TouchableOpacity style={[s.actBtn, {backgroundColor:'#FEF3C7'}]} onPress={()=>updateStatus(selected.id,'pending')}><Text style={s.actTxtPending}>{t('admin.orders.status.pending')}</Text></TouchableOpacity>
+                  <TouchableOpacity style={[s.actBtn, {backgroundColor:'#DBEAFE'}]} onPress={()=>updateStatus(selected.id,'confirmed')}><Text style={s.actTxtConfirmed}>{t('admin.orders.status.confirmed')}</Text></TouchableOpacity>
+                  <TouchableOpacity style={[s.actBtn, {backgroundColor:'#16A34A'}]} onPress={()=>updateStatus(selected.id,'delivered')}><Text style={s.actTxtWhite}>{t('admin.orders.deliver')}</Text></TouchableOpacity>
                 </View>
                 <View style={s.actions}>
-                  <TouchableOpacity style={[s.actBtn, {backgroundColor:'#E8C87A', flexDirection:'row', gap:6, justifyContent:'center'}]} onPress={handleCall}>
-                    <Ionicons name="call" size={16} color="#000"/><Text style={s.actTxt}>{t('admin.orders.call')}</Text>
+                  <TouchableOpacity style={[s.actBtn, {backgroundColor:'#F0FDF4', flexDirection:'row', gap:6, justifyContent:'center', borderWidth:1, borderColor:'#BBF7D0'}]} onPress={handleCall}>
+                    <Ionicons name="call" size={16} color="#16A34A"/><Text style={s.actTxtGreen}>{t('admin.orders.call')}</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity style={[s.actBtn, {backgroundColor:'#F44336'}]} onPress={()=>updateStatus(selected.id,'cancelled')}><Text style={s.actTxtWhite}>{t('admin.orders.cancel')}</Text></TouchableOpacity>
+                  <TouchableOpacity style={[s.actBtn, {backgroundColor:'#EF4444'}]} onPress={()=>updateStatus(selected.id,'cancelled')}><Text style={s.actTxtWhite}>{t('admin.orders.cancel')}</Text></TouchableOpacity>
                 </View>
               </>
             )}
@@ -137,19 +137,37 @@ export default function OrdersPage() {
   );
 }
 const s = StyleSheet.create({
-  bg:{flex:1, backgroundColor:'#0F0F0F', padding:16, paddingTop:50},
-  h1:{color:'#fff', fontSize:28, fontWeight:'bold'}, sub:{color:'#E8C87A', fontSize:12, marginTop:4, marginBottom:10},
-  searchBox:{flexDirection:'row', alignItems:'center', backgroundColor:'#1A1A1A', borderRadius:12, paddingHorizontal:14, height: 46, borderWidth:1, borderColor:'#222', gap:10, marginBottom:12},
-  searchInput:{color:'#fff', flex:1},
-  filterChip:{paddingHorizontal:18, height: 34, justifyContent:'center', borderRadius:20, backgroundColor:'#1E1E1E', borderWidth:1, borderColor:'#2A2A2A'},
-  filterChipActive:{backgroundColor:'#E8C87A', borderColor:'#E8C87A'},
-  filterTxt:{color:'#888', fontSize:12, fontWeight:'bold'}, filterTxtActive:{color:'#000'},
-  card:{backgroundColor:'#161616', padding:14, borderRadius:16, marginBottom:10, borderWidth:1, borderColor:'#222'},
-  cardTop:{flexDirection:'row', justifyContent:'space-between'}, id:{color:'#fff', fontWeight:'bold'}, total:{color:'#E8C87A', fontWeight:'bold'}, badge:{fontSize:10, fontWeight:'bold', marginTop:6, paddingHorizontal:8, paddingVertical:3, borderRadius:10, alignSelf:'flex-start', textTransform:'uppercase', overflow:'hidden'},
-  overlay:{flex:1, backgroundColor:'rgba(0,0,0,0.85)', justifyContent:'flex-end'}, modal:{backgroundColor:'#1E1E1E', borderTopLeftRadius:24, borderTopRightRadius:24, padding:20, paddingBottom:40},
-  modalHead:{flexDirection:'row', justifyContent:'space-between', marginBottom:16}, modalTitle:{color:'#fff', fontSize:18, fontWeight:'bold'}, closeBtn:{width:34, height:34, backgroundColor:'#2A2A2A', borderRadius:17, justifyContent:'center', alignItems:'center'},
-  infoBox:{backgroundColor:'#121212', padding:12, borderRadius:12, borderWidth:1, borderColor:'#222', marginBottom:12},
-  row:{color:'#ccc', marginBottom:8, fontSize:13}, label:{color:'#888'}, val:{color:'#fff', fontWeight:'bold'},
-  itemsHead:{color:'#E8C87A', fontWeight:'bold', marginBottom:8}, itemRow:{flexDirection:'row', justifyContent:'space-between', marginBottom:6}, itemName:{color:'#aaa', fontSize:12}, itemPrice:{color:'#aaa', fontSize:12},
-  actions:{flexDirection:'row', gap:8, marginTop:12}, actBtn:{flex:1, height: 48, borderRadius:12, alignItems:'center', justifyContent:'center'}, actTxt:{color:'#000', fontWeight:'bold'}, actTxtWhite:{color:'#fff', fontWeight:'bold'},
+  bg:{flex:1, backgroundColor:'#FFFFFF', padding:16, paddingTop:50},
+  h1:{color:'#111', fontSize:28, fontWeight:'800'}, 
+  sub:{color:'#16A34A', fontSize:12, marginTop:4, marginBottom:10, fontWeight:'700'},
+  searchBox:{flexDirection:'row', alignItems:'center', backgroundColor:'#FFFFFF', borderRadius:12, paddingHorizontal:14, height: 46, borderWidth:1, borderColor:'#E5E5E5', gap:10, marginBottom:12},
+  searchInput:{color:'#111', flex:1, fontWeight:'600'},
+  filterChip:{paddingHorizontal:18, height: 34, justifyContent:'center', borderRadius:20, backgroundColor:'#FFFFFF', borderWidth:1, borderColor:'#E5E5E5'},
+  filterChipActive:{backgroundColor:'#16A34A', borderColor:'#16A34A'},
+  filterTxt:{color:'#555', fontSize:12, fontWeight:'700'}, 
+  filterTxtActive:{color:'#FFFFFF'},
+  card:{backgroundColor:'#FFFFFF', padding:14, borderRadius:16, marginBottom:10, borderWidth:1, borderColor:'#E5E5E5'},
+  cardTop:{flexDirection:'row', justifyContent:'space-between'}, 
+  id:{color:'#111', fontWeight:'800'}, 
+  total:{color:'#16A34A', fontWeight:'800'}, 
+  badge:{fontSize:10, fontWeight:'800', marginTop:6, paddingHorizontal:8, paddingVertical:3, borderRadius:10, alignSelf:'flex-start', textTransform:'uppercase', overflow:'hidden', borderWidth:1},
+  overlay:{flex:1, backgroundColor:'rgba(0,0,0,0.4)', justifyContent:'flex-end'}, 
+  modal:{backgroundColor:'#FFFFFF', borderTopLeftRadius:24, borderTopRightRadius:24, padding:20, paddingBottom:40, borderWidth:1, borderColor:'#E5E5E5', borderBottomWidth:0},
+  modalHead:{flexDirection:'row', justifyContent:'space-between', marginBottom:16}, 
+  modalTitle:{color:'#111', fontSize:18, fontWeight:'800'}, 
+  closeBtn:{width:34, height:34, backgroundColor:'#F5F5F5', borderRadius:17, justifyContent:'center', alignItems:'center'},
+  infoBox:{backgroundColor:'#F0FDF4', padding:12, borderRadius:12, borderWidth:1, borderColor:'#BBF7D0', marginBottom:12},
+  row:{color:'#333', marginBottom:8, fontSize:13}, 
+  label:{color:'#888', fontWeight:'600'}, 
+  val:{color:'#111', fontWeight:'700'},
+  itemsHead:{color:'#16A34A', fontWeight:'800', marginBottom:8}, 
+  itemRow:{flexDirection:'row', justifyContent:'space-between', marginBottom:6}, 
+  itemName:{color:'#555', fontSize:12, fontWeight:'600'}, 
+  itemPrice:{color:'#111', fontSize:12, fontWeight:'700'},
+  actions:{flexDirection:'row', gap:8, marginTop:12}, 
+  actBtn:{flex:1, height: 48, borderRadius:12, alignItems:'center', justifyContent:'center'}, 
+  actTxtPending:{color:'#92400E', fontWeight:'800'}, 
+  actTxtConfirmed:{color:'#1E40AF', fontWeight:'800'}, 
+  actTxtGreen:{color:'#16A34A', fontWeight:'800'}, 
+  actTxtWhite:{color:'#FFFFFF', fontWeight:'800'},
 });

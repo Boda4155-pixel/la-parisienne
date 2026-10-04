@@ -58,23 +58,23 @@ export default function Sales() {
   const pendingPayment = total - paid;
 
   const getStatusColor = (status: string) => {
-    if(status === 'delivered') return '#4CAF50';
-    if(status === 'cancelled') return '#F44336';
-    if(status === 'confirmed') return '#2196F3';
-    return '#FFC107';
+    if(status === 'delivered') return '#16A34A';
+    if(status === 'cancelled') return '#EF4444';
+    if(status === 'confirmed') return '#2563EB';
+    return '#D97706';
   };
 
   return (
     <View style={s.bg}>
       <View style={s.header}>
-        <TouchableOpacity onPress={()=> {}} style={s.gear}><Ionicons name="settings" size={22} color="#888" /></TouchableOpacity>
+        <TouchableOpacity onPress={()=> {}} style={s.gear}><Ionicons name="settings" size={22} color="#16A34A" /></TouchableOpacity>
         <Text style={s.h1}>{t('admin.sales.title')}</Text>
       </View>
 
       <View style={s.topRow}>
         <TouchableOpacity style={s.calendarBtn} onPress={()=> setShowCalendar(true)}>
           <Text style={s.calText}>{filter==='custom'? customDate.toLocaleDateString('en-GB') : t('admin.sales.pickDate')}</Text>
-          <Ionicons name="calendar" size={18} color="#000" />
+          <Ionicons name="calendar" size={18} color="#FFF" />
         </TouchableOpacity>
         <View style={s.tabs}>
           {(['month','week','today','all'] as const).map(f => (
@@ -87,13 +87,13 @@ export default function Sales() {
 
       <View style={s.summary}>
         <View style={s.sumHeader}>
-          <Ionicons name="trending-up" size={16} color="#E8C87A" />
+          <Ionicons name="trending-up" size={16} color="#16A34A" />
           <Text style={s.sumLab}>{t('admin.sales.totalSales')} ({orders.length})</Text>
         </View>
         <Text style={s.sumVal}>EGP {total.toFixed(2)}</Text>
         <View style={s.sumRow}>
-          <View style={s.sumChipGreen}><Text style={s.chipTxt}>{t('admin.sales.paid')}: EGP {paid.toFixed(0)}</Text></View>
-          <View style={s.sumChipYellow}><Text style={[s.chipTxt,{color:'#000'}]}>{t('admin.sales.pending')}: EGP {pendingPayment.toFixed(0)}</Text></View>
+          <View style={s.sumChipGreen}><Text style={s.chipTxtGreen}>{t('admin.sales.paid')}: EGP {paid.toFixed(0)}</Text></View>
+          <View style={s.sumChipYellow}><Text style={s.chipTxtYellow}>{t('admin.sales.pending')}: EGP {pendingPayment.toFixed(0)}</Text></View>
         </View>
       </View>
 
@@ -117,11 +117,11 @@ export default function Sales() {
             </View>
             <View style={s.cardRight}>
               <Text style={s.orderTotal}>EGP {Number(o.total).toFixed(0)}</Text>
-              <Ionicons name="chevron-forward" size={14} color="#666" />
+              <Ionicons name="chevron-forward" size={14} color="#16A34A" />
             </View>
           </TouchableOpacity>
         ))}
-        {orders.length===0 && <Text style={{color:'#666', textAlign:'center', marginTop:50}}>{t('admin.sales.noSales')}</Text>}
+        {orders.length===0 && <Text style={{color:'#888', textAlign:'center', marginTop:50, fontWeight:'600'}}>{t('admin.sales.noSales')}</Text>}
       </ScrollView>
 
       <Modal visible={showCalendar} transparent animationType="slide">
@@ -130,7 +130,7 @@ export default function Sales() {
             <Text style={s.calTitle}>{t('admin.sales.pickDateTitle')}</Text>
             <TouchableOpacity style={s.dateBtn} onPress={()=> setShowDatePicker(true)}>
               <Text style={s.dateBtnText}>{customDate.toDateString()}</Text>
-              <Ionicons name="calendar-outline" size={20} color="#E8C87A" />
+              <Ionicons name="calendar-outline" size={20} color="#16A34A" />
             </TouchableOpacity>
             {showDatePicker && (
               <DateTimePicker value={customDate} mode="date" display="default" onChange={(e,d)=>{
@@ -151,13 +151,13 @@ export default function Sales() {
           <Pressable style={s.detailsBox} onPress={e=> e.stopPropagation()}>
             <View style={s.detailsHeader}>
               <Text style={s.detailsTitle}>{t('admin.orders.order')} #{selectedOrder?.id.slice(0,8)}</Text>
-              <TouchableOpacity onPress={()=> setSelectedOrder(null)}><Ionicons name="close" size={24} color="#fff" /></TouchableOpacity>
+              <TouchableOpacity onPress={()=> setSelectedOrder(null)}><Ionicons name="close" size={24} color="#111" /></TouchableOpacity>
             </View>
             {selectedOrder && (
               <>
                 <Text style={s.detailRow}><Text style={s.detailLabel}>{t('admin.orders.name')}: </Text>{selectedOrder.profile?.full_name || selectedOrder.customer_name || t('admin.orders.guest')}</Text>
                 <Text style={s.detailRow}><Text style={s.detailLabel}>{t('admin.orders.phone')}: </Text>{selectedOrder.profile?.phone || selectedOrder.customer_phone || 'N/A'}</Text>
-                <Text style={s.detailRow}><Text style={s.detailLabel}>{t('admin.orders.statusLabel')}: </Text><Text style={{color: getStatusColor(selectedOrder.status), fontWeight:'bold'}}>{t(`admin.orders.status.${selectedOrder.status}`)}</Text></Text>
+                <Text style={s.detailRow}><Text style={s.detailLabel}>{t('admin.orders.statusLabel')}: </Text><Text style={{color: getStatusColor(selectedOrder.status), fontWeight:'800'}}>{t(`admin.orders.status.${selectedOrder.status}`)}</Text></Text>
                 <Text style={s.detailRow}><Text style={s.detailLabel}>{t('admin.sales.payment')}: </Text>{selectedOrder.payment_status} • {selectedOrder.payment_method || 'COD'}</Text>
                 <Text style={s.detailRow}><Text style={s.detailLabel}>{t('admin.sales.date')}: </Text>{new Date(selectedOrder.created_at).toLocaleString()}</Text>
                 <View style={s.divider} />
@@ -178,23 +178,54 @@ export default function Sales() {
 }
 
 const s = StyleSheet.create({
-  bg:{flex:1, backgroundColor:'#0F0F0F', padding:16, paddingTop:50},
+  bg:{flex:1, backgroundColor:'#FFFFFF', padding:16, paddingTop:50},
   header:{flexDirection:'row', alignItems:'center', justifyContent:'space-between', marginBottom:12},
-  gear:{width:42, height:42, borderRadius:21, backgroundColor:'#1E1E1E', justifyContent:'center', alignItems:'center', borderWidth:1, borderColor:'#2A2A2A'},
-  h1:{color:'#fff', fontSize:28, fontWeight:'bold'},
+  gear:{width:42, height:42, borderRadius:21, backgroundColor:'#F0FDF4', justifyContent:'center', alignItems:'center', borderWidth:1, borderColor:'#BBF7D0'},
+  h1:{color:'#111', fontSize:28, fontWeight:'800'},
   topRow:{flexDirection:'row', justifyContent:'space-between', alignItems:'center', marginBottom:16},
-  calendarBtn:{flexDirection:'row', alignItems:'center', backgroundColor:'#E8C87A', paddingHorizontal:14, paddingVertical:9, borderRadius:22, gap:8},
-  calText:{color:'#000', fontWeight:'bold', fontSize:12},
+  calendarBtn:{flexDirection:'row', alignItems:'center', backgroundColor:'#16A34A', paddingHorizontal:14, paddingVertical:9, borderRadius:22, gap:8},
+  calText:{color:'#FFF', fontWeight:'800', fontSize:12},
   tabs:{flexDirection:'row', gap:6},
-  tab:{paddingHorizontal:12, paddingVertical:8, borderRadius:20, backgroundColor:'#1E1E1E', borderWidth:1, borderColor:'#2A2A2A'},
-  tabActive:{backgroundColor:'#E8C87A', borderColor:'#E8C87A'},
-  tabTxt:{color:'#666', fontSize:10, fontWeight:'bold'}, tabTxtActive:{color:'#000'},
-  summary:{backgroundColor:'#1A1A1A', padding:20, borderRadius:22, marginBottom:16, borderWidth:1, borderColor:'#222', alignItems:'flex-end'},
-  sumHeader:{flexDirection:'row', gap:8, alignItems:'center', alignSelf:'flex-start'}, sumLab:{color:'#888', fontSize:11, letterSpacing:1}, sumVal:{color:'#E8C87A', fontSize:36, fontWeight:'bold', marginTop:8, alignSelf:'center'}, sumRow:{flexDirection:'row', gap:8, marginTop:14, alignSelf:'center'}, sumChipGreen:{backgroundColor:'#12321A', paddingHorizontal:12, paddingVertical:6, borderRadius:20, borderWidth:1, borderColor:'#4CAF5040'}, sumChipYellow:{backgroundColor:'#332A14', paddingHorizontal:12, paddingVertical:6, borderRadius:20, borderWidth:1, borderColor:'#FFC10740'}, chipTxt:{color:'#4CAF50', fontSize:11, fontWeight:'bold'},
-  orderCard:{flexDirection:'row', justifyContent:'space-between', alignItems:'center', padding:16, backgroundColor:'#161616', borderRadius:16, marginBottom:10, borderWidth:1, borderColor:'#222'},
-  cardLeft:{flexDirection:'row', alignItems:'center', gap:10}, statusDot:{width:8, height:8, borderRadius:4}, orderId:{color:'#fff', fontWeight:'bold', fontSize:14}, orderDate:{color:'#666', fontSize:11, marginTop:2}, cardRight:{alignItems:'center', flexDirection:'row', gap:6, justifyContent:'flex-end'}, orderTotal:{color:'#E8C87A', fontWeight:'bold', fontSize:14},
-  modalOverlay:{flex:1, backgroundColor:'rgba(0,0,0,0.85)', justifyContent:'center', padding:20},
-  calendarBox:{backgroundColor:'#1E1E1E', borderRadius:20, padding:20, borderWidth:1, borderColor:'#2A2A2A'},
-  calTitle:{color:'#fff', fontWeight:'bold', fontSize:16, marginBottom:16}, dateBtn:{flexDirection:'row', justifyContent:'space-between', backgroundColor:'#121212', padding:16, borderRadius:12, borderWidth:1, borderColor:'#333'}, dateBtnText:{color:'#fff'}, modalActions:{flexDirection:'row', gap:10, marginTop:20}, cancelBtn:{flex:1, padding:14, backgroundColor:'#2A2A2A', borderRadius:12, alignItems:'center'}, cancelTxt:{color:'#fff'}, applyBtn:{flex:1, padding:14, backgroundColor:'#E8C87A', borderRadius:12, alignItems:'center'}, applyTxt:{color:'#000', fontWeight:'bold'},
-  detailsBox:{backgroundColor:'#1E1E1E', borderRadius:20, padding:20, borderWidth:1, borderColor:'#2A2A2A'}, detailsHeader:{flexDirection:'row', justifyContent:'space-between', marginBottom:16}, detailsTitle:{color:'#fff', fontSize:18, fontWeight:'bold'}, detailRow:{color:'#ccc', marginBottom:8, fontSize:13}, detailLabel:{color:'#888'}, divider:{height:1, backgroundColor:'#2A2A2A', marginVertical:12}, itemsTitle:{color:'#E8C87A', fontWeight:'bold', marginBottom:8}, itemRow:{flexDirection:'row', justifyContent:'space-between', marginBottom:6}, itemTxt:{color:'#aaa', fontSize:12}, itemPrice:{color:'#aaa', fontSize:12}, totalTxt:{color:'#E8C87A', fontWeight:'bold', fontSize:18, marginTop:4, textAlign:'right'}, addressTxt:{color:'#666', fontSize:11, marginTop:12}
+  tab:{paddingHorizontal:12, paddingVertical:8, borderRadius:20, backgroundColor:'#FFFFFF', borderWidth:1, borderColor:'#E5E5E5'},
+  tabActive:{backgroundColor:'#16A34A', borderColor:'#16A34A'},
+  tabTxt:{color:'#666', fontSize:10, fontWeight:'800'},
+  tabTxtActive:{color:'#FFFFFF'},
+  summary:{backgroundColor:'#FFFFFF', padding:20, borderRadius:22, marginBottom:16, borderWidth:1, borderColor:'#E5E5E5', alignItems:'flex-end'},
+  sumHeader:{flexDirection:'row', gap:8, alignItems:'center', alignSelf:'flex-start'},
+  sumLab:{color:'#888', fontSize:11, letterSpacing:0.5, fontWeight:'700'},
+  sumVal:{color:'#111', fontSize:36, fontWeight:'800', marginTop:8, alignSelf:'center'},
+  sumRow:{flexDirection:'row', gap:8, marginTop:14, alignSelf:'center'},
+  sumChipGreen:{backgroundColor:'#F0FDF4', paddingHorizontal:12, paddingVertical:6, borderRadius:20, borderWidth:1, borderColor:'#BBF7D0'},
+  sumChipYellow:{backgroundColor:'#FEF3C7', paddingHorizontal:12, paddingVertical:6, borderRadius:20, borderWidth:1, borderColor:'#FDE68A'},
+  chipTxtGreen:{color:'#16A34A', fontSize:11, fontWeight:'800'},
+  chipTxtYellow:{color:'#92400E', fontSize:11, fontWeight:'800'},
+  orderCard:{flexDirection:'row', justifyContent:'space-between', alignItems:'center', padding:16, backgroundColor:'#FFFFFF', borderRadius:16, marginBottom:10, borderWidth:1, borderColor:'#E5E5E5'},
+  cardLeft:{flexDirection:'row', alignItems:'center', gap:10},
+  statusDot:{width:8, height:8, borderRadius:4},
+  orderId:{color:'#111', fontWeight:'800', fontSize:14},
+  orderDate:{color:'#888', fontSize:11, marginTop:2, fontWeight:'600'},
+  cardRight:{alignItems:'center', flexDirection:'row', gap:6, justifyContent:'flex-end'},
+  orderTotal:{color:'#16A34A', fontWeight:'800', fontSize:14},
+  modalOverlay:{flex:1, backgroundColor:'rgba(0,0,0,0.4)', justifyContent:'center', padding:20},
+  calendarBox:{backgroundColor:'#FFFFFF', borderRadius:20, padding:20, borderWidth:1, borderColor:'#E5E5E5'},
+  calTitle:{color:'#111', fontWeight:'800', fontSize:16, marginBottom:16},
+  dateBtn:{flexDirection:'row', justifyContent:'space-between', backgroundColor:'#F9F9F9', padding:16, borderRadius:12, borderWidth:1, borderColor:'#E5E5E5'},
+  dateBtnText:{color:'#111', fontWeight:'700'},
+  modalActions:{flexDirection:'row', gap:10, marginTop:20},
+  cancelBtn:{flex:1, padding:14, backgroundColor:'#F5F5F5', borderRadius:12, alignItems:'center'},
+  cancelTxt:{color:'#111', fontWeight:'700'},
+  applyBtn:{flex:1, padding:14, backgroundColor:'#16A34A', borderRadius:12, alignItems:'center'},
+  applyTxt:{color:'#FFFFFF', fontWeight:'800'},
+  detailsBox:{backgroundColor:'#FFFFFF', borderRadius:20, padding:20, borderWidth:1, borderColor:'#E5E5E5'},
+  detailsHeader:{flexDirection:'row', justifyContent:'space-between', marginBottom:16},
+  detailsTitle:{color:'#111', fontSize:18, fontWeight:'800'},
+  detailRow:{color:'#111', marginBottom:8, fontSize:13, fontWeight:'500'},
+  detailLabel:{color:'#888', fontWeight:'600'},
+  divider:{height:1, backgroundColor:'#F0F0F0', marginVertical:12},
+  itemsTitle:{color:'#16A34A', fontWeight:'800', marginBottom:8},
+  itemRow:{flexDirection:'row', justifyContent:'space-between', marginBottom:6},
+  itemTxt:{color:'#555', fontSize:12, fontWeight:'600'},
+  itemPrice:{color:'#111', fontSize:12, fontWeight:'700'},
+  totalTxt:{color:'#111', fontWeight:'800', fontSize:18, marginTop:4, textAlign:'right'},
+  addressTxt:{color:'#888', fontSize:11, marginTop:12, fontWeight:'600'}
 });

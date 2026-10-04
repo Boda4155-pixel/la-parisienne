@@ -41,7 +41,7 @@ export default function StoreLocation(){
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <style>html,body,#map{height:100%;margin:0;padding:0;background:#111}</style>
+  <style>html,body,#map{height:100%;margin:0;padding:0;background:#f5f5f5}</style>
   </head><body><div id="map"></div>
   <script>
     var map = L.map('map',{zoomControl:false}).setView([30.0074, 31.4913], 13);
@@ -57,7 +57,7 @@ export default function StoreLocation(){
     function handleMsg(data){
       if(data.type==='search'){
         fetch('https://nominatim.openstreetmap.org/search?format=json&q='+encodeURIComponent(data.q)+'&countrycodes=eg&limit=5&accept-language=ar')
-        .then(r=>r.json()).then(res=>{
+      .then(r=>r.json()).then(res=>{
             window.ReactNativeWebView.postMessage(JSON.stringify({type:'results', results:res}));
             if(res.length>0){ map.flyTo([res[0].lat, res[0].lon], 15); setCur(res[0].lat, res[0].lon); window.ReactNativeWebView.postMessage(JSON.stringify({lat:res[0].lat,lng:res[0].lon})); }
           }).catch(()=>{ window.ReactNativeWebView.postMessage(JSON.stringify({type:'results', results:[]})); });
@@ -89,7 +89,7 @@ export default function StoreLocation(){
   return (
     <KeyboardAvoidingView style={s.bg} behavior={Platform.OS==='ios'?'padding':'height'}>
       <View style={[s.header, {paddingTop: insets.top + 10}]}>
-        <TouchableOpacity onPress={()=>router.back()} style={s.back}><Ionicons name="chevron-forward" size={20} color="#fff"/></TouchableOpacity>
+        <TouchableOpacity onPress={()=>router.back()} style={s.back}><Ionicons name="chevron-forward" size={20} color="#111"/></TouchableOpacity>
         <Text style={s.h1}>تحديد موقع المتجر</Text>
         <TouchableOpacity onPress={async()=>{
           let {status}=await Location.requestForegroundPermissionsAsync();
@@ -97,19 +97,19 @@ export default function StoreLocation(){
           let loc=await Location.getCurrentPositionAsync({});
           setCoord({lat:loc.coords.latitude, lng:loc.coords.longitude});
           webRef.current?.postMessage(JSON.stringify({type:'fly', lat:loc.coords.latitude, lng:loc.coords.longitude}));
-        }} style={s.loc}><Ionicons name="locate" size={18} color="#000"/></TouchableOpacity>
+        }} style={s.loc}><Ionicons name="locate" size={18} color="#FFFFFF"/></TouchableOpacity>
       </View>
 
       <View style={s.searchWrap}>
-        <TouchableOpacity onPress={doSearch} style={s.searchBtn}>{searching?<ActivityIndicator size="small" color="#000"/>:<Ionicons name="search" size={18} color="#000"/>}</TouchableOpacity>
-        <TextInput value={search} onChangeText={setSearch} placeholder="ابحث: التجمع الخامس..." placeholderTextColor="#666" style={s.searchInput} onSubmitEditing={doSearch} returnKeyType="search"/>
+        <TouchableOpacity onPress={doSearch} style={s.searchBtn}>{searching?<ActivityIndicator size="small" color="#FFFFFF"/>:<Ionicons name="search" size={18} color="#FFFFFF"/>}</TouchableOpacity>
+        <TextInput value={search} onChangeText={setSearch} placeholder="ابحث: التجمع الخامس..." placeholderTextColor="#999" style={s.searchInput} onSubmitEditing={doSearch} returnKeyType="search"/>
       </View>
 
       {results.length>0 && (
         <View style={s.results}>
           {results.map((r,i)=>(
             <TouchableOpacity key={i} onPress={()=>selectResult(r)} style={s.resultItem}>
-              <Ionicons name="location-outline" size={16} color="#E8C87A"/>
+              <Ionicons name="location-outline" size={16} color="#16A34A"/>
               <Text style={s.resultTxt} numberOfLines={1}>{r.display_name}</Text>
             </TouchableOpacity>
           ))}
@@ -126,40 +126,38 @@ export default function StoreLocation(){
         }}
       />
 
-      {/* ده الجزء اللي كان غاطس - دلوقتي بيطلع فوق الكيبورد */}
       <View style={[s.bottom, {paddingBottom: keyboardHeight > 0? 12 : insets.bottom + 12, marginBottom: keyboardHeight}]}>
         <Text style={s.label}>عنوان المتجر</Text>
         <TextInput
           value={address}
           onChangeText={setAddress}
           placeholder="مثال: التجمع الخامس، شارع التسعين"
-          placeholderTextColor="#555"
+          placeholderTextColor="#999"
           style={s.input}
-          onFocus={()=>{ /* اول ما تدوس عليه الكيبورد هيطلع والبوكس هيطلع فوقه */ }}
         />
         <Text style={s.coord}>📍 {coord.lat.toFixed(5)}, {coord.lng.toFixed(5)}</Text>
-        <TouchableOpacity onPress={save} style={s.save}><Text style={{fontWeight:'bold', color:'#000'}}>{saving?'جاري الحفظ...':'تأكيد وحفظ الموقع ✅'}</Text></TouchableOpacity>
+        <TouchableOpacity onPress={save} style={s.save}><Text style={{fontWeight:'800', color:'#FFFFFF', fontSize:14}}>{saving?'جاري الحفظ...':'تأكيد وحفظ الموقع ✅'}</Text></TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
   );
 }
 
 const s = StyleSheet.create({
-  bg:{flex:1, backgroundColor:'#0F0F0F'},
-  header:{flexDirection:'row', justifyContent:'space-between', alignItems:'center', padding:12},
-  h1:{color:'#fff', fontWeight:'bold', fontSize:16},
-  back:{width:36, height:36, borderRadius:18, backgroundColor:'#1A1A1A', justifyContent:'center', alignItems:'center', borderWidth:1, borderColor:'#222'},
-  loc:{width:36, height:36, borderRadius:18, backgroundColor:'#E8C87A', justifyContent:'center', alignItems:'center'},
-  searchWrap:{flexDirection:'row', alignItems:'center', backgroundColor:'#161616', marginHorizontal:12, borderRadius:12, borderWidth:1, borderColor:'#222', paddingHorizontal:10, marginTop:6},
-  searchInput:{flex:1, height:44, color:'#fff', textAlign:'right'},
-  searchBtn:{width:32, height:32, borderRadius:16, backgroundColor:'#E8C87A', justifyContent:'center', alignItems:'center'},
-  results:{backgroundColor:'#161616', marginHorizontal:12, borderRadius:12, borderWidth:1, borderColor:'#222', marginTop:4, zIndex:20},
-  resultItem:{flexDirection:'row', alignItems:'center', gap:8, padding:12, borderBottomWidth:1, borderBottomColor:'#222'},
-  resultTxt:{color:'#fff', flex:1, fontSize:12},
-  map:{flex:1, backgroundColor:'#111', marginTop:8, marginHorizontal:12, borderRadius:16, overflow:'hidden'},
-  bottom:{backgroundColor:'#1A1A1A', padding:12, borderTopLeftRadius:20, borderTopRightRadius:20, borderTopWidth:1, borderColor:'#222'},
-  label:{color:'#888', fontSize:11, textAlign:'right', marginBottom:6},
-  input:{backgroundColor:'#0F0F0F', borderWidth:1, borderColor:'#222', borderRadius:12, color:'#fff', paddingHorizontal:12, height:48, textAlign:'right'},
-  coord:{color:'#666', fontSize:10, textAlign:'center', marginTop:6},
-  save:{backgroundColor:'#E8C87A', height:50, borderRadius:12, justifyContent:'center', alignItems:'center', marginTop:10}
+  bg:{flex:1, backgroundColor:'#FFFFFF'},
+  header:{flexDirection:'row', justifyContent:'space-between', alignItems:'center', padding:12, borderBottomWidth:1, borderBottomColor:'#F0F0F0', backgroundColor:'#FFFFFF'},
+  h1:{color:'#111', fontWeight:'800', fontSize:16},
+  back:{width:36, height:36, borderRadius:18, backgroundColor:'#FFFFFF', justifyContent:'center', alignItems:'center', borderWidth:1, borderColor:'#E5E5E5'},
+  loc:{width:36, height:36, borderRadius:18, backgroundColor:'#16A34A', justifyContent:'center', alignItems:'center'},
+  searchWrap:{flexDirection:'row', alignItems:'center', backgroundColor:'#F9F9F9', marginHorizontal:12, borderRadius:12, borderWidth:1, borderColor:'#E5E5E5', paddingHorizontal:10, marginTop:10},
+  searchInput:{flex:1, height:44, color:'#111', textAlign:'right', fontWeight:'600'},
+  searchBtn:{width:32, height:32, borderRadius:16, backgroundColor:'#16A34A', justifyContent:'center', alignItems:'center'},
+  results:{backgroundColor:'#FFFFFF', marginHorizontal:12, borderRadius:12, borderWidth:1, borderColor:'#E5E5E5', marginTop:6, zIndex:20},
+  resultItem:{flexDirection:'row', alignItems:'center', gap:8, padding:12, borderBottomWidth:1, borderBottomColor:'#F0F0F0'},
+  resultTxt:{color:'#111', flex:1, fontSize:12, fontWeight:'600'},
+  map:{flex:1, backgroundColor:'#F5F5F5', marginTop:10, marginHorizontal:12, borderRadius:16, overflow:'hidden', borderWidth:1, borderColor:'#E5E5E5'},
+  bottom:{backgroundColor:'#FFFFFF', padding:14, borderTopLeftRadius:20, borderTopRightRadius:20, borderTopWidth:1, borderColor:'#E5E5E5'},
+  label:{color:'#111', fontSize:11, textAlign:'right', marginBottom:6, fontWeight:'700'},
+  input:{backgroundColor:'#F9F9F9', borderWidth:1, borderColor:'#E5E5E5', borderRadius:12, color:'#111', paddingHorizontal:12, height:48, textAlign:'right', fontWeight:'600'},
+  coord:{color:'#16A34A', fontSize:10, textAlign:'center', marginTop:8, fontWeight:'700'},
+  save:{backgroundColor:'#16A34A', height:52, borderRadius:12, justifyContent:'center', alignItems:'center', marginTop:12}
 });

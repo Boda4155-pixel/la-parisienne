@@ -47,7 +47,7 @@ export default function CouponsPage(){
   };
 
   const save = async () => {
-    if(!code ||!value) return Alert.alert(t('admin.coupons.fillRequired'));
+    if(!code ||!value) return Alert.alert(t('admincoupons.fillRequired'));
     let finalDate = expiry? (expiry.includes('-') && expiry.split('-')[0].length===2? (()=>{const [d,m,y]=expiry.split('-'); return `${y}-${m}-${d}`})() : expiry) : null;
 
     const payload:any = {
@@ -77,67 +77,66 @@ export default function CouponsPage(){
 
   const renderCoupon = ({item}:any) => (
     <TouchableOpacity style={s.card} onPress={()=>openEdit(item)}>
-      <TouchableOpacity onPress={()=>del(item.id)} style={s.trash}><Ionicons name="trash-outline" size={18} color="#ff5c5c"/></TouchableOpacity>
+      <TouchableOpacity onPress={()=>del(item.id)} style={s.trash}><Ionicons name="trash-outline" size={18} color="#EF4444"/></TouchableOpacity>
       <View style={{flex:1, alignItems:'flex-end'}}>
-        <Text style={s.code}>{item.code} <Text style={{color:'#E8C87A'}}>{item.discount_type==='percent'?`${item.discount_value}%`:`${item.discount_value}EGP`}</Text></Text>
+        <Text style={s.code}>{item.code} <Text style={{color:'#16A34A'}}>{item.discount_type==='percent'?`${item.discount_value}%`:`${item.discount_value}EGP`}</Text></Text>
         <Text style={s.desc} numberOfLines={1}>
           {item.applicable_type==='all'? t('common:all') : item.applicable_type==='product'? `${t('admin.coupons.product')}: ${products.find(p=>p.id===item.applicable_id)?.name||'...'}` : `Category: ${categories.find(c=>c.id===item.applicable_id)?.name||'...'}`} • {t('admin.coupons.min')} {item.min_order_amount} • {item.expires_at? `${t('admin.coupons.expires')} ${item.expires_at}`: t('admin.coupons.noExpiry')}
         </Text>
       </View>
-      <View style={s.tag}><Ionicons name="pricetag" size={20} color="#E8C87A"/></View>
-      <Ionicons name="create-outline" size={16} color="#666" />
+      <View style={s.tag}><Ionicons name="pricetag" size={20} color="#16A34A"/></View>
     </TouchableOpacity>
   );
 
   return (
     <View style={s.bg}>
       <View style={s.header}>
-        <TouchableOpacity onPress={()=>router.back()} style={s.back}><Ionicons name="chevron-forward" size={20} color="#fff"/></TouchableOpacity>
+        <TouchableOpacity onPress={()=>router.back()} style={s.back}><Ionicons name="chevron-forward" size={20} color="#111"/></TouchableOpacity>
         <View style={{alignItems:'flex-end'}}><Text style={s.h1}>{t('admin.coupons.title')}</Text><Text style={s.sub}>{t('admin.coupons.tapToEdit', { count: coupons.length })}</Text></View>
       </View>
 
-      <TouchableOpacity style={s.newBtn} onPress={openNew}><Text style={{fontWeight:'bold'}}>{t('admin.coupons.add')}</Text><Ionicons name="add" size={20} color="#000"/></TouchableOpacity>
+      <TouchableOpacity style={s.newBtn} onPress={openNew}><Text style={s.newBtnTxt}>{t('admin.coupons.add')}</Text><Ionicons name="add" size={20} color="#FFFFFF"/></TouchableOpacity>
 
       <FlatList data={coupons} keyExtractor={i=>i.id} renderItem={renderCoupon} contentContainerStyle={{padding:16, gap:10, paddingBottom:100}} />
 
       <Modal visible={showModal} animationType="slide" transparent>
         <View style={s.modalBg}>
           <View style={s.modal}>
-            <View style={{flexDirection:'row', justifyContent:'space-between', alignItems:'center', marginBottom:12}}>
-              <TouchableOpacity onPress={()=>setShowModal(false)}><Ionicons name="close" size={24} color="#fff"/></TouchableOpacity>
-              <Text style={{color:'#fff', fontWeight:'bold', fontSize:18}}>{editing? t('admin.coupons.edit'): t('admin.coupons.new')}</Text>
+            <View style={{flexDirection:'row', justifyContent:'space-between', alignItems:'center', marginBottom:16}}>
+              <TouchableOpacity onPress={()=>setShowModal(false)} style={s.closeIcon}><Ionicons name="close" size={22} color="#111"/></TouchableOpacity>
+              <Text style={s.modalTitle}>{editing? t('admin.coupons.edit'): t('admin.coupons.new')}</Text>
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false}>
               <Text style={s.label}>{t('admin.coupons.code')}</Text>
-              <TextInput placeholder="SAVE20" value={code} onChangeText={setCode} style={s.input} autoCapitalize="characters" placeholderTextColor="#666"/>
+              <TextInput placeholder="SAVE20" value={code} onChangeText={setCode} style={s.input} autoCapitalize="characters" placeholderTextColor="#999"/>
 
               <View style={{flexDirection:'row', gap:8}}>
-                <View style={{flex:1}}><Text style={s.label}>{t('admin.coupons.discountValue')}</Text><TextInput placeholder="20" value={value} onChangeText={setValue} keyboardType="numeric" style={s.input} placeholderTextColor="#666"/></View>
+                <View style={{flex:1}}><Text style={s.label}>{t('admin.coupons.discountValue')}</Text><TextInput placeholder="20" value={value} onChangeText={setValue} keyboardType="numeric" style={s.input} placeholderTextColor="#999"/></View>
                 <View style={{flexDirection:'row', gap:6, alignItems:'flex-end', marginBottom:8}}>
-                  <TouchableOpacity style={[s.typeBtn, type==='percent' && {backgroundColor:'#E8C87A'}]} onPress={()=>setType('percent')}><Text style={s.typeTxt}>%</Text></TouchableOpacity>
-                  <TouchableOpacity style={[s.typeBtn, type==='fixed' && {backgroundColor:'#E8C87A'}]} onPress={()=>setType('fixed')}><Text style={s.typeTxt}>EGP</Text></TouchableOpacity>
+                  <TouchableOpacity style={[s.typeBtn, type==='percent' && s.typeBtnActive]} onPress={()=>setType('percent')}><Text style={[s.typeTxt, type==='percent' && s.typeTxtActive]}>%</Text></TouchableOpacity>
+                  <TouchableOpacity style={[s.typeBtn, type==='fixed' && s.typeBtnActive]} onPress={()=>setType('fixed')}><Text style={[s.typeTxt, type==='fixed' && s.typeTxtActive]}>EGP</Text></TouchableOpacity>
                 </View>
               </View>
 
               <Text style={s.label}>{t('admin.coupons.minOrder')}</Text>
-              <TextInput placeholder="200" value={minOrder} onChangeText={setMinOrder} keyboardType="numeric" style={s.input} placeholderTextColor="#666"/>
+              <TextInput placeholder="200" value={minOrder} onChangeText={setMinOrder} keyboardType="numeric" style={s.input} placeholderTextColor="#999"/>
 
               <Text style={s.label}>{t('admin.coupons.expiresAt')}</Text>
-              <TextInput placeholder="2026-12-31" value={expiry} onChangeText={setExpiry} style={s.input} placeholderTextColor="#666"/>
+              <TextInput placeholder="2026-12-31" value={expiry} onChangeText={setExpiry} style={s.input} placeholderTextColor="#999"/>
 
               <Text style={s.label}>{t('admin.coupons.applicableTo')}</Text>
               <View style={{flexDirection:'row', gap:6, marginBottom:10}}>
-                <TouchableOpacity style={[s.typeBtn, {flex:1}, appType==='all'&&{backgroundColor:'#E8C87A'}]} onPress={()=>{setAppType('all'); setAppId(null); setAppName(t('common:all'))}}><Text style={s.typeTxt}>{t('common:all')}</Text></TouchableOpacity>
-                <TouchableOpacity style={[s.typeBtn, {flex:1}, appType==='category'&&{backgroundColor:'#E8C87A'}]} onPress={()=>setAppType('category')}><Text style={s.typeTxt}>Category</Text></TouchableOpacity>
-                <TouchableOpacity style={[s.typeBtn, {flex:1}, appType==='product'&&{backgroundColor:'#E8C87A'}]} onPress={()=>setAppType('product')}><Text style={s.typeTxt}>{t('admin.products.title')}</Text></TouchableOpacity>
+                <TouchableOpacity style={[s.typeBtn, {flex:1}, appType==='all'&& s.typeBtnActive]} onPress={()=>{setAppType('all'); setAppId(null); setAppName(t('common:all'))}}><Text style={[s.typeTxt, appType==='all'&& s.typeTxtActive]}>{t('common:all')}</Text></TouchableOpacity>
+                <TouchableOpacity style={[s.typeBtn, {flex:1}, appType==='category'&& s.typeBtnActive]} onPress={()=>setAppType('category')}><Text style={[s.typeTxt, appType==='category'&& s.typeTxtActive]}>Category</Text></TouchableOpacity>
+                <TouchableOpacity style={[s.typeBtn, {flex:1}, appType==='product'&& s.typeBtnActive]} onPress={()=>setAppType('product')}><Text style={[s.typeTxt, appType==='product'&& s.typeTxtActive]}>{t('admin.products.title')}</Text></TouchableOpacity>
               </View>
 
               {appType==='category' && (
                 <View style={s.listBox}>
                   {categories.map(c=>(
-                    <TouchableOpacity key={c.id} style={[s.listItem, appId===c.id && {backgroundColor:'#E8C87A'}]} onPress={()=>{setAppId(c.id); setAppName(c.name)}}>
-                      <Text style={{color: appId===c.id?'#000':'#fff'}}>{c.name}</Text>
+                    <TouchableOpacity key={c.id} style={[s.listItem, appId===c.id && s.listItemActive]} onPress={()=>{setAppId(c.id); setAppName(c.name)}}>
+                      <Text style={[s.listItemTxt, appId===c.id && s.listItemTxtActive]}>{c.name}</Text>
                     </TouchableOpacity>
                   ))}
                 </View>
@@ -145,15 +144,15 @@ export default function CouponsPage(){
               {appType==='product' && (
                 <View style={s.listBox}>
                   {products.map(p=>(
-                    <TouchableOpacity key={p.id} style={[s.listItem, appId===p.id && {backgroundColor:'#E8C87A'}]} onPress={()=>{setAppId(p.id); setAppName(p.name)}}>
-                      <Text style={{color: appId===p.id?'#000':'#fff'}}>{p.name}</Text>
+                    <TouchableOpacity key={p.id} style={[s.listItem, appId===p.id && s.listItemActive]} onPress={()=>{setAppId(p.id); setAppName(p.name)}}>
+                      <Text style={[s.listItemTxt, appId===p.id && s.listItemTxtActive]}>{p.name}</Text>
                     </TouchableOpacity>
                   ))}
                 </View>
               )}
-              <Text style={{color:'#E8C87A', textAlign:'right', fontSize:12, marginBottom:12}}>{t('admin.coupons.selected')}: {appName}</Text>
+              <Text style={s.selectedTxt}>{t('admin.coupons.selected')}: {appName}</Text>
 
-              <TouchableOpacity style={s.saveBtn} onPress={save}><Text style={{fontWeight:'bold', color:'#000'}}>{editing? t('common:save'): t('admin.coupons.create')}</Text></TouchableOpacity>
+              <TouchableOpacity style={s.saveBtn} onPress={save}><Text style={s.saveBtnTxt}>{editing? t('common:save'): t('admin.coupons.create')}</Text></TouchableOpacity>
               <View style={{height:40}}/>
             </ScrollView>
           </View>
@@ -162,18 +161,43 @@ export default function CouponsPage(){
     </View>
   );
 }
+
 const s = StyleSheet.create({
-  bg:{flex:1, backgroundColor:'#0F0F0F'},
+  bg:{flex:1, backgroundColor:'#FFFFFF'},
   header:{flexDirection:'row', justifyContent:'space-between', padding:16, paddingTop:60, alignItems:'center'},
-  h1:{color:'#fff', fontSize:26, fontWeight:'bold'}, sub:{color:'#E8C87A', fontSize:11}, back:{width:36, height:36, borderRadius:18, backgroundColor:'#1A1A1A', justifyContent:'center', alignItems:'center', borderWidth:1, borderColor:'#222'},
-  newBtn:{backgroundColor:'#E8C87A', marginHorizontal:16, height:44, borderRadius:12, flexDirection:'row', justifyContent:'center', alignItems:'center', gap:6},
-  card:{backgroundColor:'#161616', borderRadius:14, padding:14, flexDirection:'row', alignItems:'center', gap:10, borderWidth:1, borderColor:'#222'},
-  tag:{width:36, height:36, borderRadius:10, backgroundColor:'#1E1E1E', justifyContent:'center', alignItems:'center'}, code:{color:'#fff', fontWeight:'bold', fontSize:14}, desc:{color:'#888', fontSize:10, marginTop:2, textAlign:'right'},
-  trash:{width:32, height:32, borderRadius:8, backgroundColor:'#1A1A1A', justifyContent:'center', alignItems:'center'},
-  modalBg:{flex:1, backgroundColor:'rgba(0,0,0,0.7)', justifyContent:'flex-end'}, modal:{backgroundColor:'#161616', borderTopLeftRadius:24, borderTopRightRadius:24, padding:16, maxHeight:'90%', borderWidth:1, borderColor:'#222'},
-  label:{color:'#888', fontSize:10, textAlign:'right', marginBottom:4, marginTop:8},
-  input:{backgroundColor:'#0F0F0F', borderWidth:1, borderColor:'#222', borderRadius:10, color:'#fff', paddingHorizontal:12, height:44, marginBottom:8},
-  typeBtn:{height:44, borderRadius:10, backgroundColor:'#1A1A1A', justifyContent:'center', alignItems:'center', borderWidth:1, borderColor:'#222', paddingHorizontal:14}, typeTxt:{color:'#fff', fontWeight:'bold', fontSize:12},
-  saveBtn:{backgroundColor:'#E8C87A', height:50, borderRadius:12, justifyContent:'center', alignItems:'center', marginTop:10},
-  listBox:{maxHeight:150, backgroundColor:'#0F0F0F', borderRadius:10, borderWidth:1, borderColor:'#222'}, listItem:{padding:12, borderBottomWidth:1, borderBottomColor:'#222'}
+  h1:{color:'#111', fontSize:26, fontWeight:'800'},
+  sub:{color:'#16A34A', fontSize:12, fontWeight:'700'},
+  back:{width:36, height:36, borderRadius:18, backgroundColor:'#FFFFFF', justifyContent:'center', alignItems:'center', borderWidth:1, borderColor:'#E5E5E5'},
+
+  newBtn:{backgroundColor:'#16A34A', marginHorizontal:16, height:46, borderRadius:12, flexDirection:'row', justifyContent:'center', alignItems:'center', gap:6},
+  newBtnTxt:{fontWeight:'800', color:'#FFFFFF', fontSize:14},
+
+  card:{backgroundColor:'#FFFFFF', borderRadius:14, padding:14, flexDirection:'row', alignItems:'center', gap:10, borderWidth:1, borderColor:'#E5E5E5'},
+  tag:{width:38, height:38, borderRadius:10, backgroundColor:'#F0FDF4', justifyContent:'center', alignItems:'center', borderWidth:1, borderColor:'#BBF7D0'},
+  code:{color:'#111', fontWeight:'800', fontSize:15},
+  desc:{color:'#555', fontSize:11, marginTop:4, textAlign:'right', fontWeight:'500'},
+  trash:{width:34, height:34, borderRadius:8, backgroundColor:'#FEF2F2', justifyContent:'center', alignItems:'center', borderWidth:1, borderColor:'#FECACA'},
+
+  modalBg:{flex:1, backgroundColor:'rgba(0,0,0,0.35)', justifyContent:'flex-end'},
+  modal:{backgroundColor:'#FFFFFF', borderTopLeftRadius:24, borderTopRightRadius:24, padding:20, maxHeight:'90%', borderWidth:1, borderColor:'#E5E5E5'},
+  modalTitle:{color:'#111', fontWeight:'800', fontSize:19},
+  closeIcon:{width:36, height:36, borderRadius:18, backgroundColor:'#F5F5F5', justifyContent:'center', alignItems:'center'},
+
+  label:{color:'#111', fontSize:12, textAlign:'right', marginBottom:6, marginTop:12, fontWeight:'700'},
+  input:{backgroundColor:'#F9F9F9', borderWidth:1, borderColor:'#E5E5E5', borderRadius:10, color:'#111', paddingHorizontal:14, height:48, marginBottom:4, fontSize:14, fontWeight:'600'},
+
+  typeBtn:{height:44, borderRadius:10, backgroundColor:'#FFFFFF', justifyContent:'center', alignItems:'center', borderWidth:1.5, borderColor:'#E5E5E5', paddingHorizontal:16},
+  typeBtnActive:{backgroundColor:'#16A34A', borderColor:'#16A34A'},
+  typeTxt:{color:'#111', fontWeight:'700', fontSize:12},
+  typeTxtActive:{color:'#FFFFFF'},
+
+  saveBtn:{backgroundColor:'#16A34A', height:52, borderRadius:14, justifyContent:'center', alignItems:'center', marginTop:16},
+  saveBtnTxt:{fontWeight:'800', color:'#FFFFFF', fontSize:15},
+
+  listBox:{maxHeight:160, backgroundColor:'#FFFFFF', borderRadius:12, borderWidth:1, borderColor:'#E5E5E5', marginTop:4},
+  listItem:{padding:14, borderBottomWidth:1, borderBottomColor:'#F5F5F5'},
+  listItemActive:{backgroundColor:'#16A34A'},
+  listItemTxt:{color:'#111', fontSize:14, fontWeight:'600'},
+  listItemTxtActive:{color:'#FFFFFF'},
+  selectedTxt:{color:'#16A34A', textAlign:'right', fontSize:12, marginTop:10, marginBottom:6, fontWeight:'700'}
 });
