@@ -1,93 +1,133 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Linking, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Linking, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { supabase } from '../../../lib/supabase';
 
-export default function OrdersPage() {
+export default function OrdersDashboard() {
   const [orders, setOrders] = useState<any[]>([]);
-  const [filter, setFilter] = useState<'open' | 'closed'>('open');
   const [loading, setLoading] = useState(true);
 
-  const loadOrders = async () => {
-    setLoading(true);
-    const openStatus = ['pending','preparing','ready','on_the_way','picked_up','new'];
-    const closedStatus = ['delivered','cancelled','closed','completed'];
-
-    const { data, error } = await supabase
-     .from('orders')
-     .select('*')
-     .in('status', filter === 'open'? openStatus : closedStatus)
-     .order('created_at', { ascending: false });
-
-    if (!error) setOrders(data || []);
+  const loadData = async () => {
+    const { data } = await supabase.from('orders').select('*').order('created_at', { ascending: false });
+    if (data) setOrders(data);
     setLoading(false);
   };
 
-  useEffect(() => {
-    loadOrders();
-    const ch = supabase.channel('orders-real')
-     .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => loadOrders())
-     .subscribe();
-    return () => { supabase.removeChannel(ch); };
-  }, [filter]);
+  useEffect(() => { loadData(); }, []);
 
-  if (loading) return <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}><ActivityIndicator size="large" color="#2D1E16" /></View>;
+  const updateStatus = async (id: string, newStatus: string) => {
+    try {
+      setOrders(prev => prev.map(o => o.id === id ? { ...o, status: newStatus } : o));
+      const { error } = await supabase.from('orders').update({ status: newStatus }).eq('id', id);
+      if (error) throw error;
+    } catch (e: any) {
+      Alert.alert('خطأ', e.message);
+      loadData();
+    }
+  };
+
+  const getStatusLabel = (status: string) => {
+    if (status === 'pending' || status === 'new') return 'جديد - بانتظار القبول';
+    if (status === 'preparing') return 'قيد التجهيز 👨‍🍳';
+    if (status === 'ready') return 'جاهز للتوصيل 🛵 - ظهر للدليفري';
+    if (status === 'out_for_delivery') return 'خرج للتوصيل';
+    if (status === 'delivered') return 'تم التوصيل ✅';
+    if (status === 'cancelled') return 'ملغي ❌';
+    return status;
+  };
+
+  if (loading) return <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F5F3FF' }}><ActivityIndicator color="#7C4DFF" /></View>;
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#F8F6F3' }}>
-      <View style={{ backgroundColor: 'white', paddingTop: 50, paddingHorizontal: 16, paddingBottom: 12 }}>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Text style={{ fontWeight: '900', fontSize: 18 }}>طلبات جارية</Text>
-          <View style={{ flexDirection: 'row', gap: 8 }}>
-            <TouchableOpacity onPress={() => setFilter('closed')} style={{ backgroundColor: filter === 'closed'? '#2D1E16' : '#F0F0F0', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20 }}>
-              <Text style={{ fontSize: 12, color: filter === 'closed'? 'white' : '#888', fontWeight: '700' }}>مغلقة</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => setFilter('open')} style={{ backgroundColor: filter === 'open'? '#7C4DFF' : '#F0F0F0', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20 }}>
-              <Text style={{ fontSize: 12, color: filter === 'open'? 'white' : '#888', fontWeight: '700' }}>مفتوح</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+    <View style={{ flex: 1, backgroundColor: '#F5F3FF' }}>
+      <View style={{ backgroundColor: '#8B5CF6', paddingTop: 55, paddingBottom: 18, paddingHorizontal: 16, borderBottomLeftRadius: 24, borderBottomRightRadius: 24 }}>
+        <Text style={{ color: 'white', fontWeight: '900', fontSize: 20, textAlign: 'right' }}>Abdelrahman El Sawy</Text>
+        <Text style={{ color: '#E9D5FF', fontSize: 12, textAlign: 'right' }}>إدارة الطلبات - {orders.length} طلب</Text>
       </View>
 
-      <ScrollView contentContainerStyle={{ padding: 12, paddingBottom: 120 }}>
-        {orders.length === 0? (
-          <View style={{ marginTop: 120, alignItems: 'center' }}>
-            <Ionicons name="receipt-outline" size={64} color="#DDD" />
-            <Text style={{ marginTop: 12, color: '#999', fontWeight: '700' }}>مفيش طلبات {filter === 'open'? 'مفتوحة' : 'مغلقة'}</Text>
-            <Text style={{ fontSize: 12, color: '#BBB', marginTop: 6 }}>الطلبات الحقيقية من Supabase هتظهر هنا</Text>
-          </View>
-        ) : orders.map((order) => {
-          let items: any[] = [];
-          try { items = typeof order.items === 'string'? JSON.parse(order.items) : order.items || []; } catch {}
-          const time = new Date(order.created_at).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+      <ScrollView contentContainerStyle={{ padding: 14, gap: 14, paddingBottom: 110 }}>
+        {orders.map(o => {
+          const isPending = o.status === 'pending' || o.status === 'new';
+          const isPreparing = o.status === 'preparing';
+          const isReady = o.status === 'ready' || o.status === 'out_for_delivery';
 
           return (
-            <View key={order.id} style={{ backgroundColor: 'white', borderRadius: 16, marginBottom: 12, borderWidth: 1, borderColor: '#EEE', overflow: 'hidden' }}>
-              <View style={{ backgroundColor: order.status === 'cancelled'? '#FFEBEE' : '#EDE7F6', padding: 12, flexDirection: 'row', justifyContent: 'space-between' }}>
-                <Text style={{ fontWeight: '900', fontSize: 13 }}>طلب #{order.id.slice(0, 6)} • {order.status}</Text>
-                <Text style={{ fontSize: 11, fontWeight: '700' }}>{time}</Text>
+            <View key={o.id} style={{ backgroundColor: 'white', borderRadius: 18, overflow: 'hidden', elevation: 3, borderWidth: isReady ? 2 : 0, borderColor: isReady ? '#22C55E' : 'transparent' }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 12, backgroundColor: isPending ? '#FEF9C3' : isPreparing ? '#E0E7FF' : isReady ? '#DCFCE7' : '#F6F4FF' }}>
+                <View style={{ backgroundColor: isPending ? '#FEF08A' : isPreparing ? '#C7D2FE' : isReady ? '#86EFAC' : '#E0E7FF', paddingHorizontal: 12, paddingVertical: 5, borderRadius: 10 }}>
+                  <Text style={{ fontSize: 11, fontWeight: '900' }}>{getStatusLabel(o.status)}</Text>
+                </View>
+                <Text style={{ fontWeight: '900', fontSize: 15 }}>#{o.id.slice(0, 8).toUpperCase()}</Text>
               </View>
 
-              <View style={{ padding: 12, gap: 10 }}>
-                <Text style={{ fontWeight: '700', textAlign: 'right' }}>{order.customer_name}</Text>
-                {order.phone? (
-                  <TouchableOpacity onPress={() => Linking.openURL(`tel:${order.phone}`)} style={{ backgroundColor: '#E0F2F1', padding: 12, borderRadius: 10, flexDirection: 'row', justifyContent: 'space-between' }}>
-                    <Ionicons name="call" size={16} color="#00796B" />
-                    <Text style={{ fontWeight: '800', flex: 1, textAlign: 'right' }}>{order.phone}</Text>
-                  </TouchableOpacity>
-                ) : null}
-                <Text style={{ fontSize: 12, color: '#666', textAlign: 'right' }}>{order.address}</Text>
-
-                <View style={{ borderTopWidth: 1, borderTopColor: '#F0F0F0', paddingTop: 10 }}>
-                  {items.map((it: any, i: number) => (
-                    <View key={i} style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
-                      <Text style={{ fontSize: 12 }}>{it.price} ج</Text>
-                      <Text style={{ fontSize: 12, flex: 1, textAlign: 'right' }}>{it.qty || it.quantity || 1}x {it.name}</Text>
-                    </View>
-                  ))}
+              <View style={{ padding: 14, gap: 12 }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Text style={{ fontWeight: '900', fontSize: 18, color: '#7C4DFF' }}>{o.total || o.total_amount} ج</Text>
+                  <Text style={{ fontSize: 13, fontWeight: '600' }}>{o.payment_method === 'cash' ? 'كاش عند التسليم 💵' : o.payment_method}</Text>
                 </View>
 
-                <Text style={{ fontWeight: '900', textAlign: 'right', backgroundColor: '#F5F5F5', padding: 8, borderRadius: 8 }}>الإجمالي: {order.total_price} ج</Text>
+                <TouchableOpacity onPress={() => Linking.openURL(`tel:${o.phone}`)} style={{ backgroundColor: '#F9F9F9', borderRadius: 12, padding: 10, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Ionicons name="call" size={18} color="#7C4DFF" />
+                  <View style={{ alignItems: 'flex-end' }}>
+                    <Text style={{ fontWeight: '700', fontSize: 13 }}>{o.phone}</Text>
+                    <Text style={{ fontSize: 11, color: '#888' }}>اضغط للاتصال</Text>
+                  </View>
+                </TouchableOpacity>
+
+                <View style={{ backgroundColor: '#F8F7FF', borderRadius: 12, padding: 12, gap: 8, borderWidth: 1, borderColor: '#EDE9FE' }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 6 }}>
+                    <Text style={{ fontSize: 14, fontWeight: '700', textAlign: 'right', flex: 1, lineHeight: 22 }}>
+                      {o.delivery_address_text || `${o.street || ''} - عمارة ${o.building || ''} - شقة ${o.apartment || ''} - دور ${o.floor || ''}`}
+                    </Text>
+                    <Text style={{ fontSize: 16 }}>📍</Text>
+                  </View>
+                  {(o.lat && o.lng) && (
+                    <TouchableOpacity onPress={() => Linking.openURL(`https://maps.google.com/?q=${o.lat},${o.lng}`)} style={{ backgroundColor: 'white', borderRadius: 8, padding: 8, alignItems: 'center', marginTop: 4, borderWidth: 1, borderColor: '#DDD' }}>
+                      <Text style={{ fontSize: 12, fontWeight: '700', color: '#7C4DFF' }}>📍 فتح على الخريطة</Text>
+                    </TouchableOpacity>
+                  )}
+                  {o.customer_note && <Text style={{ textAlign: 'right', fontSize: 12, color: '#666' }}>📝 {o.customer_note}</Text>}
+                </View>
+
+                {/* ازرار حسب الحالة */}
+                {isPending && (
+                  <View style={{ flexDirection: 'row', gap: 10, marginTop: 4 }}>
+                    <TouchableOpacity onPress={() => updateStatus(o.id, 'preparing')} style={{ flex: 2, backgroundColor: '#7C4DFF', paddingVertical: 14, borderRadius: 12, alignItems: 'center' }}>
+                      <Text style={{ color: 'white', fontWeight: '900', fontSize: 15 }}>قبول ✅</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => updateStatus(o.id, 'cancelled')} style={{ flex: 1, backgroundColor: 'white', borderWidth: 1.5, borderColor: '#FECACA', paddingVertical: 14, borderRadius: 12, alignItems: 'center' }}>
+                      <Text style={{ color: '#EF4444', fontWeight: '900' }}>رفض</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+
+                {isPreparing && (
+                  <View style={{ flexDirection: 'row', gap: 10, marginTop: 4 }}>
+                    <TouchableOpacity onPress={() => updateStatus(o.id, 'ready')} style={{ flex: 2, backgroundColor: '#16A34A', paddingVertical: 14, borderRadius: 12, alignItems: 'center' }}>
+                      <Text style={{ color: 'white', fontWeight: '900', fontSize: 15 }}>جاهز للتوصيل 🛵</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => updateStatus(o.id, 'cancelled')} style={{ flex: 1, backgroundColor: 'white', borderWidth: 1.5, borderColor: '#FECACA', paddingVertical: 14, borderRadius: 12, alignItems: 'center' }}>
+                      <Text style={{ color: '#EF4444', fontWeight: '900' }}>الغاء</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+
+                {isReady && (
+                  <View style={{ gap: 8 }}>
+                    <View style={{ backgroundColor: '#F0FDF4', padding: 10, borderRadius: 10, alignItems: 'center', borderWidth: 1, borderColor: '#BBF7D0' }}>
+                      <Text style={{ color: '#16A34A', fontWeight: '900', fontSize: 13 }}>✅ الطلب ظاهر الآن للدليفري</Text>
+                    </View>
+                    <TouchableOpacity onPress={() => updateStatus(o.id, 'delivered')} style={{ backgroundColor: '#0F172A', paddingVertical: 12, borderRadius: 12, alignItems: 'center' }}>
+                      <Text style={{ color: 'white', fontWeight: '800' }}>تأكيد التوصيل - تم التسليم</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+
+                {(o.status === 'delivered' || o.status === 'cancelled') && (
+                  <View style={{ backgroundColor: o.status === 'delivered' ? '#F0FDF4' : '#FEF2F2', padding: 10, borderRadius: 10, alignItems: 'center' }}>
+                    <Text style={{ color: o.status === 'delivered' ? '#16A34A' : '#EF4444', fontWeight: '700', fontSize: 13 }}>{getStatusLabel(o.status)}</Text>
+                  </View>
+                )}
               </View>
             </View>
           );

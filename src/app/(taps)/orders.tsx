@@ -1,131 +1,151 @@
-import { router } from "expo-router";
-import { Package } from "lucide-react-native";
-import { useTranslation } from "react-i18next";
-import {
-  ActivityIndicator,
-  FlatList,
-  Pressable,
-  Text,
-  View,
-} from "react-native";
+import { useFocusEffect } from "expo-router";
+import { Banknote, CheckCircle2, ChevronDown, ChevronUp, Clock, CreditCard, MapPin, Package, Truck } from "lucide-react-native";
+import { useCallback, useState } from "react";
+import { FlatList, Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-
-import { useSupabaseQuery } from "../../../hooks/useSupabaseQuery";
-import { getOrders } from "../../../lib/queries";
+import { supabase } from "../../../lib/supabase";
 import { useAuthStore } from "../../../store/auth.store";
 
-const STATUS_COLORS: Record<string, string> = {
-  pending: "#D4A574",
-  confirmed: "#7A9E7E",
-  preparing: "#B18C55",
-  out_for_delivery: "#8B6F8B",
-  delivered: "#4A7C59",
-  cancelled: "#C0392B",
+const C = { orange:"#FF6B00", white:"#fff", gray:"#8E8E93", light:"#F6F6F6", border:"#EEEEEE", green:"#22C55E", blue:"#3B82F6" };
+
+const STATUS_CONFIG:any = {
+  pending: { label:"قيد الانتظار", color:"#F59E0B", bg:"#FEF3C7", icon: Clock },
+  preparing: { label:"جاري التجهيز", color:"#3B82F6", bg:"#DBEAFE", icon: Package },
+  out_for_delivery: { label:"في الطريق", color:"#8B5CF6", bg:"#EDE9FE", icon: Truck },
+  delivered: { label:"تم التوصيل", color:"#22C55E", bg:"#DCFCE7", icon: CheckCircle2 },
+  cancelled: { label:"ملغي", color:"#EF4444", bg:"#FEE2E2", icon: Clock },
 };
 
-export default function Orders() {
-  const { t } = useTranslation();
-  const user = useAuthStore((state) => state.user);
+const TABS = [
+  { key:"all", label:"الكل" },
+  { key:"pending", label:"منتظر" },
+  { key:"preparing", label:"يتجهز" },
+  { key:"out_for_delivery", label:"في الطريق" },
+  { key:"delivered", label:"تم" },
+];
 
-  const {
-    data: orders,
-    loading,
-    error,
-  } = useSupabaseQuery({
-    fn: getOrders,
-    params: { userId: user?.id ?? "" },
-    skip: !user,
-  });
+export default function Orders(){
+  const { profile } = useAuthStore() as any;
+  const [orders, setOrders] = useState<any[]>([]);
+  const [filter, setFilter] = useState("all");
+  const [expanded, setExpanded] = useState<string|null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
-  if (!user) {
+  const load = async () => {
+    if(!profile?.id) return;
+    setRefreshing(true);
+    const { data, error } = await supabase
+      .from("orders")
+      .select(`*, order_items(*, products(name, image_url))`)
+      .eq("user_id", profile.id)
+      .order("created_at", {ascending:false});
+    if(!error && data) setOrders(data);
+    setRefreshing(false);
+  };
+
+  useFocusEffect(useCallback(()=>{ load(); 
+    const ch = supabase.channel('orders-realtime').on('postgres_changes',{event:'*',schema:'public',table:'orders', filter:`user_id=eq.${profile?.id}`},()=>load()).subscribe();
+    return ()=>{ supabase.removeChannel(ch); }
+  },[profile?.id]));
+
+  const filtered = filter==="all" ? orders : orders.filter(o=>o.status===filter);
+
+  const renderItem = ({item}:{item:any}) => {
+    const cfg = STATUS_CONFIG[item.status] || STATUS_CONFIG.pending;
+    const Icon = cfg.icon;
+    const isOpen = expanded===item.id;
+    const date = new Date(item.created_at).toLocaleDateString('ar-EG',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+
     return (
-      <SafeAreaView className="flex-1 bg-white items-center justify-center px-8">
-        <Package size={56} color="#D1D5DB" />
-        <Text className="h2-bold text-dark-100 mt-6 text-center">
-          {t("orders.loginRequired")}
-        </Text>
-        <Pressable
-          onPress={() => router.push("/sign-in")}
-          className="bg-dark-100 rounded-full px-8 py-4 mt-6"
-        >
-          <Text className="paragraph-bold text-white">{t("orders.login")}</Text>
+      <View style={{ backgroundColor:'#fff', borderRadius:20, borderWidth:1, borderColor:C.border, marginBottom:14, overflow:'hidden' }}>
+        {/* Header */}
+        <Pressable onPress={()=> setExpanded(isOpen? null : item.id)} style={{ padding:16 }}>
+          <View style={{ flexDirection:'row', justifyContent:'space-between', alignItems:'center' }}>
+            <View style={{ flexDirection:'row', alignItems:'center', gap:8, backgroundColor:cfg.bg, paddingHorizontal:10, paddingVertical:6, borderRadius:20 }}>
+              <Icon size={14} color={cfg.color} />
+              <Text style={{ color:cfg.color, fontWeight:'800', fontSize:12 }}>{cfg.label}</Text>
+            </View>
+            <Text style={{ color:C.gray, fontSize:12 }}>{date}</Text>
+          </View>
+
+          <View style={{ flexDirection:'row', justifyContent:'space-between', marginTop:12 }}>
+            <Text style={{ fontWeight:'900', fontSize:16 }}>#{item.id.slice(0,8).toUpperCase()}</Text>
+            <Text style={{ fontWeight:'900', fontSize:16 }}>EGP {item.total || item.total_amount}</Text>
+          </View>
+
+          <View style={{ flexDirection:'row', justifyContent:'space-between', marginTop:8, alignItems:'center' }}>
+            <View style={{ flexDirection:'row', alignItems:'center', gap:4 }}>
+              {item.payment_method==='cash' ? <Banknote size={14} color={C.gray}/> : <CreditCard size={14} color={C.gray}/>}
+              <Text style={{ color:C.gray, fontSize:12 }}>{item.payment_method==='cash' ? 'كاش عند الاستلام' : 'فيزا عند الاستلام'} • {item.order_items?.length||0} منتجات</Text>
+            </View>
+            {isOpen ? <ChevronUp size={18} color={C.gray}/> : <ChevronDown size={18} color={C.gray}/>}
+          </View>
         </Pressable>
-      </SafeAreaView>
+
+        {isOpen && (
+          <View style={{ borderTopWidth:1, borderColor:C.border, backgroundColor:"#FFFBF8" }}>
+            <View style={{ padding:16, gap:10 }}>
+              {item.order_items?.map((it:any)=>(
+                <View key={it.id} style={{ flexDirection:'row', justifyContent:'space-between', alignItems:'center' }}>
+                  <Text style={{ fontWeight:'700' }}>EGP {it.price * it.quantity}</Text>
+                  <View style={{ flexDirection:'row', gap:8, alignItems:'center', flex:1, justifyContent:'flex-end' }}>
+                    <View style={{ alignItems:'flex-end' }}>
+                      <Text style={{ fontWeight:'700', textAlign:'right' }} numberOfLines={1}>{it.products?.name || 'منتج'}</Text>
+                      <Text style={{ color:C.gray, fontSize:12 }}>x{it.quantity}</Text>
+                    </View>
+                    <View style={{ width:40, height:40, borderRadius:10, backgroundColor:C.light }} />
+                  </View>
+                </View>
+              ))}
+            </View>
+
+            <View style={{ padding:16, gap:6, borderTopWidth:1, borderColor:C.border, borderStyle:'dashed' as any }}>
+              <View style={{ flexDirection:'row', justifyContent:'space-between' }}><Text style={{color:C.gray}}>Subtotal</Text><Text>EGP {(item.total||item.total_amount) - (item.delivery_fee||0)}</Text></View>
+              <View style={{ flexDirection:'row', justifyContent:'space-between' }}><Text style={{color:C.gray}}>Delivery</Text><Text>{item.delivery_fee===0? 'FREE' : `EGP ${item.delivery_fee}`}</Text></View>
+              {item.delivery_address_text && (
+                <View style={{ flexDirection:'row', gap:6, marginTop:8, backgroundColor:'#fff', padding:10, borderRadius:12, borderWidth:1, borderColor:C.border }}>
+                  <MapPin size={14} color={C.orange} style={{marginTop:2}}/>
+                  <Text style={{ flex:1, textAlign:'right', color:C.gray, fontSize:12 }}>{item.delivery_address_text}</Text>
+                </View>
+              )}
+            </View>
+          </View>
+        )}
+      </View>
     );
-  }
+  };
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
-      <View className="px-5 py-3">
-        <Text className="h1-bold text-dark-100">{t("tabs.orders")}</Text>
+    <SafeAreaView style={{ flex:1, backgroundColor:C.light }}>
+      <View style={{ padding:16, backgroundColor:'#fff' }}>
+        <Text style={{ fontWeight:'900', fontSize:22, textAlign:'right' }}>طلباتي</Text>
+        <Text style={{ color:C.gray, textAlign:'right', marginTop:2 }}>{orders.length} طلب حتى الان</Text>
       </View>
 
-      {loading ? (
-        <View className="flex-1 items-center justify-center">
-          <ActivityIndicator color="#FE8C00" />
-        </View>
-      ) : error ? (
-        <View className="flex-1 items-center justify-center px-5">
-          <Text className="paragraph-regular text-gray-100 text-center">
-            {t("common.errorLoading")}
-          </Text>
-        </View>
-      ) : (
-        <FlatList
-          data={orders}
-          keyExtractor={(item) => item.id}
-          contentContainerClassName="px-5 pt-2 gap-y-3 pb-28"
-          renderItem={({ item }) => (
-            <Pressable
-              onPress={() =>
-                router.push({
-                  pathname: "/order/[id]",
-                  params: { id: item.id },
-                })
-              }
-              className="border border-gray-200 rounded-2xl p-4"
-            >
-              <View className="flex-row items-center justify-between">
-                <Text className="paragraph-bold text-dark-100">
-                  #{item.id.slice(0, 8).toUpperCase()}
-                </Text>
-
-                <View
-                  className="rounded-full px-3 py-1"
-                  style={{
-                    backgroundColor: STATUS_COLORS[item.status] ?? "#9CA3AF",
-                  }}
-                >
-                  <Text className="small-bold text-white">
-                    {t(`orders.status.${item.status}`)}
-                  </Text>
-                </View>
-              </View>
-
-              <Text className="paragraph-regular text-gray-100 mt-2">
-                {new Date(item.created_at).toLocaleDateString()}
-              </Text>
-
-              <View className="flex-row items-center justify-between mt-3 pt-3 border-t border-gray-100">
-                <Text className="paragraph-regular text-gray-100">
-                  {t("orders.total")}
-                </Text>
-                <Text className="paragraph-bold text-dark-100">
-                  {item.total} {t("common.currency")}
-                </Text>
-              </View>
+      <View style={{ backgroundColor:'#fff', borderBottomWidth:1, borderColor:C.border }}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ padding:12, gap:8, flexDirection:'row-reverse' }}>
+          {TABS.map(t=>(
+            <Pressable key={t.key} onPress={()=> setFilter(t.key)} style={{ paddingHorizontal:16, height:36, borderRadius:18, backgroundColor: filter===t.key? C.orange : C.light, justifyContent:'center' }}>
+              <Text style={{ fontWeight:'800', color: filter===t.key? '#fff' : C.gray }}>{t.label}</Text>
             </Pressable>
-          )}
-          ListEmptyComponent={
-            <View className="items-center py-16 px-8">
-              <Package size={48} color="#D1D5DB" />
-              <Text className="paragraph-regular text-gray-100 mt-4 text-center">
-                {t("orders.empty")}
-              </Text>
-            </View>
-          }
-        />
-      )}
+          ))}
+        </ScrollView>
+      </View>
+
+      <FlatList
+        data={filtered}
+        keyExtractor={i=>i.id}
+        renderItem={renderItem}
+        contentContainerStyle={{ padding:16, paddingBottom:100 }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={load} colors={[C.orange]} />}
+        ListEmptyComponent={
+          <View style={{ alignItems:'center', marginTop:80, gap:10 }}>
+            <View style={{ width:80, height:80, borderRadius:40, backgroundColor:'#fff', justifyContent:'center', alignItems:'center' }}><Package size={32} color={C.gray}/></View>
+            <Text style={{ fontWeight:'800', fontSize:16 }}>لسه مفيش طلبات</Text>
+            <Text style={{ color:C.gray }}>اول اوردر هيظهر هنا</Text>
+          </View>
+        }
+      />
     </SafeAreaView>
   );
 }
