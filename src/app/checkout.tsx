@@ -51,34 +51,26 @@ export default function Checkout() {
     try{
       const fullAddress = `${street}, عمارة ${building}, شقة ${apt}, دور ${floor} - ${notes}`;
 
-      // الحل: لازم نبعث payment_method من اول insert عشان عندك NOT NULL
-      const { data: order, error } = await supabase.from("orders").insert({
-        user_id: profile.id,
-        total: total,
-        total_amount: total,
-        status: "pending",
-        payment_method: paymentMethod, // <-- ده كان ناقص
-        delivery_fee: fee,
-        street, building, apartment: apt, floor, phone, notes,
-        delivery_address_text: fullAddress,
-        lat: coord.lat, lng: coord.lng,
-        address_id: selectedAddress?.id || null,
-      }).select().single();
+      // ✅ الحل المتأمن: السعر بيتحسب في السيرفر مش هنا
+      const { data: orderId, error } = await supabase.rpc('create_secure_order', {
+        p_address_id: selectedAddress?.id || null,
+        p_street: street,
+        p_building: building,
+        p_apartment: apt,
+        p_floor: floor,
+        p_phone: phone,
+        p_notes: notes,
+        p_lat: coord.lat,
+        p_lng: coord.lng,
+        p_payment_method: paymentMethod,
+        p_delivery_address_text: fullAddress
+      });
 
       if(error) throw error;
 
-      for(let item of items){
-        await supabase.from("order_items").insert({
-          order_id: order.id,
-          product_id: item.product_id || item.id,
-          quantity: item.quantity,
-          price: item.price
-        });
-      }
-
       clearCart();
       Alert.alert("تم ✅", `الاوردر اتعمل - الدفع: ${paymentMethod==='cash'? 'كاش' : 'فيزا عند الاستلام'}`);
-      router.replace("/(taps)/orders" as any);
+      router.replace("/(tabs)/orders" as any);
 
     }catch(e:any){
       console.log("ORDER FAIL", e);
@@ -137,6 +129,7 @@ export default function Checkout() {
           <View style={{ flexDirection:'row', justifyContent:'space-between' }}><Text style={{ color:C.gray }}>Subtotal ({items.length})</Text><Text style={{ fontWeight:'700' }}>EGP {subtotal}</Text></View>
           <View style={{ flexDirection:'row', justifyContent:'space-between' }}><Text style={{ color:C.gray }}>Delivery ({area})</Text><Text style={{ fontWeight:'700', color: fee===0? C.orange : '#000' }}>{fee===0? "FREE" : `EGP ${fee}`}</Text></View>
           <View style={{ flexDirection:'row', justifyContent:'space-between', marginTop:6 }}><Text style={{ fontWeight:'900', fontSize:18 }}>Total</Text><Text style={{ fontWeight:'900', fontSize:18 }}>EGP {total}</Text></View>
+          <Text style={{ fontSize:11, color:C.gray, textAlign:'right', marginTop:4 }}>السعر النهائي بيتحسب في السيرفر للأمان</Text>
         </View>
       </ScrollView>
 

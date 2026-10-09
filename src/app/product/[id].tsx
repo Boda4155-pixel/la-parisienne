@@ -40,7 +40,7 @@ export default function ProductDetails() {
       });
     }
     // بعد ما يضيف يوديك للسلة عشان تشوفه زي الصورة اللي بعتها
-    router.push('/(taps)/cart' as any);
+    router.push('/(tabs)/cart' as any);
   };
 
   if (loading ||!product) {
