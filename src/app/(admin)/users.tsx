@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, Modal, ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { supabase } from '../../../lib/supabase';
+import { ADMIN_COLORS } from "../../../lib/adminTheme";
 
 const ROLES = ['admin','manager','cashier','delivery','staff'];
 
@@ -57,16 +58,16 @@ export default function StaffManagement(){
   return (
     <View style={s.bg}>
       <View style={s.header}>
-        <TouchableOpacity onPress={()=>router.back()} style={s.back}><Ionicons name="chevron-forward" size={20} color="#111"/></TouchableOpacity>
+        <TouchableOpacity onPress={()=>router.back()} style={s.back}><Ionicons name="chevron-forward" size={20} color={ADMIN_COLORS.textPrimary}/></TouchableOpacity>
         <Text style={s.h1}>{t('admin.staff.title')}</Text>
-        <TouchableOpacity onPress={()=>setShowAdd(!showAdd)} style={s.addBtn}><Ionicons name={showAdd?'close':'add'} size={20} color="#FFFFFF"/></TouchableOpacity>
+        <TouchableOpacity onPress={()=>setShowAdd(!showAdd)} style={s.addBtn}><Ionicons name={showAdd?'close':'add'} size={20} color={ADMIN_COLORS.primaryText}/></TouchableOpacity>
       </View>
 
       {showAdd && (
         <View style={s.addCard}>
-          <Text style={s.label}>{t('admin.staff.staffName')}</Text><TextInput value={name} onChangeText={setName} style={s.input} placeholder="Ahmed" placeholderTextColor="#999"/>
-          <Text style={s.label}>{t('admin.staff.email')}</Text><TextInput value={email} onChangeText={setEmail} style={s.input} placeholder="ahmed@email.com" autoCapitalize="none" placeholderTextColor="#999"/>
-          <Text style={s.label}>{t('admin.staff.password')}</Text><TextInput value={password} onChangeText={setPassword} style={s.input} placeholder="••••••••" secureTextEntry placeholderTextColor="#999"/>
+          <Text style={s.label}>{t('admin.staff.staffName')}</Text><TextInput value={name} onChangeText={setName} style={s.input} placeholder="Ahmed" placeholderTextColor={ADMIN_COLORS.textSecondary}/>
+          <Text style={s.label}>{t('admin.staff.email')}</Text><TextInput value={email} onChangeText={setEmail} style={s.input} placeholder="ahmed@email.com" autoCapitalize="none" placeholderTextColor={ADMIN_COLORS.textSecondary}/>
+          <Text style={s.label}>{t('admin.staff.password')}</Text><TextInput value={password} onChangeText={setPassword} style={s.input} placeholder="••••••••" secureTextEntry placeholderTextColor={ADMIN_COLORS.textSecondary}/>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{gap:8, marginTop:8}}>
             {ROLES.map(r=> (<TouchableOpacity key={r} onPress={()=>setRole(r)} style={[s.roleChip, role===r && s.roleActive]}><Text style={[s.roleTxt, role===r && s.roleTxtActive]}>{t(`admin.staff.roles.${r}`)}</Text></TouchableOpacity>))}
           </ScrollView>
@@ -74,21 +75,21 @@ export default function StaffManagement(){
         </View>
       )}
 
-      <ScrollView contentContainerStyle={{padding:16, gap:10, paddingBottom:100}} style={{backgroundColor:'#F9F9F9'}}>
-        {staff.length===0 && <Text style={{color:'#888', textAlign:'center', marginTop:30, fontWeight:'600'}}>{t('admin.staff.noStaff')}</Text>}
+      <ScrollView contentContainerStyle={{padding:16, gap:10, paddingBottom:100}} style={{backgroundColor:ADMIN_COLORS.backgroundSecondary}}>
+        {staff.length===0 && <Text style={{color:ADMIN_COLORS.textMuted, textAlign:'center', marginTop:30, fontWeight:'600'}}>{t('admin.staff.noStaff')}</Text>}
         {staff.map(item=>(
           <View key={item.id} style={[s.card,!item.is_active && {opacity:0.6}]}>
             <View style={{flexDirection:'row', justifyContent:'space-between', alignItems:'center'}}>
               <View style={{flexDirection:'row', gap:10}}>
-                <TouchableOpacity onPress={()=>deleteFully(item)} style={s.iconSmall}><Ionicons name="trash" size={16} color="#EF4444"/></TouchableOpacity>
-                <TouchableOpacity onPress={()=>setEditItem(item)} style={s.iconSmall}><Ionicons name="create" size={16} color="#16A34A"/></TouchableOpacity>
+                <TouchableOpacity onPress={()=>deleteFully(item)} style={s.iconSmall}><Ionicons name="trash" size={16} color={ADMIN_COLORS.danger}/></TouchableOpacity>
+                <TouchableOpacity onPress={()=>setEditItem(item)} style={s.iconSmall}><Ionicons name="create" size={16} color={ADMIN_COLORS.textPrimary}/></TouchableOpacity>
               </View>
               <View style={{alignItems:'flex-end', flex:1, marginHorizontal:12}}><Text style={s.name}>{item.name}</Text><Text style={s.email}>{item.email} • {t(`admin.staff.roles.${item.role}`)}</Text></View>
-              <View style={s.avatar}><Text style={{fontWeight:'800', color:'#FFFFFF'}}>{item.name?.[0]?.toUpperCase() || '?'}</Text></View>
+              <View style={s.avatar}><Text style={{fontWeight:'800', color:ADMIN_COLORS.primaryText}}>{item.name?.[0]?.toUpperCase() || '?'}</Text></View>
             </View>
-            <View style={{flexDirection:'row', justifyContent:'space-between', alignItems:'center', marginTop:12, borderTopWidth:1, borderTopColor:'#F0F0F0', paddingTop:10}}>
-              <Switch value={!!item.is_active} onValueChange={()=>toggleActive(item)} trackColor={{true:'#16A34A', false:'#E5E5E5'}} thumbColor={'#FFFFFF'}/>
-              <Text style={{color: item.is_active? '#16A34A' : '#888', fontSize:12, fontWeight:'700'}}>{item.is_active? t('admin.staff.active') : t('admin.staff.inactive')}</Text>
+            <View style={{flexDirection:'row', justifyContent:'space-between', alignItems:'center', marginTop:12, borderTopWidth:1, borderTopColor:ADMIN_COLORS.border, paddingTop:10}}>
+              <Switch value={!!item.is_active} onValueChange={()=>toggleActive(item)} trackColor={{true:ADMIN_COLORS.primary, false:ADMIN_COLORS.border}} thumbColor={ADMIN_COLORS.textPrimary}/>
+              <Text style={{color: item.is_active? ADMIN_COLORS.textPrimary : ADMIN_COLORS.textMuted, fontSize:12, fontWeight:'700'}}>{item.is_active? t('admin.staff.active') : t('admin.staff.inactive')}</Text>
             </View>
           </View>
         ))}
@@ -108,7 +109,7 @@ export default function StaffManagement(){
                 {ROLES.map(r=> (<TouchableOpacity key={r} onPress={()=>setEditItem((p:any)=>({...p, role:r}))} style={[s.roleChip, editItem.role===r && s.roleActive]}><Text style={[s.roleTxt, editItem.role===r && s.roleTxtActive]}>{t(`admin.staff.roles.${r}`)}</Text></TouchableOpacity>))}
               </ScrollView>
               <View style={{flexDirection:'row', gap:10, marginTop:16}}>
-                <TouchableOpacity style={[s.saveBig,{flex:1, backgroundColor:'#FFFFFF', borderWidth:1, borderColor:'#E5E5E5'}]} onPress={()=>setEditItem(null)}><Text style={{color:'#111', fontWeight:'700'}}>{t('common:cancel')}</Text></TouchableOpacity>
+<TouchableOpacity style={[s.saveBig,{flex:1, backgroundColor:ADMIN_COLORS.card, borderWidth:1, borderColor:ADMIN_COLORS.border}]} onPress={()=>setEditItem(null)}><Text style={{color:ADMIN_COLORS.textPrimary, fontWeight:'700'}}>{t('common:cancel')}</Text></TouchableOpacity>
                 <TouchableOpacity style={[s.saveBig,{flex:1}]} onPress={updateStaff}><Text style={s.saveBigTxt}>{t('common:save')}</Text></TouchableOpacity>
               </View>
             </View>
@@ -119,15 +120,15 @@ export default function StaffManagement(){
   );
 }
 const s = StyleSheet.create({
-  bg:{flex:1, backgroundColor:'#FFFFFF'}, header:{flexDirection:'row', justifyContent:'space-between', alignItems:'center', padding:16, paddingTop:50, borderBottomWidth:1, borderBottomColor:'#F0F0F0', backgroundColor:'#FFFFFF'},
-  h1:{color:'#111', fontWeight:'800', fontSize:18}, back:{width:36, height:36, borderRadius:18, backgroundColor:'#FFFFFF', justifyContent:'center', alignItems:'center', borderWidth:1, borderColor:'#E5E5E5'},
-  addBtn:{width:36, height:36, borderRadius:18, backgroundColor:'#16A34A', justifyContent:'center', alignItems:'center'},
-  addCard:{backgroundColor:'#FFFFFF', margin:16, borderRadius:16, padding:16, borderWidth:1, borderColor:'#E5E5E5', gap:8},
-  label:{color:'#111', fontSize:11, textAlign:'right', marginTop:4, fontWeight:'700'}, input:{backgroundColor:'#F9F9F9', borderWidth:1, borderColor:'#E5E5E5', borderRadius:10, color:'#111', height:44, paddingHorizontal:12, textAlign:'right', fontWeight:'600'},
-  roleChip:{paddingHorizontal:14, height:32, borderRadius:16, backgroundColor:'#FFFFFF', justifyContent:'center', borderWidth:1, borderColor:'#E5E5E5'}, roleActive:{backgroundColor:'#16A34A', borderColor:'#16A34A'}, roleTxt:{color:'#555', fontSize:12, fontWeight:'600'}, roleTxtActive:{color:'#FFFFFF'},
-  saveBig:{backgroundColor:'#16A34A', height:46, borderRadius:12, justifyContent:'center', alignItems:'center', marginTop:12}, saveBigTxt:{color:'#FFFFFF', fontWeight:'800'},
-  card:{backgroundColor:'#FFFFFF', borderRadius:16, padding:14, borderWidth:1, borderColor:'#E5E5E5'},
-  avatar:{width:36, height:36, borderRadius:18, backgroundColor:'#16A34A', justifyContent:'center', alignItems:'center'},
-  iconSmall:{width:32, height:32, borderRadius:16, backgroundColor:'#F9F9F9', justifyContent:'center', alignItems:'center', borderWidth:1, borderColor:'#E5E5E5'},
-  name:{color:'#111', fontWeight:'800', fontSize:13}, email:{color:'#666', fontSize:10, marginTop:2, fontWeight:'500'}
+  bg:{flex:1, backgroundColor:ADMIN_COLORS.background}, header:{flexDirection:'row', justifyContent:'space-between', alignItems:'center', padding:16, paddingTop:50, borderBottomWidth:1, borderBottomColor:ADMIN_COLORS.border, backgroundColor:ADMIN_COLORS.background},
+  h1:{color:ADMIN_COLORS.textPrimary, fontWeight:'800', fontSize:18}, back:{width:36, height:36, borderRadius:18, backgroundColor:ADMIN_COLORS.card, justifyContent:'center', alignItems:'center', borderWidth:1, borderColor:ADMIN_COLORS.border},
+  addBtn:{width:36, height:36, borderRadius:18, backgroundColor:ADMIN_COLORS.primary, justifyContent:'center', alignItems:'center'},
+  addCard:{backgroundColor:ADMIN_COLORS.card, margin:16, borderRadius:16, padding:16, borderWidth:1, borderColor:ADMIN_COLORS.border, gap:8},
+  label:{color:ADMIN_COLORS.textSecondary, fontSize:11, textAlign:'right', marginTop:4, fontWeight:'700'}, input:{backgroundColor:ADMIN_COLORS.inputBg, borderWidth:1, borderColor:ADMIN_COLORS.inputBorder, borderRadius:10, color:ADMIN_COLORS.inputText, height:44, paddingHorizontal:12, textAlign:'right', fontWeight:'600'},
+  roleChip:{paddingHorizontal:14, height:32, borderRadius:16, backgroundColor:ADMIN_COLORS.card, justifyContent:'center', borderWidth:1, borderColor:ADMIN_COLORS.border}, roleActive:{backgroundColor:ADMIN_COLORS.primary, borderColor:ADMIN_COLORS.primary}, roleTxt:{color:ADMIN_COLORS.textSecondary, fontSize:12, fontWeight:'600'}, roleTxtActive:{color:ADMIN_COLORS.primaryText},
+  saveBig:{backgroundColor:ADMIN_COLORS.primary, height:46, borderRadius:12, justifyContent:'center', alignItems:'center', marginTop:12}, saveBigTxt:{color:ADMIN_COLORS.primaryText, fontWeight:'800'},
+  card:{backgroundColor:ADMIN_COLORS.card, borderRadius:16, padding:14, borderWidth:1, borderColor:ADMIN_COLORS.border},
+  avatar:{width:36, height:36, borderRadius:18, backgroundColor:ADMIN_COLORS.primary, justifyContent:'center', alignItems:'center'},
+  iconSmall:{width:32, height:32, borderRadius:16, backgroundColor:ADMIN_COLORS.cardSecondary, justifyContent:'center', alignItems:'center', borderWidth:1, borderColor:ADMIN_COLORS.border},
+  name:{color:ADMIN_COLORS.textPrimary, fontWeight:'800', fontSize:13}, email:{color:ADMIN_COLORS.textSecondary, fontSize:10, marginTop:2, fontWeight:'500'}
 });

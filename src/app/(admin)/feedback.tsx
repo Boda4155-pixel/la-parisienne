@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '../../../lib/supabase';
+import { ADMIN_COLORS } from "../../../lib/adminTheme";
 
 export default function FeedbackAdmin(){
   const insets = useSafeAreaInsets();
@@ -31,7 +32,7 @@ export default function FeedbackAdmin(){
   return (
     <View style={s.bg}>
       <View style={[s.header, {paddingTop: insets.top+12}]}>
-        <TouchableOpacity onPress={()=>router.back()} style={s.back}><Ionicons name="chevron-forward" size={22} color="#111"/></TouchableOpacity>
+        <TouchableOpacity onPress={()=>router.back()} style={s.back}><Ionicons name="chevron-forward" size={22} color={ADMIN_COLORS.textPrimary}/></TouchableOpacity>
         <Text style={s.h1}>الاقتراحات والشكاوي</Text>
         <View style={{width:42}}/>
       </View>
@@ -42,15 +43,15 @@ export default function FeedbackAdmin(){
         <TouchableOpacity onPress={()=>setFilter('suggestion')} style={[s.tab, filter==='suggestion'&&s.tabActive]}><Text style={[s.tabTxt, filter==='suggestion'&&s.tabTxtActive]}>اقتراحات</Text></TouchableOpacity>
       </View>
 
-      {loading? <ActivityIndicator color="#16A34A" style={{marginTop:40}}/> : (
+      {loading? <ActivityIndicator color={ADMIN_COLORS.textPrimary} style={{marginTop:40}}/> : (
         <FlatList data={data} keyExtractor={i=>i.id} contentContainerStyle={{padding:16, paddingBottom:100}}
-          ListEmptyComponent={<Text style={{color:'#999', textAlign:'center', marginTop:40, fontWeight:'600'}}>لا يوجد رسائل</Text>}
+          ListEmptyComponent={<Text style={{color:ADMIN_COLORS.textSecondary, textAlign:'center', marginTop:40, fontWeight:'600'}}>لا يوجد رسائل</Text>}
           renderItem={({item})=>(
             <View style={s.card}>
               <View style={{flexDirection:'row', justifyContent:'space-between', alignItems:'center'}}>
-                <TouchableOpacity onPress={()=>del(item.id)} style={s.trash}><Ionicons name="trash-outline" size={18} color="#EF4444"/></TouchableOpacity>
-                <View style={[s.badge, {backgroundColor: item.type==='complaint'? '#FEF2F2' : '#F0FDF4', borderColor: item.type==='complaint'? '#FECACA' : '#BBF7D0'}]}>
-                  <Text style={[s.badgeTxt, {color: item.type==='complaint'? '#DC2626' : '#16A34A'}]}>{item.type==='complaint'?'شكوى':'اقتراح'}</Text>
+                <TouchableOpacity onPress={()=>del(item.id)} style={s.trash}><Ionicons name="trash-outline" size={18} color={ADMIN_COLORS.danger}/></TouchableOpacity>
+                <View style={[s.badge, {backgroundColor: item.type==='complaint'? ADMIN_COLORS.dangerBg : ADMIN_COLORS.backgroundSecondary, borderColor: item.type==='complaint'? ADMIN_COLORS.dangerBorder : ADMIN_COLORS.border}]}>
+                  <Text style={[s.badgeTxt, {color: item.type==='complaint'? ADMIN_COLORS.danger : ADMIN_COLORS.textPrimary}]}>{item.type==='complaint'?'شكوى':'اقتراح'}</Text>
                 </View>
               </View>
               <Text style={s.name}>{item.name} - {item.phone}</Text>
@@ -64,22 +65,22 @@ export default function FeedbackAdmin(){
   );
 }
 const s = StyleSheet.create({
-  bg:{flex:1, backgroundColor:'#FFFFFF'},
-  header:{flexDirection:'row', justifyContent:'space-between', alignItems:'center', padding:12, borderBottomWidth:1, borderBottomColor:'#F0F0F0', backgroundColor:'#FFFFFF'},
-  h1:{color:'#111', fontWeight:'800', fontSize:17},
-  back:{width:42, height:42, borderRadius:21, backgroundColor:'#FFFFFF', justifyContent:'center', alignItems:'center', borderWidth:1, borderColor:'#E5E5E5'},
+  bg:{flex:1, backgroundColor:ADMIN_COLORS.backgroundSecondary},
+  header:{flexDirection:'row', justifyContent:'space-between', alignItems:'center', padding:12, borderBottomWidth:1, borderBottomColor:ADMIN_COLORS.border, backgroundColor:ADMIN_COLORS.card},
+  h1:{color:ADMIN_COLORS.textPrimary, fontWeight:'800', fontSize:17},
+  back:{width:42, height:42, borderRadius:21, backgroundColor:ADMIN_COLORS.card, justifyContent:'center', alignItems:'center', borderWidth:1, borderColor:ADMIN_COLORS.border},
 
-  tabs:{flexDirection:'row', gap:8, padding:12, backgroundColor:'#F9F9F9'},
-  tab:{flex:1, height:42, borderRadius:20, backgroundColor:'#FFFFFF', justifyContent:'center', alignItems:'center', borderWidth:1, borderColor:'#E5E5E5'},
-  tabActive:{backgroundColor:'#16A34A', borderColor:'#16A34A'},
-  tabTxt:{color:'#555', fontWeight:'700', fontSize:13},
-  tabTxtActive:{color:'#FFFFFF'},
+  tabs:{flexDirection:'row', gap:8, padding:12, backgroundColor:ADMIN_COLORS.backgroundSecondary},
+  tab:{flex:1, height:42, borderRadius:20, backgroundColor:ADMIN_COLORS.card, justifyContent:'center', alignItems:'center', borderWidth:1, borderColor:ADMIN_COLORS.border},
+  tabActive:{backgroundColor:ADMIN_COLORS.primary, borderColor:ADMIN_COLORS.primary},
+  tabTxt:{color:ADMIN_COLORS.textSecondary, fontWeight:'700', fontSize:13},
+  tabTxtActive:{color:ADMIN_COLORS.primaryText},
 
-  card:{backgroundColor:'#FFFFFF', borderRadius:16, padding:14, borderWidth:1, borderColor:'#E5E5E5', marginBottom:10},
+  card:{backgroundColor:ADMIN_COLORS.card, borderRadius:16, padding:14, borderWidth:1, borderColor:ADMIN_COLORS.border, marginBottom:10},
   badge:{paddingHorizontal:12, paddingVertical:5, borderRadius:20, borderWidth:1},
   badgeTxt:{fontSize:11, fontWeight:'800'},
-  trash:{width:34, height:34, borderRadius:8, backgroundColor:'#FEF2F2', justifyContent:'center', alignItems:'center', borderWidth:1, borderColor:'#FECACA'},
-  name:{color:'#555', fontSize:12, marginTop:10, textAlign:'right', fontWeight:'600'},
-  msg:{color:'#111', fontSize:14, marginTop:8, lineHeight:22, textAlign:'right', fontWeight:'600'},
-  date:{color:'#999', fontSize:10, marginTop:10, textAlign:'right', fontWeight:'500'}
+  trash:{width:34, height:34, borderRadius:8, backgroundColor:ADMIN_COLORS.dangerBg, justifyContent:'center', alignItems:'center', borderWidth:1, borderColor:ADMIN_COLORS.dangerBorder},
+  name:{color:ADMIN_COLORS.textSecondary, fontSize:12, marginTop:10, textAlign:'right', fontWeight:'600'},
+  msg:{color:ADMIN_COLORS.textPrimary, fontSize:14, marginTop:8, lineHeight:22, textAlign:'right', fontWeight:'600'},
+  date:{color:ADMIN_COLORS.textSecondary, fontSize:10, marginTop:10, textAlign:'right', fontWeight:'500'}
 });

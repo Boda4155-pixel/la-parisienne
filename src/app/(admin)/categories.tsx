@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { supabase } from '../../../lib/supabase';
+import { ADMIN_COLORS } from "../../../lib/adminTheme";
 
 export default function CategoriesPage(){
   const { t } = useTranslation();
@@ -50,7 +51,7 @@ export default function CategoriesPage(){
     <View style={s.bg}>
       <View style={s.header}>
         <TouchableOpacity style={s.newBtn} onPress={()=>setShowAdd(!showAdd)}>
-          <Ionicons name="add" size={20} color="#FFF"/><Text style={s.newTxt}>{t('admin.categories.add')}</Text>
+<Ionicons name="add" size={20} color={ADMIN_COLORS.primaryText}/><Text style={s.newTxt}>{t('admin.categories.add')}</Text>
         </TouchableOpacity>
         <View style={{alignItems:'flex-end'}}>
           <Text style={s.h1}>{t('admin.categories.title')}</Text>
@@ -60,7 +61,7 @@ export default function CategoriesPage(){
 
       {showAdd && (
         <View style={s.addBox}>
-          <TextInput placeholder={t('admin.categories.namePlaceholder')} placeholderTextColor="#999" value={newName} onChangeText={setNewName} style={s.input}/>
+<TextInput placeholder={t('admin.categories.namePlaceholder')} placeholderTextColor={ADMIN_COLORS.textSecondary} value={newName} onChangeText={setNewName} style={s.input}/>
           <TouchableOpacity style={s.addBtn} onPress={onAdd}><Text style={s.addBtnTxt}>{t('common:add')}</Text></TouchableOpacity>
         </View>
       )}
@@ -71,14 +72,14 @@ export default function CategoriesPage(){
         contentContainerStyle={{padding:16, paddingBottom:120, gap:12}}
         renderItem={({item})=>(
           <TouchableOpacity style={s.card} onPress={()=>router.push(`/(admin)/products?cat=${item.id}` as any)}>
-            <Ionicons name="chevron-forward" size={20} color="#999" />
+<Ionicons name="chevron-forward" size={20} color={ADMIN_COLORS.textSecondary} />
             <View style={{flex:1, alignItems:'flex-end'}}>
               <Text style={s.name}>{item.name}</Text>
               <Text style={s.count}>{t('admin.categories.countRow', { count: counts[item.id]||0 })}</Text>
             </View>
-            <View style={s.iconBox}><Ionicons name="folder" size={24} color="#16A34A"/></View>
+            <View style={s.iconBox}><Ionicons name="folder" size={24} color={ADMIN_COLORS.textPrimary}/></View>
             <TouchableOpacity onPress={()=>onDelete(item)} style={s.trash}>
-              <Ionicons name="trash-outline" size={18} color="#D92D20"/>
+              <Ionicons name="trash-outline" size={18} color={ADMIN_COLORS.danger}/>
             </TouchableOpacity>
           </TouchableOpacity>
         )}
@@ -87,19 +88,19 @@ export default function CategoriesPage(){
   );
 }
 const s = StyleSheet.create({
-  bg:{flex:1, backgroundColor:'#FFFFFF'},
+  bg:{flex:1, backgroundColor:ADMIN_COLORS.background},
   header:{flexDirection:'row', justifyContent:'space-between', alignItems:'center', padding:16, paddingTop:60},
-  h1:{color:'#111', fontSize:30, fontWeight:'bold'}, 
-  sub:{color:'#16A34A', fontSize:13, marginTop:2, fontWeight:'700', backgroundColor:'#F0FDF4', paddingHorizontal:8, paddingVertical:3, borderRadius:8, borderWidth:1, borderColor:'#BBF7D0'},
-  newBtn:{backgroundColor:'#16A34A', flexDirection:'row', paddingHorizontal:16, height:40, borderRadius:20, alignItems:'center', gap:4}, 
-  newTxt:{color:'#FFFFFF', fontWeight:'bold'},
-  addBox:{flexDirection:'row', gap:8, paddingHorizontal:16, marginBottom:8}, 
-  input:{flex:1, backgroundColor:'#F9F9F9', borderWidth:1, borderColor:'#E5E5E5', borderRadius:12, color:'#111', paddingHorizontal:12, height:44}, 
-  addBtn:{backgroundColor:'#111', paddingHorizontal:20, borderRadius:12, justifyContent:'center'}, 
-  addBtnTxt:{color:'#FFFFFF', fontWeight:'bold'},
-  card:{backgroundColor:'#FFFFFF', borderRadius:16, padding:14, flexDirection:'row', alignItems:'center', gap:10, borderWidth:1, borderColor:'#E5E5E5'},
-  iconBox:{width:44, height:44, borderRadius:10, backgroundColor:'#F0FDF4', justifyContent:'center', alignItems:'center', borderWidth:1, borderColor:'#BBF7D0'},
-  name:{color:'#111', fontWeight:'bold', fontSize:16}, 
-  count:{color:'#666', fontSize:11, marginTop:2},
-  trash:{width:36, height:36, borderRadius:10, backgroundColor:'#FEF2F2', justifyContent:'center', alignItems:'center', borderWidth:1, borderColor:'#FECACA'}
+  h1:{color:ADMIN_COLORS.textPrimary, fontSize:30, fontWeight:'bold'},
+  sub:{color:ADMIN_COLORS.textSecondary, fontSize:13, marginTop:2, fontWeight:'700', backgroundColor:ADMIN_COLORS.card, paddingHorizontal:8, paddingVertical:3, borderRadius:8, borderWidth:1, borderColor:ADMIN_COLORS.borderLight},
+  newBtn:{backgroundColor:ADMIN_COLORS.primary, flexDirection:'row', paddingHorizontal:16, height:40, borderRadius:20, alignItems:'center', gap:4},
+  newTxt:{color:ADMIN_COLORS.primaryText, fontWeight:'bold'},
+  addBox:{flexDirection:'row', gap:8, paddingHorizontal:16, marginBottom:8},
+  input:{flex:1, backgroundColor:ADMIN_COLORS.inputBg, borderWidth:1, borderColor:ADMIN_COLORS.inputBorder, borderRadius:12, color:ADMIN_COLORS.inputText, paddingHorizontal:12, height:44},
+  addBtn:{backgroundColor:ADMIN_COLORS.primary, paddingHorizontal:20, borderRadius:12, justifyContent:'center'},
+  addBtnTxt:{color:ADMIN_COLORS.primaryText, fontWeight:'bold'},
+  card:{backgroundColor:ADMIN_COLORS.card, borderRadius:16, padding:14, flexDirection:'row', alignItems:'center', gap:10, borderWidth:1, borderColor:ADMIN_COLORS.border},
+  iconBox:{width:44, height:44, borderRadius:10, backgroundColor:ADMIN_COLORS.cardSecondary, justifyContent:'center', alignItems:'center', borderWidth:1, borderColor:ADMIN_COLORS.border},
+  name:{color:ADMIN_COLORS.textPrimary, fontWeight:'bold', fontSize:16},
+  count:{color:ADMIN_COLORS.textMuted, fontSize:11, marginTop:2},
+  trash:{width:36, height:36, borderRadius:10, backgroundColor:ADMIN_COLORS.dangerBg, justifyContent:'center', alignItems:'center', borderWidth:1, borderColor:ADMIN_COLORS.dangerBorder}
 });

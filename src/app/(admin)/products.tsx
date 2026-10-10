@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Alert, Image, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { supabase } from '../../../lib/supabase';
+import { ADMIN_COLORS } from "../../../lib/adminTheme";
 
 export default function ProductsPage() {
   const { t } = useTranslation();
@@ -68,7 +69,7 @@ export default function ProductsPage() {
         <View>
           {catName? (
             <TouchableOpacity onPress={()=>router.back()} style={{flexDirection:'row', alignItems:'center', marginBottom:6}}>
-              <Ionicons name="arrow-back" size={18} color="#111"/><Text style={{color:'#111', marginLeft:4, fontWeight:'700'}}>{t('admin.nav.categories')}</Text>
+              <Ionicons name="arrow-back" size={18} color={ADMIN_COLORS.textPrimary}/><Text style={{color:ADMIN_COLORS.textPrimary, marginLeft:4, fontWeight:'700'}}>{t('admin.nav.categories')}</Text>
             </TouchableOpacity>
           ) : <Text style={s.backHint}>{t('admin.nav.dashboard')}</Text>}
           <Text style={s.h1}>{catName? catName as string : t('admin.products.title')}</Text>
@@ -76,10 +77,10 @@ export default function ProductsPage() {
         </View>
         <View style={{flexDirection:'row', gap:8}}>
           <TouchableOpacity style={s.catBtn} onPress={()=>router.push('/(admin)/categories')}>
-            <Text style={s.addTxt}>{t('admin.nav.categories').slice(0,4)}</Text><Ionicons name="grid" size={16} color="#FFFFFF"/>
+            <Text style={s.addTxt}>{t('admin.nav.categories').slice(0,4)}</Text><Ionicons name="grid" size={16} color={ADMIN_COLORS.textPrimary}/>
           </TouchableOpacity>
           <TouchableOpacity style={s.addCircle} onPress={()=>{ setEdit({name:'', price:'', category_id: selectedCat!=='all'? selectedCat : categories[0]?.id, image_url:''}); setModal(true); }}>
-            <Ionicons name="add" size={22} color="#FFFFFF"/>
+            <Ionicons name="add" size={22} color={ADMIN_COLORS.primaryText}/>
           </TouchableOpacity>
         </View>
       </View>
@@ -98,8 +99,8 @@ export default function ProductsPage() {
       </View>
 
       <View style={s.searchBox}>
-        <Ionicons name="search" size={18} color="#16A34A" />
-        <TextInput placeholder={t('common.search') || "Search..."} placeholderTextColor="#999" style={s.searchInput} value={search} onChangeText={setSearch}/>
+        <Ionicons name="search" size={18} color={ADMIN_COLORS.textPrimary} />
+        <TextInput placeholder={t('common.search') || "Search..."} placeholderTextColor={ADMIN_COLORS.textSecondary} style={s.searchInput} value={search} onChangeText={setSearch}/>
       </View>
 
       <ScrollView contentContainerStyle={{paddingBottom:120}} showsVerticalScrollIndicator={false}>
@@ -110,8 +111,8 @@ export default function ProductsPage() {
               <Text style={s.name} numberOfLines={1}>{p.name}</Text>
               <Text style={s.price}>{t('common.currency')} {Number(p.price).toFixed(0)}</Text>
               <View style={s.cardActions}>
-                <TouchableOpacity style={s.iconBtn} onPress={()=>{ setEdit(p); setModal(true); }}><Ionicons name="pencil" size={16} color="#16A34A"/></TouchableOpacity>
-                <TouchableOpacity style={[s.iconBtn, s.iconBtnDel]} onPress={async()=>{ await supabase.from('products').delete().eq('id', p.id); load(); }}><Ionicons name="trash" size={16} color="#D92D20"/></TouchableOpacity>
+                <TouchableOpacity style={s.iconBtn} onPress={()=>{ setEdit(p); setModal(true); }}><Ionicons name="pencil" size={16} color={ADMIN_COLORS.textPrimary}/></TouchableOpacity>
+                <TouchableOpacity style={[s.iconBtn, s.iconBtnDel]} onPress={async()=>{ await supabase.from('products').delete().eq('id', p.id); load(); }}><Ionicons name="trash" size={16} color={ADMIN_COLORS.danger}/></TouchableOpacity>
               </View>
             </View>
           ))}
@@ -121,15 +122,15 @@ export default function ProductsPage() {
       <Modal visible={modal} transparent animationType="slide">
         <View style={s.overlay}>
           <View style={s.modal}>
-            <View style={s.modalHead}><Text style={s.modalTitle}>{edit?.id? t('admin.products.edit') : t('admin.products.new')}</Text><TouchableOpacity onPress={()=>setModal(false)} style={s.closeBtn}><Ionicons name="close" size={20} color="#111"/></TouchableOpacity></View>
+            <View style={s.modalHead}><Text style={s.modalTitle}>{edit?.id? t('admin.products.edit') : t('admin.products.new')}</Text><TouchableOpacity onPress={()=>setModal(false)} style={s.closeBtn}><Ionicons name="close" size={20} color={ADMIN_COLORS.textPrimary}/></TouchableOpacity></View>
             <ScrollView showsVerticalScrollIndicator={false}>
               <TouchableOpacity style={s.imgPicker} onPress={pickImage}>
-                {edit?.image_url? <Image source={{uri: edit.image_url}} style={s.bigImg}/> : <View style={s.imgPlaceholder}><Ionicons name="camera" size={30} color="#16A34A"/><Text style={s.imgTxt}>{t('admin.products.image')}</Text></View>}
+                {edit?.image_url? <Image source={{uri: edit.image_url}} style={s.bigImg}/> : <View style={s.imgPlaceholder}><Ionicons name="camera" size={30} color={ADMIN_COLORS.textPrimary}/><Text style={s.imgTxt}>{t('admin.products.image')}</Text></View>}
               </TouchableOpacity>
               <Text style={s.label}>{t('admin.products.name')} (EN)</Text>
-              <TextInput style={s.input} value={edit?.name} onChangeText={t=>setEdit({...edit, name:t})} placeholder={t('admin.products.namePlaceholder')} placeholderTextColor="#999"/>
+              <TextInput style={s.input} value={edit?.name} onChangeText={t=>setEdit({...edit, name:t})} placeholder={t('admin.products.namePlaceholder')} placeholderTextColor={ADMIN_COLORS.textSecondary}/>
               <Text style={s.label}>{t('admin.products.price')}</Text>
-              <TextInput style={s.input} value={String(edit?.price||'')} onChangeText={t=>setEdit({...edit, price:t})} keyboardType="numeric" placeholder="150" placeholderTextColor="#999"/>
+              <TextInput style={s.input} value={String(edit?.price||'')} onChangeText={t=>setEdit({...edit, price:t})} keyboardType="numeric" placeholder="150" placeholderTextColor={ADMIN_COLORS.textSecondary}/>
               <Text style={s.label}>{t('admin.products.category')}</Text>
               <View style={s.catSelector}>
                 {categories.map(c=>(
@@ -139,7 +140,7 @@ export default function ProductsPage() {
                 ))}
               </View>
               <TouchableOpacity style={s.saveBtn} onPress={saveProduct} disabled={uploading}>
-                {uploading? <ActivityIndicator color="#FFFFFF"/> : <Text style={s.saveTxt}>{edit?.id? t('common.save') : t('common.save')}</Text>}
+                {uploading? <ActivityIndicator color={ADMIN_COLORS.textPrimary}/> : <Text style={s.saveTxt}>{edit?.id? t('common.save') : t('common.save')}</Text>}
               </TouchableOpacity>
             </ScrollView>
           </View>
@@ -149,19 +150,19 @@ export default function ProductsPage() {
   );
 }
 const s = StyleSheet.create({
-  bg:{flex:1, backgroundColor:'#FFFFFF', padding:16, paddingTop:50},
+  bg:{flex:1, backgroundColor:ADMIN_COLORS.background, padding:16, paddingTop:50},
   head:{flexDirection:'row', justifyContent:'space-between', alignItems:'center', marginBottom:14},
-  backHint:{color:'#666', fontSize:12, textAlign:'right', fontWeight:'600'}, h1:{color:'#111', fontSize:32, fontWeight:'800', textAlign:'right'}, sub:{color:'#16A34A', fontSize:12, marginTop:4, textAlign:'right', fontWeight:'700', backgroundColor:'#F0FDF4', paddingHorizontal:8, paddingVertical:3, borderRadius:8, alignSelf:'flex-end', borderWidth:1, borderColor:'#BBF7D0'},
-  catBtn:{flexDirection:'row', backgroundColor:'#111', paddingHorizontal:14, height:38, borderRadius:20, alignItems:'center', gap:6}, addCircle:{width:38, height:38, backgroundColor:'#16A34A', borderRadius:19, justifyContent:'center', alignItems:'center'}, addTxt:{color:'#FFFFFF', fontWeight:'bold', fontSize:13},
+  backHint:{color:ADMIN_COLORS.textMuted, fontSize:12, textAlign:'right', fontWeight:'600'}, h1:{color:ADMIN_COLORS.textPrimary, fontSize:32, fontWeight:'800', textAlign:'right'}, sub:{color:ADMIN_COLORS.textPrimary, fontSize:12, marginTop:4, textAlign:'right', fontWeight:'700', backgroundColor:ADMIN_COLORS.cardSecondary, paddingHorizontal:8, paddingVertical:3, borderRadius:8, alignSelf:'flex-end', borderWidth:1, borderColor:ADMIN_COLORS.border},
+  catBtn:{flexDirection:'row', backgroundColor:ADMIN_COLORS.card, paddingHorizontal:14, height:38, borderRadius:20, alignItems:'center', gap:6}, addCircle:{width:38, height:38, backgroundColor:ADMIN_COLORS.primary, borderRadius:19, justifyContent:'center', alignItems:'center'}, addTxt:{color:ADMIN_COLORS.textPrimary, fontWeight:'bold', fontSize:13},
   filterRow:{flexDirection:'row', alignItems:'center', gap:8, marginBottom:12},
-  catChip:{paddingHorizontal:16, height:36, borderRadius:18, backgroundColor:'#FFFFFF', borderWidth:1, borderColor:'#E5E5E5', justifyContent:'center', alignItems:'center'}, catChipActive:{backgroundColor:'#16A34A', borderColor:'#16A34A'}, catChipTxt:{color:'#555', fontSize:12, fontWeight:'bold'}, catChipTxtActive:{color:'#FFFFFF'},
-  searchBox:{flexDirection:'row', alignItems:'center', backgroundColor:'#F9F9F9', borderRadius:12, paddingHorizontal:14, height:48, borderWidth:1, borderColor:'#E5E5E5', gap:10, marginBottom:14}, searchInput:{color:'#111', flex:1, textAlign:'left', fontWeight:'600'},
+  catChip:{paddingHorizontal:16, height:36, borderRadius:18, backgroundColor:ADMIN_COLORS.card, borderWidth:1, borderColor:ADMIN_COLORS.border, justifyContent:'center', alignItems:'center'}, catChipActive:{backgroundColor:ADMIN_COLORS.primary, borderColor:ADMIN_COLORS.primary}, catChipTxt:{color:ADMIN_COLORS.textSecondary, fontSize:12, fontWeight:'bold'}, catChipTxtActive:{color:ADMIN_COLORS.primaryText},
+  searchBox:{flexDirection:'row', alignItems:'center', backgroundColor:ADMIN_COLORS.card, borderRadius:12, paddingHorizontal:14, height:48, borderWidth:1, borderColor:ADMIN_COLORS.border, gap:10, marginBottom:14}, searchInput:{color:ADMIN_COLORS.textPrimary, flex:1, textAlign:'left', fontWeight:'600'},
   grid:{flexDirection:'row', flexWrap:'wrap', gap:12},
-  card:{backgroundColor:'#FFFFFF', width:'47.5%', borderRadius:16, padding:10, borderWidth:1, borderColor:'#E5E5E5'}, img:{width:'100%', height:120, borderRadius:12, backgroundColor:'#F5F5F5'}, name:{color:'#111', fontWeight:'800', marginTop:8, fontSize:12, textAlign:'center'}, price:{color:'#16A34A', fontWeight:'800', marginTop:2, fontSize:13, textAlign:'center'}, cardActions:{flexDirection:'row', gap:8, marginTop:10}, iconBtn:{flex:1, height:36, backgroundColor:'#F0FDF4', borderRadius:10, justifyContent:'center', alignItems:'center', borderWidth:1, borderColor:'#BBF7D0'}, iconBtnDel:{backgroundColor:'#FEF2F2', borderColor:'#FECACA'},
-  overlay:{flex:1, backgroundColor:'rgba(0,0,0,0.4)', justifyContent:'flex-end'}, modal:{backgroundColor:'#FFFFFF', borderTopLeftRadius:24, borderTopRightRadius:24, padding:20, maxHeight:'90%', paddingBottom:40},
-  modalHead:{flexDirection:'row', justifyContent:'space-between', alignItems:'center', marginBottom:16}, modalTitle:{color:'#111', fontSize:18, fontWeight:'800'}, closeBtn:{width:34, height:34, borderRadius:17, backgroundColor:'#F9F9F9', justifyContent:'center', alignItems:'center', borderWidth:1, borderColor:'#E5E5E5'},
-  imgPicker:{height:150, backgroundColor:'#F9F9F9', borderRadius:16, overflow:'hidden', justifyContent:'center', alignItems:'center', borderWidth:1, borderColor:'#E5E5E5', marginBottom:14}, bigImg:{width:'100%', height:'100%'}, imgPlaceholder:{alignItems:'center'}, imgTxt:{color:'#16A34A', marginTop:6, fontWeight:'700'},
-  label:{color:'#111', fontSize:11, marginBottom:6, marginTop:10, fontWeight:'700'}, input:{backgroundColor:'#F9F9F9', borderWidth:1, borderColor:'#E5E5E5', borderRadius:12, paddingHorizontal:14, height:46, color:'#111', fontWeight:'600'},
-  catSelector:{flexDirection:'row', flexWrap:'wrap', gap:8, marginTop:6}, catOption:{paddingHorizontal:12, height:32, borderRadius:16, backgroundColor:'#FFFFFF', borderWidth:1, borderColor:'#E5E5E5', justifyContent:'center'}, catOptionActive:{backgroundColor:'#16A34A', borderColor:'#16A34A'}, catOptionTxt:{color:'#555', fontSize:12, fontWeight:'600'}, catOptionTxtActive:{color:'#FFFFFF', fontWeight:'bold'},
-  saveBtn:{backgroundColor:'#16A34A', height:48, borderRadius:14, justifyContent:'center', alignItems:'center', marginTop:20}, saveTxt:{color:'#FFFFFF', fontWeight:'bold', fontSize:15}
+  card:{backgroundColor:ADMIN_COLORS.card, width:'47.5%', borderRadius:16, padding:10, borderWidth:1, borderColor:ADMIN_COLORS.border}, img:{width:'100%', height:120, borderRadius:12, backgroundColor:ADMIN_COLORS.cardSecondary}, name:{color:ADMIN_COLORS.textPrimary, fontWeight:'800', marginTop:8, fontSize:12, textAlign:'center'}, price:{color:ADMIN_COLORS.textPrimary, fontWeight:'800', marginTop:2, fontSize:13, textAlign:'center'}, cardActions:{flexDirection:'row', gap:8, marginTop:10}, iconBtn:{flex:1, height:36, backgroundColor:ADMIN_COLORS.cardSecondary, borderRadius:10, justifyContent:'center', alignItems:'center', borderWidth:1, borderColor:ADMIN_COLORS.border}, iconBtnDel:{backgroundColor:ADMIN_COLORS.dangerBg, borderColor:ADMIN_COLORS.dangerBorder},
+  overlay:{flex:1, backgroundColor:'rgba(0,0,0,0.4)', justifyContent:'flex-end'}, modal:{backgroundColor:ADMIN_COLORS.card, borderTopLeftRadius:24, borderTopRightRadius:24, padding:20, maxHeight:'90%', paddingBottom:40},
+  modalHead:{flexDirection:'row', justifyContent:'space-between', alignItems:'center', marginBottom:16}, modalTitle:{color:ADMIN_COLORS.textPrimary, fontSize:18, fontWeight:'800'}, closeBtn:{width:34, height:34, borderRadius:17, backgroundColor:ADMIN_COLORS.cardSecondary, justifyContent:'center', alignItems:'center', borderWidth:1, borderColor:ADMIN_COLORS.border},
+  imgPicker:{height:150, backgroundColor:ADMIN_COLORS.cardSecondary, borderRadius:16, overflow:'hidden', justifyContent:'center', alignItems:'center', borderWidth:1, borderColor:ADMIN_COLORS.border, marginBottom:14}, bigImg:{width:'100%', height:'100%'}, imgPlaceholder:{alignItems:'center'}, imgTxt:{color:ADMIN_COLORS.textPrimary, marginTop:6, fontWeight:'700'},
+  label:{color:ADMIN_COLORS.textSecondary, fontSize:11, marginBottom:6, marginTop:10, fontWeight:'700'}, input:{backgroundColor:ADMIN_COLORS.cardSecondary, borderWidth:1, borderColor:ADMIN_COLORS.border, borderRadius:12, paddingHorizontal:14, height:46, color:ADMIN_COLORS.textPrimary, fontWeight:'600'},
+  catSelector:{flexDirection:'row', flexWrap:'wrap', gap:8, marginTop:6}, catOption:{paddingHorizontal:12, height:32, borderRadius:16, backgroundColor:ADMIN_COLORS.card, borderWidth:1, borderColor:ADMIN_COLORS.border, justifyContent:'center'}, catOptionActive:{backgroundColor:ADMIN_COLORS.primary, borderColor:ADMIN_COLORS.primary}, catOptionTxt:{color:ADMIN_COLORS.textSecondary, fontSize:12, fontWeight:'600'}, catOptionTxtActive:{color:ADMIN_COLORS.primaryText, fontWeight:'bold'},
+  saveBtn:{backgroundColor:ADMIN_COLORS.primary, height:48, borderRadius:14, justifyContent:'center', alignItems:'center', marginTop:20}, saveTxt:{color:ADMIN_COLORS.primaryText, fontWeight:'bold', fontSize:15}
 });

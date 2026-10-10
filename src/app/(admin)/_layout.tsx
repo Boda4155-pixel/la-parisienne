@@ -3,6 +3,7 @@ import { Tabs } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ADMIN_COLORS } from "../../../lib/adminTheme";
 
 export default function AdminLayout() {
   const insets = useSafeAreaInsets();
@@ -10,48 +11,48 @@ export default function AdminLayout() {
   
   return (
     <Tabs screenOptions={{
-      tabBarActiveTintColor: '#16A34A',
-      tabBarInactiveTintColor: '#9CA3AF',
+      tabBarActiveTintColor: ADMIN_COLORS.textPrimary,
+      tabBarInactiveTintColor: ADMIN_COLORS.textSecondary,
       tabBarStyle: {
-        backgroundColor: '#FFFFFF',
+        backgroundColor: ADMIN_COLORS.cardSecondary, // بيج ثابت مش transparent
         borderTopWidth: 1,
-        borderTopColor: '#E5E5E5',
+        borderTopColor: ADMIN_COLORS.border,
         height: 75 + insets.bottom,
         paddingBottom: insets.bottom + 10,
         paddingTop: 6,
-        position: 'absolute',
+        // شيلنا position: 'absolute' اللي مبوظ الدنيا
       },
       headerShown: false,
       tabBarLabelStyle:{fontWeight:'700', fontSize:11}
     }}>
       <Tabs.Screen name="dashboard" options={{ title: t('admin.nav.dashboard'), tabBarIcon: ({focused}: any) => (
         <View style={{alignItems:'center'}}>
-          {focused && <View style={{width:18, height:3, borderRadius:2, backgroundColor:'#16A34A', marginBottom:4}}/>}
-          <Ionicons name={focused? "home" : "home-outline"} size={24} color={focused ? "#16A34A" : "#9CA3AF"} />
+          {focused && <View style={{width:18, height:3, borderRadius:2, backgroundColor:ADMIN_COLORS.primary, marginBottom:4}}/>}
+          <Ionicons name={focused? "home" : "home-outline"} size={24} color={focused ? ADMIN_COLORS.textPrimary : ADMIN_COLORS.textSecondary} />
         </View>
       ) } as any} />
       <Tabs.Screen name="sales" options={{ title: t('admin.nav.sales'), tabBarIcon: ({focused}: any) => (
         <View style={{alignItems:'center'}}>
-          {focused && <View style={{width:18, height:3, borderRadius:2, backgroundColor:'#16A34A', marginBottom:4}}/>}
-          <Ionicons name={focused? "bar-chart" : "bar-chart-outline"} size={24} color={focused ? "#16A34A" : "#9CA3AF"} />
+          {focused && <View style={{width:18, height:3, borderRadius:2, backgroundColor:ADMIN_COLORS.primary, marginBottom:4}}/>}
+          <Ionicons name={focused? "bar-chart" : "bar-chart-outline"} size={24} color={focused ? ADMIN_COLORS.textPrimary : ADMIN_COLORS.textSecondary} />
         </View>
       ) } as any} />
       <Tabs.Screen name="orders" options={{ title: t('admin.nav.orders'), tabBarIcon: ({focused}: any) => (
         <View style={{alignItems:'center'}}>
-          {focused && <View style={{width:18, height:3, borderRadius:2, backgroundColor:'#16A34A', marginBottom:4}}/>}
-          <Ionicons name={focused? "receipt" : "receipt-outline"} size={24} color={focused ? "#16A34A" : "#9CA3AF"} />
+          {focused && <View style={{width:18, height:3, borderRadius:2, backgroundColor:ADMIN_COLORS.primary, marginBottom:4}}/>}
+          <Ionicons name={focused? "receipt" : "receipt-outline"} size={24} color={focused ? ADMIN_COLORS.textPrimary : ADMIN_COLORS.textSecondary} />
         </View>
       ) } as any} />
       <Tabs.Screen name="products" options={{ title: t('admin.nav.products'), tabBarIcon: ({focused}: any) => (
         <View style={{alignItems:'center'}}>
-          {focused && <View style={{width:18, height:3, borderRadius:2, backgroundColor:'#16A34A', marginBottom:4}}/>}
-          <Ionicons name={focused? "fast-food" : "fast-food-outline"} size={24} color={focused ? "#16A34A" : "#9CA3AF"} />
+          {focused && <View style={{width:18, height:3, borderRadius:2, backgroundColor:ADMIN_COLORS.primary, marginBottom:4}}/>}
+          <Ionicons name={focused? "fast-food" : "fast-food-outline"} size={24} color={focused ? ADMIN_COLORS.textPrimary : ADMIN_COLORS.textSecondary} />
         </View>
       ) } as any} />
       <Tabs.Screen name="account" options={{ title: t('admin.nav.account'), tabBarIcon: ({focused}: any) => (
         <View style={{alignItems:'center'}}>
-          {focused && <View style={{width:18, height:3, borderRadius:2, backgroundColor:'#16A34A', marginBottom:4}}/>}
-          <Ionicons name={focused? "person" : "person-outline"} size={24} color={focused ? "#16A34A" : "#9CA3AF"} />
+          {focused && <View style={{width:18, height:3, borderRadius:2, backgroundColor:ADMIN_COLORS.primary, marginBottom:4}}/>}
+          <Ionicons name={focused? "person" : "person-outline"} size={24} color={focused ? ADMIN_COLORS.textPrimary : ADMIN_COLORS.textSecondary} />
         </View>
       ) } as any} />
       

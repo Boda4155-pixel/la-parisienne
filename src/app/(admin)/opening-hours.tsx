@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { supabase } from '../../../lib/supabase';
+import { ADMIN_COLORS } from "../../../lib/adminTheme";
 
 const DAYS_KEYS = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
 
@@ -51,49 +52,49 @@ export default function OpeningHours(){
   };
 
   if(loading){
-    return <View style={[s.bg,{justifyContent:'center',alignItems:'center'}]}><ActivityIndicator color="#16A34A" size="large"/><Text style={{color:'#888', marginTop:10, fontWeight:'600'}}>{t('admin.openingHours.loading')}</Text></View>
+    return <View style={[s.bg,{justifyContent:'center',alignItems:'center'}]}><ActivityIndicator color={ADMIN_COLORS.textPrimary} size="large"/><Text style={{color:ADMIN_COLORS.textMuted, marginTop:10, fontWeight:'600'}}>{t('admin.openingHours.loading')}</Text></View>
   }
 
   return (
     <View style={s.bg}>
       <View style={s.header}>
-        <TouchableOpacity onPress={()=>router.back()} style={s.back}><Ionicons name="chevron-forward" size={20} color="#111"/></TouchableOpacity>
+        <TouchableOpacity onPress={()=>router.back()} style={s.back}><Ionicons name="chevron-forward" size={20} color={ADMIN_COLORS.textPrimary}/></TouchableOpacity>
         <Text style={s.h1}>{t('admin.openingHours.title')}</Text>
-        <TouchableOpacity onPress={saveAll} style={s.saveBtn}><Text style={{fontWeight:'800', fontSize:12, color:'#FFFFFF'}}>{saving?'...':t('common:save')}</Text></TouchableOpacity>
+        <TouchableOpacity onPress={saveAll} style={s.saveBtn}><Text style={{fontWeight:'800', fontSize:12, color:ADMIN_COLORS.primaryText}}>{saving?'...':t('common:save')}</Text></TouchableOpacity>
       </View>
 
       {hours.length===0? (
-        <View style={{flex:1, justifyContent:'center', alignItems:'center', padding:20, backgroundColor:'#F9F9F9'}}>
-          <View style={{width:80, height:80, borderRadius:40, backgroundColor:'#F0FDF4', justifyContent:'center', alignItems:'center', borderWidth:1, borderColor:'#BBF7D0'}}><Ionicons name="time-outline" size={40} color="#16A34A"/></View>
-          <Text style={{color:'#111', fontWeight:'800', marginTop:12, fontSize:16}}>{t('admin.openingHours.emptyTitle')}</Text>
-          <Text style={{color:'#666', fontSize:12, marginTop:4, textAlign:'center', fontWeight:'500'}}>{t('admin.openingHours.emptyDesc')}</Text>
-          <TouchableOpacity onPress={seedFromAdmin} style={s.saveBig}><Text style={{fontWeight:'800', color:'#FFFFFF'}}>{t('admin.openingHours.createWeek')}</Text></TouchableOpacity>
+        <View style={{flex:1, justifyContent:'center', alignItems:'center', padding:20, backgroundColor:ADMIN_COLORS.inputBg}}>
+          <View style={{width:80, height:80, borderRadius:40, backgroundColor:ADMIN_COLORS.cardSecondary, justifyContent:'center', alignItems:'center', borderWidth:1, borderColor:ADMIN_COLORS.borderLight}}><Ionicons name="time-outline" size={40} color={ADMIN_COLORS.textPrimary}/></View>
+          <Text style={{color:ADMIN_COLORS.textPrimary, fontWeight:'800', marginTop:12, fontSize:16}}>{t('admin.openingHours.emptyTitle')}</Text>
+          <Text style={{color:ADMIN_COLORS.textMuted, fontSize:12, marginTop:4, textAlign:'center', fontWeight:'500'}}>{t('admin.openingHours.emptyDesc')}</Text>
+          <TouchableOpacity onPress={seedFromAdmin} style={s.saveBig}><Text style={{fontWeight:'800', color:ADMIN_COLORS.primaryText}}>{t('admin.openingHours.createWeek')}</Text></TouchableOpacity>
         </View>
       ) : (
-        <ScrollView contentContainerStyle={{padding:16, gap:10, paddingBottom:100}} style={{backgroundColor:'#F9F9F9'}}>
+        <ScrollView contentContainerStyle={{padding:16, gap:10, paddingBottom:100}} style={{backgroundColor:ADMIN_COLORS.inputBg}}>
           {hours.map((h,i)=>(
             <View key={h.day} style={[s.card,!h.is_open && {opacity:0.6}]}>
               <View style={{flexDirection:'row', justifyContent:'space-between', alignItems:'center'}}>
-                <Switch value={h.is_open} onValueChange={(v)=>update(i,'is_open',v)} trackColor={{true:'#16A34A', false:'#E5E5E5'}} thumbColor={'#FFFFFF'}/>
+                <Switch value={h.is_open} onValueChange={(v)=>update(i,'is_open',v)} trackColor={{true:ADMIN_COLORS.primary, false:ADMIN_COLORS.border}} thumbColor={ADMIN_COLORS.textPrimary}/>
                 <Text style={s.day}>{t(`admin.openingHours.days.${DAYS_KEYS[h.day]}`)}</Text>
-                <View style={s.iconBox}><Ionicons name={h.is_open?'time':'time-outline'} size={18} color="#FFFFFF"/></View>
+                <View style={s.iconBox}><Ionicons name={h.is_open?'time':'time-outline'} size={18} color={ADMIN_COLORS.primaryText}/></View>
               </View>
               {h.is_open && (
                 <View style={{flexDirection:'row', gap:8, marginTop:12}}>
                   <View style={{flex:1}}>
                     <Text style={s.label}>{t('admin.openingHours.open')}</Text>
-                    <TextInput value={h.open_time} onChangeText={(v)=>update(i,'open_time',v)} style={s.input} placeholderTextColor="#999"/>
+                    <TextInput value={h.open_time} onChangeText={(v)=>update(i,'open_time',v)} style={s.input} placeholderTextColor={ADMIN_COLORS.textMuted}/>
                   </View>
                   <View style={{flex:1}}>
                     <Text style={s.label}>{t('admin.openingHours.close')}</Text>
-                    <TextInput value={h.close_time} onChangeText={(v)=>update(i,'close_time',v)} style={s.input} placeholderTextColor="#999"/>
+                    <TextInput value={h.close_time} onChangeText={(v)=>update(i,'close_time',v)} style={s.input} placeholderTextColor={ADMIN_COLORS.textMuted}/>
                   </View>
                 </View>
               )}
             </View>
           ))}
           <TouchableOpacity style={s.saveBig} onPress={saveAll}>
-            <Text style={{fontWeight:'800', color:'#FFFFFF'}}>{t('admin.openingHours.saveAdmin')}</Text>
+            <Text style={{fontWeight:'800', color:ADMIN_COLORS.primaryText}}>{t('admin.openingHours.saveAdmin')}</Text>
           </TouchableOpacity>
         </ScrollView>
       )}
@@ -101,12 +102,12 @@ export default function OpeningHours(){
   );
 }
 const s = StyleSheet.create({
-  bg:{flex:1, backgroundColor:'#FFFFFF'},
-  header:{flexDirection:'row', justifyContent:'space-between', alignItems:'center', padding:16, paddingTop:50, borderBottomWidth:1, borderBottomColor:'#F0F0F0', backgroundColor:'#FFFFFF'},
-  h1:{color:'#111', fontWeight:'800', fontSize:18}, back:{width:36, height:36, borderRadius:18, backgroundColor:'#FFFFFF', justifyContent:'center', alignItems:'center', borderWidth:1, borderColor:'#E5E5E5'},
-  saveBtn:{backgroundColor:'#16A34A', paddingHorizontal:18, height:36, borderRadius:18, justifyContent:'center', alignItems:'center'},
-  card:{backgroundColor:'#FFFFFF', borderRadius:16, padding:14, borderWidth:1, borderColor:'#E5E5E5'},
-  day:{color:'#111', fontWeight:'800', fontSize:14}, iconBox:{width:32, height:32, borderRadius:8, backgroundColor:'#16A34A', justifyContent:'center', alignItems:'center'},
-  label:{color:'#111', fontSize:10, textAlign:'center', marginBottom:6, fontWeight:'700'}, input:{backgroundColor:'#F9F9F9', borderWidth:1, borderColor:'#E5E5E5', borderRadius:10, color:'#111', textAlign:'center', height:44, fontWeight:'700'},
-  saveBig:{backgroundColor:'#16A34A', height:52, borderRadius:14, justifyContent:'center', alignItems:'center', marginTop:20, paddingHorizontal:20}
+  bg:{flex:1, backgroundColor:ADMIN_COLORS.background},
+  header:{flexDirection:'row', justifyContent:'space-between', alignItems:'center', padding:16, paddingTop:50, borderBottomWidth:1, borderBottomColor:ADMIN_COLORS.border, backgroundColor:ADMIN_COLORS.card},
+  h1:{color:ADMIN_COLORS.textPrimary, fontWeight:'800', fontSize:18}, back:{width:36, height:36, borderRadius:18, backgroundColor:ADMIN_COLORS.card, justifyContent:'center', alignItems:'center', borderWidth:1, borderColor:ADMIN_COLORS.border},
+  saveBtn:{backgroundColor:ADMIN_COLORS.primary, paddingHorizontal:18, height:36, borderRadius:18, justifyContent:'center', alignItems:'center'},
+  card:{backgroundColor:ADMIN_COLORS.card, borderRadius:16, padding:14, borderWidth:1, borderColor:ADMIN_COLORS.border},
+  day:{color:ADMIN_COLORS.textPrimary, fontWeight:'800', fontSize:14}, iconBox:{width:32, height:32, borderRadius:8, backgroundColor:ADMIN_COLORS.primary, justifyContent:'center', alignItems:'center'},
+  label:{color:ADMIN_COLORS.textPrimary, fontSize:10, textAlign:'center', marginBottom:6, fontWeight:'700'}, input:{backgroundColor:ADMIN_COLORS.inputBg, borderWidth:1, borderColor:ADMIN_COLORS.border, borderRadius:10, color:ADMIN_COLORS.textPrimary, textAlign:'center', height:44, fontWeight:'700'},
+  saveBig:{backgroundColor:ADMIN_COLORS.primary, height:52, borderRadius:14, justifyContent:'center', alignItems:'center', marginTop:20, paddingHorizontal:20}
 });

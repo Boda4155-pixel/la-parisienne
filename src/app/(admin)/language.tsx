@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Alert, I18nManager, Text, TouchableOpacity, View } from 'react-native';
 import { changeAppLanguage } from '../../../i18next/i18next';
 import { supabase } from '../../../lib/supabase';
+import { ADMIN_COLORS } from "../../../lib/adminTheme";
 
 const langs = [
   {code:'en', native:'English', flag:'🇬🇧'},
@@ -60,29 +61,29 @@ export default function LanguageScreen(){
     }
   };
 
-  if(loading) return <View style={{flex:1, backgroundColor:'#FFFFFF', justifyContent:'center', alignItems:'center'}}><ActivityIndicator color="#16A34A"/></View>;
+  if(loading) return <View style={{flex:1, backgroundColor:ADMIN_COLORS.backgroundSecondary, justifyContent:'center', alignItems:'center'}}><ActivityIndicator color={ADMIN_COLORS.textPrimary}/></View>;
 
   return (
-    <View style={{flex:1, backgroundColor:'#FFFFFF', paddingTop:60, padding:16}}>
-      <TouchableOpacity onPress={()=>router.back()} style={{flexDirection:'row', gap:6, alignItems:'center', width:90, height:36, borderRadius:18, backgroundColor:'#FFFFFF', borderWidth:1, borderColor:'#E5E5E5', justifyContent:'center'}}>
-        <Ionicons name="chevron-forward" size={20} color="#111"/><Text style={{color:'#111', fontWeight:'700'}}>Back</Text>
+    <View style={{flex:1, backgroundColor:ADMIN_COLORS.backgroundSecondary, paddingTop:60, padding:16}}>
+      <TouchableOpacity onPress={()=>router.back()} style={{flexDirection:'row', gap:6, alignItems:'center', width:90, height:36, borderRadius:18, backgroundColor:ADMIN_COLORS.card, borderWidth:1, borderColor:ADMIN_COLORS.border, justifyContent:'center'}}>
+        <Ionicons name="chevron-forward" size={20} color={ADMIN_COLORS.textPrimary}/><Text style={{color:ADMIN_COLORS.textPrimary, fontWeight:'700'}}>Back</Text>
       </TouchableOpacity>
 
-      <Text style={{color:'#111', fontSize:22, fontWeight:'800', marginTop:20, textAlign:'right'}}>Language • اللغة - فوري</Text>
-      <Text style={{color:'#555', fontSize:12, marginTop:4, textAlign:'right', fontWeight:'600'}}></Text>
+      <Text style={{color:ADMIN_COLORS.textPrimary, fontSize:22, fontWeight:'800', marginTop:20, textAlign:'right'}}>Language • اللغة - فوري</Text>
+      <Text style={{color:ADMIN_COLORS.textSecondary, fontSize:12, marginTop:4, textAlign:'right', fontWeight:'600'}}></Text>
 
       <View style={{marginTop:20, gap:12}}>
         {langs.map(l=>{
           const active = current===l.code;
           const isSaving = saving === l.code;
           return (
-            <TouchableOpacity key={l.code} onPress={()=>select(l.code)} disabled={!!saving} style={{backgroundColor: active ? '#16A34A' : '#FFFFFF', borderRadius:16, padding:18, flexDirection:'row', justifyContent:'space-between', alignItems:'center', borderWidth:1, borderColor: active ? '#16A34A' : '#E5E5E5', opacity: saving ? 0.6 : 1}}>
+            <TouchableOpacity key={l.code} onPress={()=>select(l.code)} disabled={!!saving} style={{backgroundColor: active ? ADMIN_COLORS.primary : ADMIN_COLORS.card, borderRadius:16, padding:18, flexDirection:'row', justifyContent:'space-between', alignItems:'center', borderWidth:1, borderColor: active ? ADMIN_COLORS.primary : ADMIN_COLORS.border, opacity: saving ? 0.6 : 1}}>
               <View style={{flexDirection:'row', alignItems:'center', gap:10}}>
-                {active && <Ionicons name="checkmark-circle" size={24} color="#FFFFFF"/>}
-                {isSaving && <ActivityIndicator color="#FFFFFF" size="small"/>}
+                {active && <Ionicons name="checkmark-circle" size={24} color={ADMIN_COLORS.primaryText}/>}
+                {isSaving && <ActivityIndicator color={ADMIN_COLORS.primaryText} size="small"/>}
               </View>
               <View style={{flexDirection:'row', alignItems:'center', gap:8}}>
-                <Text style={{color: active ? '#FFFFFF' : '#111', fontWeight:'800', fontSize:16}}>{l.native}</Text>
+                <Text style={{color: active ? ADMIN_COLORS.primaryText : ADMIN_COLORS.textPrimary, fontWeight:'800', fontSize:16}}>{l.native}</Text>
                 <Text style={{fontSize:20}}>{l.flag}</Text>
               </View>
             </TouchableOpacity>
@@ -90,8 +91,8 @@ export default function LanguageScreen(){
         })}
       </View>
 
-      <View style={{marginTop:30, backgroundColor:'#F0FDF4', borderRadius:12, padding:12, borderWidth:1, borderColor:'#BBF7D0'}}>
-        <Text style={{color:'#16A34A', fontSize:11, textAlign:'center', fontWeight:'700'}}>Current: {current.toUpperCase()} • i18n: {i18n.language}</Text>
+      <View style={{marginTop:30, backgroundColor:ADMIN_COLORS.card, borderRadius:12, padding:12, borderWidth:1, borderColor:ADMIN_COLORS.border}}>
+        <Text style={{color:ADMIN_COLORS.textPrimary, fontSize:11, textAlign:'center', fontWeight:'700'}}>Current: {current.toUpperCase()} • i18n: {i18n.language}</Text>
       </View>
     </View>
   );
