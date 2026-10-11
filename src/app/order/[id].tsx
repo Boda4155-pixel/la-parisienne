@@ -57,7 +57,9 @@ export default function OrderDetails() {
   if (!order) {
     return (
       <SafeAreaView className="flex-1 bg-white items-center justify-center">
-        <Text className="paragraph-regular text-gray-100">Order not found</Text>
+        <Text className="paragraph-regular text-gray-100">
+          {t("orders.notFound")}
+        </Text>
       </SafeAreaView>
     );
   }

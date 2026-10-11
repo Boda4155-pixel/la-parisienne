@@ -48,7 +48,7 @@ export default function OrderSuccess() {
       </Pressable>
 
       <Pressable
-        onPress={() => router.replace("/(tabs)")}
+        onPress={() => router.replace("/(customer)/home" as any)}
         className="py-4 items-center mt-2"
       >
         <Text className="paragraph-bold text-primary">

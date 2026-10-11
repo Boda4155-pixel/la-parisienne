@@ -19,7 +19,7 @@ const MenuCard = ({ item }: { item: Product }) => {
   useEffect(() => {
     if (!user) return;
 
-    isProductFavorite({ userId: user.id, productId: item.id })
+    isProductFavorite({ productId: item.id })
       .then((result) => setIsFavorite(result.data ?? false))
       .catch(() => {});
   }, [user, item.id]);
@@ -39,7 +39,7 @@ const MenuCard = ({ item }: { item: Product }) => {
     e.stopPropagation();
 
     if (!user) {
-      router.push("/sign-in");
+      router.push("/(auth)/login");
       return;
     }
 
@@ -48,9 +48,9 @@ const MenuCard = ({ item }: { item: Product }) => {
 
     try {
       if (nextValue) {
-        await addFavorite({ userId: user.id, productId: item.id });
+        await addFavorite({ productId: item.id });
       } else {
-        await removeFavorite({ userId: user.id, productId: item.id });
+        await removeFavorite({ productId: item.id });
       }
     } catch {
       setIsFavorite(!nextValue);

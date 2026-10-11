@@ -16,10 +16,8 @@ const getRouteByRole = (role?: string | null) => {
   if (r === 'admin') return '/(admin)/dashboard' as const;
   if (r === 'cashier') return '/(cashier)' as const;
   if (r === 'driver') return '/(driver)' as const;
-  return '/(tabs)' as const;
+  return '/(customer)/home' as const;
 };
-
-const ALLOWED_OUTSIDE = ["checkout", "addresses", "product", "[id]", "profile", "orders", "favorite", "payment-methods", "notifications", "help", "about"];
 
 export default function RootLayout() {
   const router = useRouter();
@@ -55,9 +53,11 @@ export default function RootLayout() {
   useEffect(() => {
     if (!fontsLoaded || isLoading) return;
     const inAuthGroup = segments[0] === "(auth)";
-    const currentGroup = segments[0] as string;
+    const currentGroup = segments[0] as string | undefined;
 
-    if (ALLOWED_OUTSIDE.includes(currentGroup) || currentGroup === "checkout") return;
+    if (!currentGroup) return;
+    // FIX: لو الصفحة مش جروب (يعني favorite, payment-methods, addresses...) سيبها تعدي
+    if (!currentGroup.startsWith("(")) return;
 
     if (!isAuthenticated) {
       if (!inAuthGroup) router.replace("/(auth)/login" as any);
@@ -77,8 +77,8 @@ export default function RootLayout() {
       router.replace("/(cashier)" as any);
     } else if (role === "driver" && currentGroup!== "(driver)") {
       router.replace("/(driver)" as any);
-    } else if (!["admin","cashier","driver"].includes(role) && currentGroup!== "(tabs)") {
-      router.replace("/(tabs)" as any);
+    } else if (!["admin","cashier","driver"].includes(role) && currentGroup!== "(customer)") {
+      router.replace("/(customer)/home" as any);
     }
   }, [fontsLoaded, isLoading, isAuthenticated, profile, segments, router]);
 
@@ -88,11 +88,18 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-          <Stack.Screen name="(admin)" options={{ headerShown: false }} />
-          <Stack.Screen name="(cashier)" options={{ headerShown: false }} />
-          <Stack.Screen name="(driver)" options={{ headerShown: false }} />
+          <Stack.Screen name="(customer)" />
+          <Stack.Screen name="(auth)" />
+          <Stack.Screen name="(admin)" />
+          <Stack.Screen name="(cashier)" />
+          <Stack.Screen name="(driver)" />
+          <Stack.Screen name="favorite" />
+          <Stack.Screen name="search" />
+          <Stack.Screen name="payment-methods" />
+          <Stack.Screen name="addresses" />
+          <Stack.Screen name="notifications" />
+          <Stack.Screen name="help" />
+          <Stack.Screen name="settings" />
         </Stack>
       </SafeAreaProvider>
     </GestureHandlerRootView>

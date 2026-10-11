@@ -1,3 +1,2 @@
-# Expo HAS CHANGED
-
-Read the exact versioned docs at https://docs.expo.dev/versions/v57.0.0/ before writing any code.
+@AGENTS.md
+NEVER read image files (.png, .jpg, .jpeg, .svg, .webp). Skip them completely. If you need to understand an image, just ignore it.

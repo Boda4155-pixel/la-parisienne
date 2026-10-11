@@ -2,6 +2,8 @@ import Constants from "expo-constants";
 import { router } from "expo-router";
 import { Eye, EyeOff, Lock, Mail } from "lucide-react-native";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { I18nManager } from "react-native";
 import {
   Alert,
   Image,
@@ -25,12 +27,14 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { supabase } from "../../../lib/supabase";
 
 export default function SignUpWhite() {
+  const { t } = useTranslation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [focus, setFocus] = useState("");
   const [loading, setLoading] = useState(false);
+  const isRTL = I18nManager.isRTL;
 
   const y = useSharedValue(0);
 
@@ -54,7 +58,7 @@ export default function SignUpWhite() {
     const checkSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
-        router.replace("/(tabs)" as any);
+        router.replace("/(customer)/home" as any);
       }
     };
     checkSession();
@@ -62,11 +66,11 @@ export default function SignUpWhite() {
 
   const signUpWithEmail = async () => {
     if (!email || !password || !confirmPassword) {
-      Alert.alert("Error", "All fields are required");
+      Alert.alert(t("common.error"), t("auth.fillAllFields"));
       return;
     }
     if (password !== confirmPassword) {
-      Alert.alert("Error", "Passwords do not match");
+      Alert.alert(t("common.error"), t("auth.passwordsDontMatch"));
       return;
     }
     setLoading(true);
@@ -76,10 +80,10 @@ export default function SignUpWhite() {
         password,
       });
       if (error) throw error;
-      Alert.alert("Success", "Please check your email to verify your account");
+      Alert.alert(t("auth.signUpSuccess"), t("auth.signUpSuccessDesc"));
       router.replace("/(auth)/login" as any);
     } catch (e: any) {
-      Alert.alert("Error", e.message);
+      Alert.alert(t("common.error"), e.message);
     } finally {
       setLoading(false);
     }
@@ -117,19 +121,19 @@ export default function SignUpWhite() {
                 </Text>
               </View>
               <Text className="text-[#8B6F47] text-[24px] mt-3 tracking-[2px] font-light">
-                La Parisienne
+                {t("common.brandName")}
               </Text>
               <Text className="text-[#8B6F47]/50 text-[10px] tracking-[3px] mt-1">
-                BOULANGERIE • PÂTISSERIE
+                {t("auth.brandTagline")}
               </Text>
             </View>
 
             <View className="mt-8">
               <Text className="text-black text-[26px] font-bold text-center">
-                Create Account
+                {t("auth.createAccount")}
               </Text>
               <Text className="text-black/50 text-[13px] mt-2 text-center">
-                Sign up to get started
+                {t("auth.signUpSubtitle")}
               </Text>
             </View>
 
@@ -144,20 +148,21 @@ export default function SignUpWhite() {
                   size={18}
                   color={focus === "email" ? "#D4B57A" : "#AAA"}
                 />
-                <View className="flex-1 ml-4">
+                <View className={`flex-1 ${isRTL ? "mr-4" : "ml-4"}`}>
                   <Text className="text-[#8B6F47] text-[10px] font-medium">
-                    Email
+                    {t("auth.email")}
                   </Text>
                   <TextInput
                     value={email}
                     onChangeText={setEmail}
                     onFocus={() => setFocus("email")}
                     onBlur={() => setFocus("")}
-                    placeholder="you@example.com"
+                    placeholder={t("auth.emailPlaceholder")}
                     placeholderTextColor="#BBB"
                     className="text-black text-[14px] p-0 -mt-1"
                     autoCapitalize="none"
                     keyboardType="email-address"
+                    textAlign={isRTL ? "right" : "left"}
                   />
                 </View>
               </View>
@@ -172,9 +177,9 @@ export default function SignUpWhite() {
                   size={18}
                   color={focus === "pass" ? "#D4B57A" : "#AAA"}
                 />
-                <View className="flex-1 ml-4">
+                <View className={`flex-1 ${isRTL ? "mr-4" : "ml-4"}`}>
                   <Text className="text-[#8B6F47] text-[10px] font-medium">
-                    Password
+                    {t("auth.password")}
                   </Text>
                   <TextInput
                     value={password}
@@ -185,6 +190,7 @@ export default function SignUpWhite() {
                     placeholderTextColor="#BBB"
                     className="text-black text-[14px] p-0 -mt-1"
                     secureTextEntry={!showPassword}
+                    textAlign={isRTL ? "right" : "left"}
                   />
                 </View>
                 <Pressable onPress={() => setShowPassword(!showPassword)} className="p-2">
@@ -206,9 +212,9 @@ export default function SignUpWhite() {
                   size={18}
                   color={focus === "confirm" ? "#D4B57A" : "#AAA"}
                 />
-                <View className="flex-1 ml-4">
+                <View className={`flex-1 ${isRTL ? "mr-4" : "ml-4"}`}>
                   <Text className="text-[#8B6F47] text-[10px] font-medium">
-                    Confirm Password
+                    {t("auth.confirmPassword")}
                   </Text>
                   <TextInput
                     value={confirmPassword}
@@ -219,30 +225,39 @@ export default function SignUpWhite() {
                     placeholderTextColor="#BBB"
                     className="text-black text-[14px] p-0 -mt-1"
                     secureTextEntry={!showPassword}
+                    textAlign={isRTL ? "right" : "left"}
                   />
                 </View>
+                <Pressable onPress={() => setShowPassword(!showPassword)} className="p-2">
+                  {showPassword ? (
+                    <EyeOff size={20} color="#8B6F47" />
+                  ) : (
+                    <Eye size={20} color="#AAA" />
+                  )}
+                </Pressable>
               </View>
 
               {/* Sign up button */}
               <Pressable
                 onPress={signUpWithEmail}
+                disabled={loading}
                 className="h-[56px] rounded-[20px] bg-[#D4B57A] items-center justify-center mt-2 active:bg-[#b99b5d]"
               >
                 <Text className="text-[#1A1A1A] font-bold text-[16px]">
-                  {loading ? "..." : "Sign up with email"}
+                  {loading ? t("auth.sending") : t("auth.signUpWithEmail")}
                 </Text>
               </Pressable>
 
               {/* Sign in link */}
               <View className="flex-row justify-center pt-4">
                 <Text className="text-black/40 text-[13px]">
-                  Already have an account?
+                  {t("auth.haveAccount")}
                 </Text>
                 <Pressable
                   onPress={() => router.push("/(auth)/login" as any)}
                 >
                   <Text className="text-[#8B6F47] text-[13px] font-bold">
-                    Sign in
+                    {" "} {t("auth.signIn")}
                   </Text>
                 </Pressable>
               </View>

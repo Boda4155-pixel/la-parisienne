@@ -1,6 +1,8 @@
 import { router } from "expo-router";
 import { Eye, EyeOff, Lock, Mail } from "lucide-react-native";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { I18nManager } from "react-native";
 import {
   Image,
   KeyboardAvoidingView,
@@ -23,12 +25,14 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { supabase } from "../../../lib/supabase";
 
 export default function Login() {
+  const { t, i18n } = useTranslation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [focus, setFocus] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const isRTL = I18nManager.isRTL;
 
   const y = useSharedValue(0);
 
@@ -52,7 +56,7 @@ export default function Login() {
     const checkSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
-        router.replace("/(tabs)" as any);
+        router.replace("/(customer)/home" as any);
       }
     };
     checkSession();
@@ -61,7 +65,7 @@ export default function Login() {
   const signIn = async () => {
     setError(null);
     if (!email || !password) {
-      setError("Email & password are required");
+      setError(t("auth.fillAllFields"));
       return;
     }
     setLoading(true);
@@ -71,9 +75,9 @@ export default function Login() {
         password,
       });
       if (error) throw error;
-      router.replace("/(tabs)" as any);
+      router.replace("/(customer)/home" as any);
     } catch (e: any) {
-      setError(e.message || "Something went wrong");
+      setError(e.message || t("auth.somethingWentWrong"));
     } finally {
       setLoading(false);
     }
@@ -111,19 +115,19 @@ export default function Login() {
                 </Text>
               </View>
               <Text className="text-[#8B6F47] text-[24px] mt-3 tracking-[2px] font-light">
-                La Parisienne
+                {t("common.brandName")}
               </Text>
               <Text className="text-[#8B6F47]/50 text-[10px] tracking-[3px] mt-1">
-                BOULANGERIE • PÂTISSERIE
+                {t("auth.brandTagline")}
               </Text>
             </View>
 
             <View className="mt-8">
               <Text className="text-black text-[26px] font-bold text-center">
-                Welcome Back
+                {t("auth.welcomeBack")}
               </Text>
               <Text className="text-black/50 text-[13px] mt-2 text-center">
-                Sign in to your account
+                {t("auth.signInSubtitle")}
               </Text>
             </View>
 
@@ -138,20 +142,21 @@ export default function Login() {
                   size={18}
                   color={focus === "email" ? "#D4B57A" : "#AAA"}
                 />
-                <View className="flex-1 ml-4">
+                <View className={`flex-1 ${isRTL ? "mr-4" : "ml-4"}`}>
                   <Text className="text-[#8B6F47] text-[10px] font-medium">
-                    Email
+                    {t("auth.email")}
                   </Text>
                   <TextInput
                     value={email}
                     onChangeText={setEmail}
                     onFocus={() => setFocus("email")}
                     onBlur={() => setFocus("")}
-                    placeholder="you@example.com"
+                    placeholder={t("auth.emailPlaceholder")}
                     placeholderTextColor="#BBB"
                     className="text-black text-[14px] p-0 -mt-1"
                     autoCapitalize="none"
                     keyboardType="email-address"
+                    style={{ textAlign: isRTL ? "right" : "left" }}
                   />
                 </View>
               </View>
@@ -166,9 +171,9 @@ export default function Login() {
                   size={18}
                   color={focus === "pass" ? "#D4B57A" : "#AAA"}
                 />
-                <View className="flex-1 ml-4">
+                <View className={`flex-1 ${isRTL ? "mr-4" : "ml-4"}`}>
                   <Text className="text-[#8B6F47] text-[10px] font-medium">
-                    Password
+                    {t("auth.password")}
                   </Text>
                   <TextInput
                     value={password}
@@ -179,6 +184,7 @@ export default function Login() {
                     placeholderTextColor="#BBB"
                     className="text-black text-[14px] p-0 -mt-1"
                     secureTextEntry={!showPassword}
+                    style={{ textAlign: isRTL ? "right" : "left" }}
                   />
                 </View>
                 <Pressable onPress={() => setShowPassword(!showPassword)} className="p-2">
@@ -193,7 +199,7 @@ export default function Login() {
               {/* Inline error message */}
               {error ? (
                 <View className="bg-[#FDEDED] border border-[#F8B4B4] rounded-[16px] px-4 py-3">
-                  <Text className="text-[#B91C1C] text-[13px] leading-5">
+                  <Text className="text-[#B91C1C] text-[13px] leading-5" style={{ textAlign: isRTL ? "right" : "left" }}>
                     {error}
                   </Text>
                 </View>
@@ -210,30 +216,30 @@ export default function Login() {
                 }`}
               >
                 <Text className="text-[#1A1A1A] font-bold text-[16px]">
-                  {loading ? "Signing in..." : "Sign in"}
+                  {loading ? t("auth.signingIn") : t("auth.signIn")}
                 </Text>
               </Pressable>
 
               {/* Forgot password link */}
               <Pressable
                 onPress={() => router.push("/(auth)/forgot-password" as any)}
-                className="self-end mt-1"
+                className={`self-${isRTL ? "left" : "right"} mt-1`}
               >
                 <Text className="text-[#8B6F47] text-[13px] font-medium">
-                  Forgot password?
+                  {t("auth.forgotPassword")}
                 </Text>
               </Pressable>
 
               {/* Sign up link */}
               <View className="flex-row justify-center pt-4">
                 <Text className="text-black/40 text-[13px]">
-                  No account?
+                  {t("auth.noAccount")}
                 </Text>
                 <Pressable
                   onPress={() => router.push("/(auth)/sign-up" as any)}
                 >
                   <Text className="text-[#8B6F47] text-[13px] font-bold">
-                    {" "}Register
+                    {" "} {t("auth.signUp")}
                   </Text>
                 </Pressable>
               </View>

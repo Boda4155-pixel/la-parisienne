@@ -13,21 +13,13 @@
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/icon.jpeg",
-        "backgroundImage": "./assets/images/icon.jpeg",
-        "monochromeImage": "./assets/images/icon.jpeg"
+        "foregroundImage": "./assets/images/icon.jpeg"
       },
-      "predictiveBackGestureEnabled": false,
-      "config": {
-        "googleMaps": {
-          "apiKey": "AIzaSyCziy3e304C8Xxz4hWNh9OIHY-5K0LKziE"
-        }
-      },
+      "package": "com.bboda4155.laparisienne",
       "permissions": [
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION"
-      ],
-      "package": "com.mohamed34347.laparisienne"
+      ]
     },
     "web": {
       "bundler": "metro",

@@ -1,6 +1,8 @@
 import { router } from "expo-router";
 import { ChevronLeft, Mail } from "lucide-react-native";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { I18nManager } from "react-native";
 import {
   Alert,
   Image,
@@ -24,9 +26,11 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { supabase } from "../../../lib/supabase";
 
 export default function ForgotPassword() {
+  const { t } = useTranslation();
   const [email, setEmail] = useState("");
   const [focus, setFocus] = useState(false);
   const [loading, setLoading] = useState(false);
+  const isRTL = I18nManager.isRTL;
 
   const y = useSharedValue(0);
 
@@ -47,7 +51,7 @@ export default function ForgotPassword() {
 
   const handleReset = async () => {
     if (!email) {
-      Alert.alert("Error", "Email is required");
+      Alert.alert(t("common.error"), t("auth.emailRequired"));
       return;
     }
     setLoading(true);
@@ -56,10 +60,10 @@ export default function ForgotPassword() {
         redirectTo: "laparisienne://(auth)/reset-password",
       });
       if (error) throw error;
-      Alert.alert("Success", "Password reset link sent to your email");
+      Alert.alert(t("auth.resetSuccess"), t("auth.resetEmailSent"));
       router.replace("/(auth)/login" as any);
     } catch (e: any) {
-      Alert.alert("Error", e.message);
+      Alert.alert(t("common.error"), e.message);
     } finally {
       setLoading(false);
     }
@@ -97,19 +101,19 @@ export default function ForgotPassword() {
                 </Text>
               </View>
               <Text className="text-[#8B6F47] text-[24px] mt-3 tracking-[2px] font-light">
-                La Parisienne
+                {t("common.brandName")}
               </Text>
               <Text className="text-[#8B6F47]/50 text-[10px] tracking-[3px] mt-1">
-                BOULANGERIE • PÂTISSERIE
+                {t("auth.brandTagline")}
               </Text>
             </View>
 
             <View className="mt-8">
               <Text className="text-black text-[26px] font-bold text-center">
-                Forgot Password?
+                {t("auth.forgotPasswordTitle")}
               </Text>
               <Text className="text-black/50 text-[13px] mt-2 text-center">
-                Enter your email to receive a reset link
+                {t("auth.forgotPasswordSubtitle")}
               </Text>
             </View>
 
@@ -124,20 +128,21 @@ export default function ForgotPassword() {
                   size={18}
                   color={focus ? "#D4B57A" : "#AAA"}
                 />
-                <View className="flex-1 ml-4">
+                <View className={`flex-1 ${isRTL ? "mr-4" : "ml-4"}`}>
                   <Text className="text-[#8B6F47] text-[10px] font-medium">
-                    Email
+                    {t("auth.email")}
                   </Text>
                   <TextInput
                     value={email}
                     onChangeText={setEmail}
                     onFocus={() => setFocus(true)}
                     onBlur={() => setFocus(false)}
-                    placeholder="you@example.com"
+                    placeholder={t("auth.emailPlaceholder")}
                     placeholderTextColor="#BBB"
                     className="text-black text-[14px] p-0 -mt-1"
                     autoCapitalize="none"
                     keyboardType="email-address"
+                    textAlign={isRTL ? "right" : "left"}
                   />
                 </View>
               </View>
@@ -145,23 +150,24 @@ export default function ForgotPassword() {
               {/* Reset button */}
               <Pressable
                 onPress={handleReset}
+                disabled={loading}
                 className="h-[56px] rounded-[20px] bg-[#D4B57A] items-center justify-center mt-2 active:bg-[#b99b5d]"
               >
                 <Text className="text-[#1A1A1A] font-bold text-[16px]">
-                  {loading ? "Sending..." : "Send Reset Link"}
+                  {loading ? t("auth.sending") : t("auth.sendResetLink")}
                 </Text>
               </Pressable>
 
               {/* Back to sign in */}
               <View className="flex-row justify-center pt-4">
                 <Text className="text-black/40 text-[13px]">
-                  Remember your password?
+                  {t("auth.rememberPassword")}
                 </Text>
                 <Pressable
                   onPress={() => router.push("/(auth)/login" as any)}
                 >
                   <Text className="text-[#8B6F47] text-[13px] font-bold">
-                    Sign in
+                    {" "} {t("auth.signIn")}
                   </Text>
                 </Pressable>
               </View>

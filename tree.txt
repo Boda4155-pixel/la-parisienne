@@ -1,0 +1,6 @@
+Folder PATH listing
+Volume serial number is 1C13-D41B
+C:\USERS\ABDEL\LA-PARISIENNE\APP
+Invalid path - \USERS\ABDEL\LA-PARISIENNE\APP
+No subfolders exist 
+

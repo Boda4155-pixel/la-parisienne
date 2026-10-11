@@ -1,9 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, Linking, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { supabase } from '../../../lib/supabase';
+import { Alert, FlatList, KeyboardAvoidingView, Linking, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { ADMIN_COLORS } from "../../../lib/adminTheme";
+import { supabase } from '../../../lib/supabase';
 
 export default function OrdersPage() {
   const { t } = useTranslation();
@@ -12,6 +12,13 @@ export default function OrdersPage() {
   const [status, setStatus] = useState<'all'|'pending'|'confirmed'|'delivered'|'cancelled'>('all');
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<any>(null);
+
+  // CHAT STATES
+  const [convId, setConvId] = useState<string | null>(null);
+  const [messages, setMessages] = useState<any[]>([]);
+  const [msgText, setMsgText] = useState('');
+  const [chatTab, setChatTab] = useState(false);
+  const flatRef = useRef<FlatList>(null);
 
   const load = async () => {
     const { data } = await supabase.from('orders').select('*').order('created_at', {ascending:false});
@@ -28,8 +35,40 @@ export default function OrdersPage() {
     setFiltered(f);
   }, [status, search, orders]);
 
+  // LOAD CHAT WHEN ORDER OPENED
+  const loadChat = async (orderId: string) => {
+    let { data: conv } = await supabase.from('chat_conversations').select('*').eq('order_id', orderId).single();
+    if (!conv) {
+      const { data: newConv, error } = await supabase.from('chat_conversations').insert([{ order_id: orderId }]).select().single();
+      if (!error) conv = newConv;
+    }
+    if (!conv) return;
+    setConvId(conv.id);
+    const { data: msgs } = await supabase.from('chat_messages').select('*').eq('conversation_id', conv.id).order('created_at', { ascending: true });
+    setMessages(msgs || []);
+  };
+
+  // REALTIME SUB
+  useEffect(() => {
+    if (!convId) return;
+    const ch = supabase.channel(`chat:${convId}`)
+     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: `conversation_id=eq.${convId}` },
+        (payload) => {
+          setMessages(m => [...m, payload.new]);
+          setTimeout(() => flatRef.current?.scrollToEnd({ animated: true }), 100);
+        }
+      ).subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [convId]);
+
   const openOrder = async (o:any) => {
     setSelected({...o, items:[], profile:null, _displayName:'Loading...', _displayPhone:'...', _displayAddr: o.delivery_address || '...' });
+    setMessages([]);
+    setConvId(null);
+    setChatTab(false);
+    setMsgText('');
+    loadChat(o.id);
+
     const {data: items} = await supabase.from('order_items').select('*, products(name)').eq('order_id', o.id);
     const possibleId = o.user_id || o.customer_id || o.profile_id || o.customerId;
     let profile = null;
@@ -38,13 +77,23 @@ export default function OrdersPage() {
       profile = profData;
     }
     setSelected({
-      ...o,
+     ...o,
       items: items||[],
       profile,
       _displayName: profile?.full_name || profile?.name || profile?.email || o.customer_name || t('admin.orders.guest'),
       _displayPhone: profile?.phone || profile?.phone_number || profile?.mobile || o.customer_phone || t('admin.orders.noPhone'),
       _displayAddr: o.delivery_address || o.address || profile?.address || t('admin.orders.noAddress')
     });
+  };
+
+  const sendMessage = async () => {
+    if (!msgText.trim() ||!convId) return;
+    const { error } = await supabase.from('chat_messages').insert([{
+      conversation_id: convId,
+      sender_role: 'cashier',
+      message: msgText.trim(),
+    }]);
+    if (!error) setMsgText('');
   };
 
   const updateStatus = async (id:string, newStatus:string) => {
@@ -97,7 +146,7 @@ export default function OrdersPage() {
       </ScrollView>
 
       <Modal visible={!!selected} transparent animationType="slide" onRequestClose={()=>setSelected(null)}>
-        <View style={s.overlay}>
+        <KeyboardAvoidingView behavior={Platform.OS==='ios'?'padding':undefined} style={s.overlay}>
           <View style={s.modal}>
             <View style={s.modalHead}>
               <Text style={s.modalTitle}>{t('admin.orders.order')} #{selected?.id?.slice(0,8)}</Text>
@@ -105,10 +154,10 @@ export default function OrdersPage() {
             </View>
 
             {selected && (
-              <>
+              <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{paddingBottom:20}}>
                 <View style={s.infoBox}>
                   <Text style={s.row}><Text style={s.label}>{t('admin.orders.name')}: </Text><Text style={s.val}>{selected._displayName}</Text></Text>
-                  <Text style={s.row}><Text style={s.label}>{t('admin.orders.phone')}: </Text><Text style={[s.val, {color: selected._displayPhone===t('admin.orders.noPhone') ? ADMIN_COLORS.danger : ADMIN_COLORS.textPrimary}]}>{selected._displayPhone}</Text></Text>
+                  <Text style={s.row}><Text style={s.label}>{t('admin.orders.phone')}: </Text><Text style={[s.val, {color: selected._displayPhone===t('admin.orders.noPhone')? ADMIN_COLORS.danger : ADMIN_COLORS.textPrimary}]}>{selected._displayPhone}</Text></Text>
                   <Text style={s.row}><Text style={s.label}>{t('admin.orders.address')}: </Text><Text style={s.val}>{selected._displayAddr}</Text></Text>
                   <Text style={s.row}><Text style={s.label}>{t('admin.orders.total')}: </Text><Text style={s.val}>EGP {Number(selected.total||0).toFixed(2)}</Text></Text>
                 </View>
@@ -118,21 +167,52 @@ export default function OrdersPage() {
                   <View key={i} style={s.itemRow}><Text style={s.itemName}>{it.products?.name || 'Product'} x{it.quantity}</Text><Text style={s.itemPrice}>EGP {it.price}</Text></View>
                 ))}
 
-                <View style={s.actions}>
-                  <TouchableOpacity style={[s.actBtn, {backgroundColor:ADMIN_COLORS.cardSecondary}]} onPress={()=>updateStatus(selected.id,'pending')}><Text style={s.actTxtPending}>{t('admin.orders.status.pending')}</Text></TouchableOpacity>
-                  <TouchableOpacity style={[s.actBtn, {backgroundColor:ADMIN_COLORS.cardSecondary}]} onPress={()=>updateStatus(selected.id,'confirmed')}><Text style={s.actTxtConfirmed}>{t('admin.orders.status.confirmed')}</Text></TouchableOpacity>
-                  <TouchableOpacity style={[s.actBtn, {backgroundColor:ADMIN_COLORS.primary}]} onPress={()=>updateStatus(selected.id,'delivered')}><Text style={s.actTxtWhite}>{t('admin.orders.deliver')}</Text></TouchableOpacity>
+                {/* TABS */}
+                <View style={s.tabRow}>
+                  <TouchableOpacity onPress={()=>setChatTab(false)} style={[s.tab,!chatTab && s.tabActive]}><Text style={[s.tabTxt,!chatTab && s.tabTxtActive]}>تفاصيل</Text></TouchableOpacity>
+                  <TouchableOpacity onPress={()=>setChatTab(true)} style={[s.tab, chatTab && s.tabActive]}><Text style={[s.tabTxt, chatTab && s.tabTxtActive]}>الشات {messages.length>0?`(${messages.length})`:''}</Text></TouchableOpacity>
                 </View>
-                <View style={s.actions}>
-                  <TouchableOpacity style={[s.actBtn, {backgroundColor:ADMIN_COLORS.card, flexDirection:'row', gap:6, justifyContent:'center', borderWidth:1, borderColor:ADMIN_COLORS.borderLight}]} onPress={handleCall}>
-                    <Ionicons name="call" size={16} color={ADMIN_COLORS.primaryText}/><Text style={s.actTxtGreen}>{t('admin.orders.call')}</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={[s.actBtn, {backgroundColor:ADMIN_COLORS.dangerBg}]} onPress={()=>updateStatus(selected.id,'cancelled')}><Text style={s.actTxtWhite}>{t('admin.orders.cancel')}</Text></TouchableOpacity>
-                </View>
-              </>
+
+                {!chatTab? (
+                  <>
+                    <View style={s.actions}>
+                      <TouchableOpacity style={[s.actBtn, {backgroundColor:ADMIN_COLORS.cardSecondary}]} onPress={()=>updateStatus(selected.id,'pending')}><Text style={s.actTxtPending}>{t('admin.orders.status.pending')}</Text></TouchableOpacity>
+                      <TouchableOpacity style={[s.actBtn, {backgroundColor:ADMIN_COLORS.cardSecondary}]} onPress={()=>updateStatus(selected.id,'confirmed')}><Text style={s.actTxtConfirmed}>{t('admin.orders.status.confirmed')}</Text></TouchableOpacity>
+                      <TouchableOpacity style={[s.actBtn, {backgroundColor:ADMIN_COLORS.primary}]} onPress={()=>updateStatus(selected.id,'delivered')}><Text style={s.actTxtWhite}>{t('admin.orders.deliver')}</Text></TouchableOpacity>
+                    </View>
+                    <View style={s.actions}>
+                      <TouchableOpacity style={[s.actBtn, {backgroundColor:ADMIN_COLORS.card, flexDirection:'row', gap:6, justifyContent:'center', borderWidth:1, borderColor:ADMIN_COLORS.borderLight}]} onPress={handleCall}>
+                        <Ionicons name="call" size={16} color={ADMIN_COLORS.primaryText}/><Text style={s.actTxtGreen}>{t('admin.orders.call')}</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={[s.actBtn, {backgroundColor:ADMIN_COLORS.dangerBg}]} onPress={()=>updateStatus(selected.id,'cancelled')}><Text style={s.actTxtWhite}>{t('admin.orders.cancel')}</Text></TouchableOpacity>
+                    </View>
+                  </>
+                ) : (
+                  <View style={s.chatBox}>
+                    <FlatList
+                      ref={flatRef}
+                      data={messages}
+                      keyExtractor={i=>i.id}
+                      style={{maxHeight:250}}
+                      contentContainerStyle={{paddingVertical:10}}
+                      renderItem={({item})=>(
+                        <View style={[s.msgBubble, item.sender_role==='cashier'? s.msgCashier : s.msgCustomer]}>
+                          <Text style={[s.msgText, item.sender_role==='cashier'? {color:'#000'} : {color:'#fff'}]}>{item.message}</Text>
+                          <Text style={s.msgTime}>{new Date(item.created_at).toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit'})}</Text>
+                        </View>
+                      )}
+                      ListEmptyComponent={<Text style={{color:ADMIN_COLORS.textMuted, textAlign:'center', marginTop:20}}>لا يوجد رسائل - ابدأ المحادثة</Text>}
+                    />
+                    <View style={s.inputRow}>
+                      <TextInput value={msgText} onChangeText={setMsgText} placeholder="اكتب تعديل للعميل..." placeholderTextColor="#888" style={s.chatInput} onSubmitEditing={sendMessage}/>
+                      <TouchableOpacity onPress={sendMessage} style={s.sendBtn}><Ionicons name="send" size={18} color="#000"/></TouchableOpacity>
+                    </View>
+                  </View>
+                )}
+              </ScrollView>
             )}
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   );
@@ -153,7 +233,7 @@ const s = StyleSheet.create({
   total:{color:ADMIN_COLORS.textPrimary, fontWeight:'800'},
   badge:{fontSize:10, fontWeight:'800', marginTop:6, paddingHorizontal:8, paddingVertical:3, borderRadius:10, alignSelf:'flex-start', textTransform:'uppercase', overflow:'hidden', borderWidth:1},
   overlay:{flex:1, backgroundColor:'rgba(0,0,0,0.4)', justifyContent:'flex-end'},
-  modal:{backgroundColor:ADMIN_COLORS.card, borderTopLeftRadius:24, borderTopRightRadius:24, padding:20, paddingBottom:40, borderWidth:1, borderColor:ADMIN_COLORS.border, borderBottomWidth:0},
+  modal:{backgroundColor:ADMIN_COLORS.card, borderTopLeftRadius:24, borderTopRightRadius:24, padding:20, maxHeight:'90%', borderWidth:1, borderColor:ADMIN_COLORS.border, borderBottomWidth:0},
   modalHead:{flexDirection:'row', justifyContent:'space-between', marginBottom:16},
   modalTitle:{color:ADMIN_COLORS.textPrimary, fontSize:18, fontWeight:'800'},
   closeBtn:{width:34, height:34, backgroundColor:ADMIN_COLORS.cardSecondary, borderRadius:17, justifyContent:'center', alignItems:'center'},
@@ -171,4 +251,18 @@ const s = StyleSheet.create({
   actTxtConfirmed:{color:ADMIN_COLORS.textPrimary, fontWeight:'800'},
   actTxtGreen:{color:ADMIN_COLORS.textPrimary, fontWeight:'800'},
   actTxtWhite:{color:ADMIN_COLORS.primaryText, fontWeight:'800'},
+  tabRow:{flexDirection:'row', gap:8, marginTop:16, marginBottom:8},
+  tab:{flex:1, height:36, borderRadius:18, backgroundColor:ADMIN_COLORS.cardSecondary, justifyContent:'center', alignItems:'center', borderWidth:1, borderColor:ADMIN_COLORS.border},
+  tabActive:{backgroundColor:ADMIN_COLORS.primary, borderColor:ADMIN_COLORS.primary},
+  tabTxt:{color:ADMIN_COLORS.textSecondary, fontWeight:'700', fontSize:12},
+  tabTxtActive:{color:ADMIN_COLORS.primaryText},
+  chatBox:{backgroundColor:ADMIN_COLORS.cardSecondary, borderRadius:12, padding:10, borderWidth:1, borderColor:ADMIN_COLORS.border, marginTop:8},
+  msgBubble:{maxWidth:'80%', padding:10, borderRadius:12, marginVertical:4},
+  msgCustomer:{alignSelf:'flex-start', backgroundColor:'#2a2a2a'},
+  msgCashier:{alignSelf:'flex-end', backgroundColor:'#c9b896'},
+  msgText:{fontSize:13, fontWeight:'600'},
+  msgTime:{fontSize:9, color:'#666', marginTop:4, textAlign:'right'},
+  inputRow:{flexDirection:'row', gap:8, marginTop:10, alignItems:'center'},
+  chatInput:{flex:1, backgroundColor:ADMIN_COLORS.card, color:ADMIN_COLORS.textPrimary, padding:12, borderRadius:20, borderWidth:1, borderColor:ADMIN_COLORS.border},
+  sendBtn:{width:44, height:44, borderRadius:22, backgroundColor:'#c9b896', justifyContent:'center', alignItems:'center'},
 });
