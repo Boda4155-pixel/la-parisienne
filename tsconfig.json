@@ -21,6 +21,7 @@
   "exclude": [
     "node_modules",
     "supabase/functions/**/*",
-    "admin/node_modules"
+    "admin/node_modules",
+    "src-backup"
   ]
 }
