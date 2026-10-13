@@ -122,15 +122,68 @@ export default function Checkout() {
 
   const mapHtml = `<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"/><link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/><script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><style>html,body,#map{height:100%;margin:0;padding:0}.leaflet-control-attribution{display:none}</style></head><body><div id="map"></div><script>var map=L.map('map',{zoomControl:false,attributionControl:false}).setView([${coord.lat},${coord.lng}],16);L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(map);map.on('moveend',function(){var c=map.getCenter();window.ReactNativeWebView.postMessage(JSON.stringify(c));});map.on('click',function(e){map.setView(e.latlng,16);});</script></body></html>`;
 
+  // Egyptian mobile phone: 010/011/012/015 prefix + 8 digits = 11 total
+  const EGYPTIAN_MOBILE_REGEX = /^01[0125][0-9]{8}$/;
+  // General international format fallback: 8–15 digits, optional + prefix
+  // (DB enforces 6-20 char length; this client check is a first-line filter)
+  const INTERNATIONAL_REGEX = /^\+?[0-9]{8,15}$/;
+
+  const normalizePhone = (raw: string): string => {
+    let cleaned = raw.trim().replace(/\s+/g, "").replace(/-/g, "");
+    // Normalize Egyptian mobile: strip +20 / 0020 prefix, keep leading 0
+    if (cleaned.startsWith("+20")) cleaned = "0" + cleaned.slice(3);
+    if (cleaned.startsWith("0020")) cleaned = "0" + cleaned.slice(4);
+    return cleaned;
+  };
+
+  const validateCheckout = (): string | null => {
+    if (!building || building.trim().length === 0) {
+      return "Please fill in your building number";
+    }
+    if (building.length > 50) {
+      return "Building number is too long (max 50 characters)";
+    }
+    if (!phone || phone.trim().length === 0) {
+      return "Please fill in your phone number";
+    }
+    const normalized = normalizePhone(phone);
+    if (!EGYPTIAN_MOBILE_REGEX.test(normalized) && !INTERNATIONAL_REGEX.test(normalized)) {
+      return "Please enter a valid phone number (e.g. 01012345678 or +20 10 1234 5678)";
+    }
+    if (apt && apt.length > 20) {
+      return "Apartment number is too long (max 20 characters)";
+    }
+    if (floor && floor.length > 10) {
+      return "Floor number is too long (max 10 characters)";
+    }
+    if (notes && notes.length > 200) {
+      return "Notes are too long (max 200 characters)";
+    }
+    if (!street || street.trim().length === 0) {
+      return "Street address is missing";
+    }
+    if (street.length > 100) {
+      return "Street address is too long (max 100 characters)";
+    }
+    const lat = Number(coord.lat);
+    const lng = Number(coord.lng);
+    if (isNaN(lat) || isNaN(lng) || lat === 0 || lng === 0) {
+      return "Delivery location coordinates are missing or invalid";
+    }
+    return null;
+  };
+
   const placeOrder = async () => {
     if (loading) return;
-    if (!building ||!phone) { Alert.alert("Incomplete", "Please fill building and phone"); return; }
+    const validationError = validateCheckout();
+    if (validationError) { Alert.alert("Validation Error", validationError); return; }
     setLoading(true);
     try {
       const full = `${addressLabel} | ${fullAddressText} | Building ${building}, Apt ${apt}, Floor ${floor} | Notes: ${notes}`;
+      const normalizedPhone = normalizePhone(phone);
       const { error } = await supabase.rpc('create_secure_order', {
         p_address_id: null, p_street: street, p_building: building, p_apartment: apt, p_floor: floor,
-        p_phone: phone, p_notes: notes, p_lat: coord.lat, p_lng: coord.lng, p_payment_method: paymentMethod, p_delivery_address_text: full
+        p_phone: normalizedPhone, p_notes: notes, p_lat: coord.lat, p_lng: coord.lng, p_payment_method: paymentMethod, p_delivery_address_text: full
       });
       if (error) throw error;
       clearCart();
