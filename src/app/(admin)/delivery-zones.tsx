@@ -22,7 +22,7 @@ export default function DeliveryZonesMap(){
 
   const load = async () => {
     const { data, error } = await supabase.from('delivery_zones').select('*').order('created_at',{ascending:false});
-    if(error) console.log('LOAD ERROR', error);
+    if(error) console.error('LOAD ERROR', error.message);
     setZones(data||[]);
   };
   useEffect(()=>{ load() },[]);
@@ -62,7 +62,7 @@ export default function DeliveryZonesMap(){
 
     if(res.error){
       Alert.alert(t('admin.zones.saveError'), res.error.message);
-      console.log(res.error);
+      console.error(res.error);
       return;
     }
     Alert.alert(t('admin.zones.saved'));

@@ -59,7 +59,7 @@ export default function CustomerHome() {
           area: real.area,
           district: real.district
         });
-      } catch (e) { console.log(e); } finally { setIsLocating(false); }
+      } catch { setIsLocating(false); }
     })();
   }, []);
 

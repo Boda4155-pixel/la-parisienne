@@ -47,39 +47,61 @@ export default function RootLayout() {
 
   useEffect(() => {
     if (error) throw error;
-    if (fontsLoaded &&!isLoading) SplashScreen.hideAsync();
+    if (fontsLoaded && !isLoading) SplashScreen.hideAsync();
   }, [fontsLoaded, isLoading, error]);
 
   useEffect(() => {
     if (!fontsLoaded || isLoading) return;
-    const inAuthGroup = segments[0] === "(auth)";
     const currentGroup = segments[0] as string | undefined;
 
     if (!currentGroup) return;
-    // FIX: لو الصفحة مش جروب (يعني favorite, payment-methods, addresses...) سيبها تعدي
-    if (!currentGroup.startsWith("(")) return;
 
+    // Unauthenticated users must be on auth screens only
     if (!isAuthenticated) {
-      if (!inAuthGroup) router.replace("/(auth)/login" as any);
+      if (currentGroup !== "(auth)") {
+        router.replace("/(auth)/login" as any);
+      }
       return;
     }
-    if (!profile) return;
+
+    // Authenticated users must have a profile loaded before role-based routing
+    if (!profile) {
+      // If we're on an auth screen or a group route, let them stay
+      if (currentGroup.startsWith("(")) return;
+      // Top-level route without profile — redirect to customer home
+      router.replace("/(customer)/home" as any);
+      return;
+    }
+
     const role = profile.role?.toLowerCase().trim() || "";
 
-    if (inAuthGroup) {
+    // In-auth-group users get redirected to their role's home
+    if (currentGroup === "(auth)") {
       router.replace(getRouteByRole(role) as any);
       return;
     }
 
-    if (role === "admin" && currentGroup!== "(admin)") {
-      router.replace("/(admin)/dashboard" as any);
-    } else if (role === "cashier" && currentGroup!== "(cashier)") {
-      router.replace("/(cashier)" as any);
-    } else if (role === "driver" && currentGroup!== "(driver)") {
-      router.replace("/(driver)" as any);
-    } else if (!["admin","cashier","driver"].includes(role) && currentGroup!== "(customer)") {
-      router.replace("/(customer)/home" as any);
+    // Role-based enforcement for group routes — prevent role bypass
+    if (currentGroup === "(admin)" && role !== "admin") {
+      router.replace(getRouteByRole(role) as any);
+      return;
     }
+    if (currentGroup === "(cashier)" && role !== "cashier") {
+      router.replace(getRouteByRole(role) as any);
+      return;
+    }
+    if (currentGroup === "(driver)" && role !== "driver") {
+      router.replace(getRouteByRole(role) as any);
+      return;
+    }
+    if (currentGroup === "(customer)" && ["admin","cashier","driver","supervisor"].includes(role)) {
+      router.replace(getRouteByRole(role) as any);
+      return;
+    }
+
+    // Top-level routes (favorite, payment-methods, addresses, notifications,
+    // help, settings, cart, checkout, orders) are accessible to all
+    // authenticated users — no role restriction needed.
   }, [fontsLoaded, isLoading, isAuthenticated, profile, segments, router]);
 
   if (!fontsLoaded || isLoading) return null;

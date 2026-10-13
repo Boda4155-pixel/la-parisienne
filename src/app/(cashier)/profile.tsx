@@ -51,7 +51,7 @@ export default function Profile() {
   };
   const update = async (k: string, v: any) => {
     const { error } = await supabase.from('stores').update({ [k]: v }).eq('id', STORE_ID);
-    if (error) console.log('update error:', error.message);
+    if (error) console.error('update error:', error.message);
     setStore((p: any) => ({...p, [k]: v }));
   };
   const changeLanguage = async (newLang: string) => {
