@@ -2,7 +2,7 @@ import React from "react";
 import { Alert, Pressable, SafeAreaView, StyleSheet, Switch, Text, TextInput, View } from "react-native";
 import { useTranslation } from "react-i18next";
 
-import { createDeliveryZone, getAllDeliveryZones, updateDeliveryZone } from "../../../lib/adminQueries";
+import { createDeliveryZone, getAllDeliveryZones, updateDeliveryZone } from "../../../lib/adminData";
 import { useAdminStore } from "../../../store/admin.store";
 import AdminMoreTrigger from "./AdminMoreTrigger";
 

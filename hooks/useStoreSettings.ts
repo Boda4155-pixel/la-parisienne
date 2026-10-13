@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { supabase } from "../lib/supabase";
-import type { AdminDeliveryZone } from "../lib/adminQueries";
+import type { AdminDeliveryZone } from "../lib/adminData";
 import type { DeliveryOption } from "../lib/queries";
 import type { StoreHour, SupportContact } from "../src/type";
 
