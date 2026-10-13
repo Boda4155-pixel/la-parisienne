@@ -1,0 +1,6 @@
+- [Security Audit Verification Report](memory/security-audit-verification-report.md) — Focused verification of findings C1–C6 and H1–H4 from Phase 5 security audit of La Parisienne application
+- [RPC Investigation Report](memory/rpc-investigation-report.md) — Read-only investigation of 4 Supabase RPC functions: accept_order, cancel_my_order, create_secure_order, reject_order
+- [Phase 1 Investigation Report](memory/phase-1-investigation.md) — Phase 1: service-role key exposure, RPC call sites, privileged operations catalog, live DB inspection requirements, rollback plan
+- [Edge Function Security Review](memory/edge-function-security-review.md) — Read-only security verification of admin-api and delete-user Edge Functions: 15 findings (EF-1 through EF-15), 6 critical, 3 high, 2 medium; includes remediation steps and live DB inspection checklist
+- [Edge Function Remediation](memory/edge-function-remediation.md) — Remediation of both Edge Functions: JWT auth, admin role checks, input validation, UUID checks, CORS hardening; 29 tests passing, changes not yet deployed
+- [Final Pre-Commit Security Review](memory/final-pre-commit-security-review.md) — Final validation: 44/44 source-pattern tests pass, TS/ESLint clean, deployed admin-api v7 confirmed vulnerable (verify_jwt=false, no auth), Deno/Docker unavailable for runtime validation

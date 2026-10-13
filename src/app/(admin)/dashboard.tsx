@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Dimensions, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Dimensions, ScrollView, Text, View } from 'react-native';
 import { BarChart } from 'react-native-chart-kit';
+import { ADMIN_COLORS } from '../../../lib/adminTheme';
 import { supabase } from '../../../lib/supabase';
 
 export default function Dashboard() {
@@ -52,23 +53,39 @@ export default function Dashboard() {
     return () => { supabase.removeChannel(ch); }
   }, []);
 
-  if(loading) return <View style={s.center}><ActivityIndicator color="#16A34A" size="large"/></View>;
+  if(loading) return <View style={{flex:1, backgroundColor: ADMIN_COLORS.background, justifyContent:'center', alignItems:'center'}}><ActivityIndicator color={ADMIN_COLORS.primary} size="large"/></View>;
 
   return (
-    <View style={s.bg}>
+    <View style={{flex:1, backgroundColor: ADMIN_COLORS.background, padding:16, paddingTop:50}}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{paddingBottom: 120}}>
-        <Text style={s.h1}>{t('admin.nav.dashboard')}</Text>
-        <Text style={s.sub}>La Parisienne • {t('admin.dashboard.ordersCount', { count: stats.totalCount })} • Live</Text>
+        <Text style={{color: ADMIN_COLORS.textPrimary, fontSize:30, fontWeight:'800'}}>{t('admin.nav.dashboard')}</Text>
+        <Text style={{color: ADMIN_COLORS.textSecondary, marginBottom:20, marginTop:4, fontWeight:'700'}}>La Parisienne • {t('admin.dashboard.ordersCount', { count: stats.totalCount })} • Live</Text>
 
-        <View style={s.grid}>
-          <View style={[s.card, {backgroundColor:'#16A34A', borderColor:'#16A34A'}]}><Text style={[s.lab,{color:'#FFFFFF', opacity:0.9}]}>{t('admin.dashboard.pending')}</Text><Text style={[s.val,{color:'#FFFFFF'}]}>{stats.pending}</Text><Text style={[s.sm,{color:'#DCFCE7'}]}>{t('admin.dashboard.needAction')}</Text></View>
-          <View style={s.card}><Text style={s.lab}>{t('admin.dashboard.todaySales')}</Text><Text style={s.val}>EGP {stats.today}</Text><Text style={s.sm}>{t('admin.dashboard.ordersToday', { count: stats.todayCount })}</Text></View>
-          <View style={s.card}><Text style={s.lab}>{t('admin.dashboard.totalRevenue')}</Text><Text style={s.val}>EGP {stats.total}</Text><Text style={s.sm}>{t('admin.dashboard.totalOrders', { count: stats.totalCount })}</Text></View>
-          <View style={s.card}><Text style={s.lab}>{t('admin.dashboard.delivered')}</Text><Text style={s.val}>{stats.delivered}</Text><Text style={s.sm}>{t('admin.dashboard.completed')}</Text></View>
+        <View style={{flexDirection:'row', flexWrap:'wrap', gap:12}}>
+          <View style={{backgroundColor: ADMIN_COLORS.primary, width:'47%', padding:18, borderRadius:18, borderWidth:1, borderColor: ADMIN_COLORS.primary}}>
+            <Text style={{color: ADMIN_COLORS.primaryText, opacity:0.9, fontSize:10, letterSpacing:1, fontWeight:'700', textTransform:'uppercase'}}>{t('admin.dashboard.pending')}</Text>
+            <Text style={{color: ADMIN_COLORS.primaryText, fontSize:20, fontWeight:'800', marginTop:8}}>{stats.pending}</Text>
+            <Text style={{color: ADMIN_COLORS.background, opacity:0.7, fontSize:11, marginTop:4}}>{t('admin.dashboard.needAction')}</Text>
+          </View>
+          <View style={{backgroundColor: ADMIN_COLORS.card, width:'47%', padding:18, borderRadius:18, borderWidth:1, borderColor: ADMIN_COLORS.border}}>
+            <Text style={{color: ADMIN_COLORS.textMuted, fontSize:10, letterSpacing:1, fontWeight:'700', textTransform:'uppercase'}}>{t('admin.dashboard.todaySales')}</Text>
+            <Text style={{color: ADMIN_COLORS.textPrimary, fontSize:20, fontWeight:'800', marginTop:8}}>EGP {stats.today}</Text>
+            <Text style={{color: ADMIN_COLORS.textSecondary, fontSize:11, marginTop:4}}>{t('admin.dashboard.ordersToday', { count: stats.todayCount })}</Text>
+          </View>
+          <View style={{backgroundColor: ADMIN_COLORS.card, width:'47%', padding:18, borderRadius:18, borderWidth:1, borderColor: ADMIN_COLORS.border}}>
+            <Text style={{color: ADMIN_COLORS.textMuted, fontSize:10, letterSpacing:1, fontWeight:'700', textTransform:'uppercase'}}>{t('admin.dashboard.totalRevenue')}</Text>
+            <Text style={{color: ADMIN_COLORS.textPrimary, fontSize:20, fontWeight:'800', marginTop:8}}>EGP {stats.total}</Text>
+            <Text style={{color: ADMIN_COLORS.textSecondary, fontSize:11, marginTop:4}}>{t('admin.dashboard.totalOrders', { count: stats.totalCount })}</Text>
+          </View>
+          <View style={{backgroundColor: ADMIN_COLORS.card, width:'47%', padding:18, borderRadius:18, borderWidth:1, borderColor: ADMIN_COLORS.border}}>
+            <Text style={{color: ADMIN_COLORS.textMuted, fontSize:10, letterSpacing:1, fontWeight:'700', textTransform:'uppercase'}}>{t('admin.dashboard.delivered')}</Text>
+            <Text style={{color: ADMIN_COLORS.textPrimary, fontSize:20, fontWeight:'800', marginTop:8}}>{stats.delivered}</Text>
+            <Text style={{color: ADMIN_COLORS.textSecondary, fontSize:11, marginTop:4}}>{t('admin.dashboard.completed')}</Text>
+          </View>
         </View>
 
-        <View style={s.chartBox}>
-          <Text style={s.chartTitle}>{t('admin.dashboard.salesLast7Days')}</Text>
+        <View style={{backgroundColor: ADMIN_COLORS.card, borderRadius:18, padding:16, marginTop:16, borderWidth:1, borderColor: ADMIN_COLORS.border}}>
+          <Text style={{color: ADMIN_COLORS.textPrimary, fontWeight:'800', fontSize:14}}>{t('admin.dashboard.salesLast7Days')}</Text>
           <BarChart
             data={{ labels: chart.labels, datasets: [{ data: chart.data }] }}
             width={Dimensions.get('window').width - 50}
@@ -76,12 +93,12 @@ export default function Dashboard() {
             yAxisLabel="EGP "
             yAxisSuffix=""
             chartConfig={{
-              backgroundColor: '#FFFFFF',
-              backgroundGradientFrom: '#FFFFFF',
-              backgroundGradientTo: '#FFFFFF',
+              backgroundColor: ADMIN_COLORS.card,
+              backgroundGradientFrom: ADMIN_COLORS.card,
+              backgroundGradientTo: ADMIN_COLORS.card,
               decimalPlaces: 0,
-              color: (opacity = 1) => `rgba(22, 163, 74, ${opacity})`,
-              labelColor: (opacity = 1) => `rgba(17, 17, 17, ${opacity})`,
+              color: (opacity = 1) => `rgba(26, 26, 26, ${opacity})`,
+              labelColor: () => ADMIN_COLORS.textPrimary,
               style: { borderRadius: 16 },
               barPercentage: 0.6,
             }}
@@ -91,27 +108,21 @@ export default function Dashboard() {
           />
         </View>
 
-        <View style={s.rowStats}>
-          <View style={s.miniCard}><Text style={s.miniLab}>{t('admin.dashboard.users')}</Text><Text style={s.miniVal}>{stats.users}</Text></View>
-          <View style={s.miniCard}><Text style={s.miniLab}>{t('admin.dashboard.products')}</Text><Text style={s.miniVal}>{stats.products}</Text></View>
-          <View style={s.miniCard}><Text style={s.miniLab}>{t('admin.dashboard.ordersLabel')}</Text><Text style={s.miniVal}>{stats.totalCount}</Text></View>
+        <View style={{flexDirection:'row', gap:12, marginTop:16, marginBottom:40}}>
+          <View style={{flex:1, backgroundColor: ADMIN_COLORS.card, padding:14, borderRadius:14, borderWidth:1, borderColor: ADMIN_COLORS.border, alignItems:'center'}}>
+            <Text style={{color: ADMIN_COLORS.textMuted, fontSize:10, fontWeight:'700', textTransform:'uppercase'}}>{t('admin.dashboard.users')}</Text>
+            <Text style={{color: ADMIN_COLORS.textPrimary, fontSize:18, fontWeight:'800', marginTop:4}}>{stats.users}</Text>
+          </View>
+          <View style={{flex:1, backgroundColor: ADMIN_COLORS.card, padding:14, borderRadius:14, borderWidth:1, borderColor: ADMIN_COLORS.border, alignItems:'center'}}>
+            <Text style={{color: ADMIN_COLORS.textMuted, fontSize:10, fontWeight:'700', textTransform:'uppercase'}}>{t('admin.dashboard.products')}</Text>
+            <Text style={{color: ADMIN_COLORS.textPrimary, fontSize:18, fontWeight:'800', marginTop:4}}>{stats.products}</Text>
+          </View>
+          <View style={{flex:1, backgroundColor: ADMIN_COLORS.card, padding:14, borderRadius:14, borderWidth:1, borderColor: ADMIN_COLORS.border, alignItems:'center'}}>
+            <Text style={{color: ADMIN_COLORS.textMuted, fontSize:10, fontWeight:'700', textTransform:'uppercase'}}>{t('admin.dashboard.ordersLabel')}</Text>
+            <Text style={{color: ADMIN_COLORS.textPrimary, fontSize:18, fontWeight:'800', marginTop:4}}>{stats.totalCount}</Text>
+          </View>
         </View>
       </ScrollView>
     </View>
   );
 }
-
-const s = StyleSheet.create({
-  bg:{flex:1, backgroundColor:'#FFFFFF', padding:16, paddingTop:50},
-  center:{flex:1, backgroundColor:'#FFFFFF', justifyContent:'center', alignItems:'center'},
-  h1:{color:'#16A34A', fontSize:30, fontWeight:'800'},
-  sub:{color:'#16A34A', marginBottom:20, marginTop:4, fontWeight:'700'},
-  grid:{flexDirection:'row', flexWrap:'wrap', gap:12},
-  card:{backgroundColor:'#FFFFFF', width:'47%', padding:18, borderRadius:18, borderWidth:1, borderColor:'#E5E5E5'},
-  lab:{color:'#888', fontSize:10, letterSpacing:1, fontWeight:'700', textTransform:'uppercase'}, val:{color:'#16A34A', fontSize:20, fontWeight:'800', marginTop:8}, sm:{color:'#666', fontSize:11, marginTop:4},
-  chartBox:{backgroundColor:'#FFFFFF', borderRadius:18, padding:16, marginTop:16, borderWidth:1, borderColor:'#E5E5E5'},
-  chartTitle:{color:'#111', fontWeight:'800', fontSize:14},
-  rowStats:{flexDirection:'row', gap:12, marginTop:16, marginBottom:40},
-  miniCard:{flex:1, backgroundColor:'#FFFFFF', padding:14, borderRadius:14, borderWidth:1, borderColor:'#E5E5E5', alignItems:'center'},
-  miniLab:{color:'#888', fontSize:10, fontWeight:'700', textTransform:'uppercase'}, miniVal:{color:'#16A34A', fontSize:18, fontWeight:'800', marginTop:4}
-});

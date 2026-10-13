@@ -576,6 +576,8 @@
       "deleted": "تم الحذف ✅",
       "deleteTitle": "حذف نهائي؟",
       "deleteDesc": "{{name}} هيتمسح نهائي",
+      "deleteAuthError": "ليس لديك صلاحية لأداء هذا الإجراء.",
+      "deleteWarningFollowUp": "يرجى التحقق من أن سجل الموظف تم إزالته من لوحة الإدارة.",
       "staffName": "اسم الموظف",
       "email": "الايميل",
       "password": "الباسورد",
