@@ -1,6 +1,6 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
-import type { RecentOrder } from "../../lib/adminQueries";
+import type { RecentOrder } from "../../lib/adminData";
 
 type RecentOrdersTableProps = {
   data: RecentOrder[];

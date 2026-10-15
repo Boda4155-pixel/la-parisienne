@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, Modal, Pressable, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { supabase } from '../../../lib/supabase';
 const BLACK='#000000';
@@ -8,24 +8,49 @@ function DeliveryChatBox({ orderId, onClose }: { orderId: string, onClose: () =>
   const [msgs, setMsgs] = useState<any[]>([]);
   const [text, setText] = useState('');
   const [convId, setConvId] = useState<string|null>(null);
+  const channelRef = useRef<any>(null);
 
   useEffect(() => {
+    let isMounted = true;
     (async () => {
       let { data: conv } = await supabase.from('chat_conversations').select('*').eq('order_id', orderId).eq('type', 'delivery').single();
       if (!conv) {
         const { data: nc } = await supabase.from('chat_conversations').insert([{ order_id: orderId, type: 'delivery' }]).select().single();
         conv = nc;
       }
-      if (!conv) return;
+      if (!conv || !isMounted) return;
       setConvId(conv.id);
       const { data } = await supabase.from('chat_messages').select('*').eq('conversation_id', conv.id).order('created_at');
-      setMsgs(data||[]);
-      const ch = supabase.channel(`delivery-chat-${conv.id}`).on('postgres_changes',
+      if (isMounted) setMsgs(data||[]);
+
+      // Remove any stale channel for this conversation. Under React Strict
+      // Mode the effect may re-run while a previous channel's removeChannel
+      // (async, awaited WebSocket leave) hasn't removed it from the internal
+      // `channels` array — channel() would then return the leaving-state
+      // channel and .subscribe() would silently no-op. Synchronously splice
+      // stale channels from the array (mirrors RealtimeClient._remove) and
+      // fire-and-forget removeChannel for WS cleanup.
+      const chatTopic = `delivery-chat-${conv.id}`;
+      const realtimeChatTopic = `realtime:${chatTopic}`;
+      const staleChat = supabase.getChannels().filter((c) => c.topic === realtimeChatTopic);
+      staleChat.forEach((c) => supabase.removeChannel(c));
+      supabase.realtime.channels = supabase.realtime.channels.filter(
+        (c) => c.topic !== realtimeChatTopic
+      );
+
+      const ch = supabase.channel(chatTopic).on('postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: `conversation_id=eq.${conv.id}` },
         (p) => setMsgs(m => [...m, p.new])
       ).subscribe();
-      return () => { supabase.removeChannel(ch); };
+      channelRef.current = ch;
     })();
+
+    // Cleanup must come from the useEffect callback, not the async IIFE,
+    // so React actually runs it on unmount.
+    return () => {
+      isMounted = false;
+      if (channelRef.current) supabase.removeChannel(channelRef.current);
+    };
   }, [orderId]);
 
   const send = async () => {
@@ -73,7 +98,7 @@ export default function Orders(){
     const {data:{user}}=await supabase.auth.getUser();
     let q=supabase.from('orders').select('*').order('created_at',{ascending:false});
     if(tab==='pending') q=q.eq('status','pending').is('driver_id',null);
-    if(tab==='active') q=q.eq('driver_id',user?.id).in('status',['out_for_delivery','picked_up','preparing','ready']);
+    if(tab==='active') q=q.eq('driver_id',user?.id).in('status',['out_for_delivery','preparing','ready']);
     if(tab==='done') q=q.eq('driver_id',user?.id).eq('status','delivered');
     const {data}=await q; setOrders(data||[]); setLoading(false);
   };
@@ -82,13 +107,18 @@ export default function Orders(){
 
   const acceptOrder = async (orderId: string) => {
     const {data:{user}} = await supabase.auth.getUser();
-    const { error } = await supabase.from('orders').update({ driver_id: user?.id, status: 'out_for_delivery' }).eq('id', orderId);
+    // Ownership check: only unassigned orders (driver_id IS NULL) can be claimed.
+    // This prevents race conditions where multiple drivers claim the same order.
+    const { error } = await supabase.from('orders').update({ driver_id: user?.id, status: 'out_for_delivery' }).eq('id', orderId).eq('driver_id', null);
     if (error) Alert.alert('خطأ', error.message);
     else { Alert.alert('تم', 'استلمت الطلب - تقدر تكلم العميل دلوقتي'); load(); setTab('active'); }
   };
 
   const markDelivered = async (orderId: string) => {
-    const { error } = await supabase.from('orders').update({ status: 'delivered' }).eq('id', orderId);
+    const {data:{user}} = await supabase.auth.getUser();
+    // Ownership + status check: only the assigned driver can mark delivery,
+    // and only from 'out_for_delivery' status.
+    const { error } = await supabase.from('orders').update({ status: 'delivered' }).eq('id', orderId).eq('driver_id', user?.id).eq('status', 'out_for_delivery');
     if (!error) load();
   };
 

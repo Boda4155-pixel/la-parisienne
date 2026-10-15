@@ -71,13 +71,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ isLoading: true });
     try {
       const isEmail = identifier.includes("@");
-      let email = identifier;
-      if (!isEmail) {
-        const { data, error } = await supabase.from("profiles").select("email").eq("phone", identifier).single();
-        if (error || !data?.email) throw new Error("No account found");
-        email = data.email;
+      // SECURITY: Do NOT pre-query profiles by phone to resolve email —
+      // that allows phone-number enumeration. Instead, delegate to Supabase Auth
+      // which returns a generic error regardless of whether the identifier exists.
+      let data: any, error: any;
+      if (isEmail) {
+        ({ data, error } = await supabase.auth.signInWithPassword({ email: identifier, password }));
+      } else {
+        ({ data, error } = await supabase.auth.signInWithPassword({ phone: identifier, password }));
       }
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
       set({ user: data.user, session: data.session, isAuthenticated: true });
       await get().loadProfile(data.user!.id);

@@ -179,9 +179,12 @@ export const getOrders = async () => {
 };
 
 export const getOrderById = async ({ id }: { id: string }) => {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not logged in");
+  // IDOR fix: scope the query by user_id so only the order owner can fetch it
   const { data: order, error: orderError } = await supabase.from("orders")
    .select("id, status, payment_method, subtotal, delivery_fee, discount_amount, total, customer_note, created_at, address_id, driver_id, profiles!orders_driver_id_fkey(full_name, phone)")
-   .eq("id", id).single();
+   .eq("id", id).eq("user_id", user.id).single();
   if (orderError) throw orderError;
 
   const { data: items, error: itemsError } = await supabase.from("order_items")
@@ -189,24 +192,6 @@ export const getOrderById = async ({ id }: { id: string }) => {
   if (itemsError) throw itemsError;
 
   return { order, items, error: null };
-};
-
-export const createSecureOrder = async (params: {
-  address_id: string;
-  payment_method: string;
-  customer_note?: string;
-  coupon_code?: string;
-  items: { product_id: string; quantity: number }[];
-}) => {
-  const { data, error } = await supabase.rpc('create_secure_order', {
-    p_address_id: params.address_id,
-    p_payment_method: params.payment_method,
-    p_customer_note: params.customer_note || null,
-    p_coupon_code: params.coupon_code || null,
-    p_items: params.items
-  });
-  if (error) throw error;
-  return data;
 };
 
 export const getOrdersCount = async () => {
@@ -281,7 +266,10 @@ export const getNotifications = async () => {
 }
 
 export const markNotificationRead = async ({ id }: { id: string }) => {
-  const { error } = await supabase.from('notifications').update({ is_read: true }).eq('id', id);
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not logged in");
+  // IDOR fix: scope the update by user_id so users can only mark their own notifications
+  const { error } = await supabase.from('notifications').update({ is_read: true }).eq('id', id).eq('user_id', user.id);
   if (error) throw error;
   return { success: true, error: null };
 }

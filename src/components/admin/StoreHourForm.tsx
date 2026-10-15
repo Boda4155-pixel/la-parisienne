@@ -3,7 +3,7 @@ import { Alert, Pressable, SafeAreaView, StyleSheet, Switch, Text, TextInput, Vi
 import { useTranslation } from "react-i18next";
 
 import { DAY_NAMES } from "../../lib/settingsConstants";
-import { createStoreHour, getAllStoreHours, updateStoreHour } from "../../../lib/adminQueries";
+import { createStoreHour, getAllStoreHours, updateStoreHour } from "../../../lib/adminData";
 import { useAdminStore } from "../../../store/admin.store";
 import AdminMoreTrigger from "./AdminMoreTrigger";
 

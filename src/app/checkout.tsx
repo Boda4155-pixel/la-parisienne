@@ -1,7 +1,7 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import * as Location from 'expo-location';
 import { router, useFocusEffect } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Alert, FlatList, Modal, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { WebView } from "react-native-webview";
@@ -10,7 +10,26 @@ import { useAuthStore } from "./(customer)/../../../store/auth.store";
 import { useCartStore } from "./(customer)/../../../store/cart.store";
 import { useLocationStore } from "./(customer)/../../../store/location.store";
 
-const DELIVERY_FEES: Record<string, number> = { "Nasr City": 50, "Maadi": 40, "New Cairo": 100, "Heliopolis": 45, "Sheikh Zayed": 80, "6th October": 80, "El Rehab": 60, "Cairo": 50 };
+/** Generate a simple RFC-4122 v4 UUID without external dependencies. */
+function uuidv4(): string {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  const bytes = new Uint8Array(16);
+  if (typeof crypto !== "undefined" && typeof crypto.getRandomValues === "function") {
+    crypto.getRandomValues(bytes);
+  } else {
+    for (let i = 0; i < 16; i++) bytes[i] = Math.floor(Math.random() * 256);
+  }
+  bytes[6] = (bytes[6] & 0x0f) | 0x40;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  const hex = Array.from(bytes, b => b.toString(16).padStart(2, "0"));
+  return `${hex[0]}${hex[1]}${hex[2]}${hex[3]}-${hex[4]}${hex[5]}-${hex[6]}${hex[7]}-${hex[8]}${hex[9]}-${hex[10]}${hex[11]}${hex[12]}${hex[13]}${hex[14]}${hex[15]}`;
+}
+
+// Must match the server (place_order): flat fee, free from FREE_LIMIT.
+// The server is the source of truth for the final total.
+const DELIVERY_FEE = 50;
 const FREE_LIMIT = 500;
 
 const reverseGeocode = async (lat: number, lng: number) => {
@@ -21,14 +40,15 @@ const reverseGeocode = async (lat: number, lng: number) => {
     const area = addr.suburb || addr.neighbourhood || addr.city_district || addr.village || '';
     const city = addr.city || addr.town || addr.county || 'Cairo';
     const street = addr.road || addr.street || '';
-    const label = area? `${area} - ${street}` : (street || city);
+    const label = area ? `${area} - ${street}` : (street || city);
     return { label: label.slice(0, 40), street: street || data.display_name?.split(',')[0] || '', full: data.display_name, city, area };
   } catch { return { label: `${lat.toFixed(4)}, ${lng.toFixed(4)}`, street: '', full: '', city: 'Cairo', area: '' }; }
 };
 
 export default function Checkout() {
   const insets = useSafeAreaInsets();
-  const { getTotalPrice, clearCart } = useCartStore() as any;
+  const { getTotalPrice, clearCart, items } = useCartStore() as any;
+  const idempotencyKeyRef = useRef(uuidv4());
   const { profile } = useAuthStore() as any;
   const { selected, setSelected, isLocating, setIsLocating } = useLocationStore();
   const subtotal = getTotalPrice();
@@ -46,8 +66,6 @@ export default function Checkout() {
   const [loading, setLoading] = useState(false);
   const [mapLoading, setMapLoading] = useState(true);
   const [showSheet, setShowSheet] = useState(false);
-
-  // NEW: Payment Method State
   const [paymentMethod, setPaymentMethod] = useState<"cash_on_delivery" | "visa_on_delivery">("cash_on_delivery");
 
   const PAYMENT_OPTIONS = [
@@ -68,7 +86,7 @@ export default function Checkout() {
       try {
         setIsLocating(true);
         let { status } = await Location.requestForegroundPermissionsAsync();
-        if (status!== 'granted') { setMapLoading(false); setIsLocating(false); setAddressLabel("Tap to select location"); return; }
+        if (status !== 'granted') { setMapLoading(false); setIsLocating(false); setAddressLabel("Tap to select location"); return; }
         let loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
         const real = await reverseGeocode(loc.coords.latitude, loc.coords.longitude);
         const newLoc = { label: real.label, street: real.street, fullAddress: real.full, lat: loc.coords.latitude, lng: loc.coords.longitude, city: real.city, area: real.area };
@@ -89,10 +107,6 @@ export default function Checkout() {
       setFullAddressText(selected.fullAddress);
       setMapLoading(false);
     }
-    (async () => {
-      const { data } = await supabase.from("customer_addresses").select("*").order("is_default", { ascending: false });
-      if (data?.length) setAllAddresses(data);
-    })();
   }, [selected]));
 
   const onMapMove = async (lat: number, lng: number) => {
@@ -117,25 +131,131 @@ export default function Checkout() {
     setMapLoading(false);
   };
 
-  const fee = subtotal >= FREE_LIMIT? 0 : (DELIVERY_FEES[selected?.city || selected?.area || "Cairo"]?? 50);
+  const fee = subtotal >= FREE_LIMIT ? 0 : DELIVERY_FEE;
   const total = subtotal + fee;
 
   const mapHtml = `<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"/><link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/><script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><style>html,body,#map{height:100%;margin:0;padding:0}.leaflet-control-attribution{display:none}</style></head><body><div id="map"></div><script>var map=L.map('map',{zoomControl:false,attributionControl:false}).setView([${coord.lat},${coord.lng}],16);L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(map);map.on('moveend',function(){var c=map.getCenter();window.ReactNativeWebView.postMessage(JSON.stringify(c));});map.on('click',function(e){map.setView(e.latlng,16);});</script></body></html>`;
 
+  const EGYPTIAN_MOBILE_REGEX = /^01[0125][0-9]{8}$/;
+  const INTERNATIONAL_REGEX = /^\+?[0-9]{8,15}$/;
+
+  const normalizePhone = (raw: string): string => {
+    let cleaned = raw.trim().replace(/\s+/g, "").replace(/-/g, "");
+    if (cleaned.startsWith("+20")) cleaned = "0" + cleaned.slice(3);
+    if (cleaned.startsWith("0020")) cleaned = "0" + cleaned.slice(4);
+    return cleaned;
+  };
+
+  const validateCheckout = (): string | null => {
+    if (!building || building.trim().length === 0) {
+      return "Please fill in your building number";
+    }
+    if (building.length > 50) {
+      return "Building number is too long (max 50 characters)";
+    }
+    if (!phone || phone.trim().length === 0) {
+      return "Please fill in your phone number";
+    }
+    const normalized = normalizePhone(phone);
+    if (!EGYPTIAN_MOBILE_REGEX.test(normalized) && !INTERNATIONAL_REGEX.test(normalized)) {
+      return "Please enter a valid phone number (e.g. 01012345678 or +20 10 1234 5678)";
+    }
+    if (apt && apt.length > 20) {
+      return "Apartment number is too long (max 20 characters)";
+    }
+    if (floor && floor.length > 10) {
+      return "Floor number is too long (max 10 characters)";
+    }
+    if (notes && notes.length > 200) {
+      return "Notes are too long (max 200 characters)";
+    }
+    if (!street || street.trim().length === 0) {
+      return "Street address is missing";
+    }
+    if (street.length > 100) {
+      return "Street address is too long (max 100 characters)";
+    }
+    const lat = Number(coord.lat);
+    const lng = Number(coord.lng);
+    if (isNaN(lat) || isNaN(lng) || lat === 0 || lng === 0) {
+      return "Delivery location coordinates are missing or invalid";
+    }
+    return null;
+  };
+
+  // Prevents double taps while the request is running
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const placeOrder = async () => {
-    if (loading) return;
-    if (!building ||!phone) { Alert.alert("Incomplete", "Please fill building and phone"); return; }
+    if (loading || isSubmitting) return;
+
+    const validationError = validateCheckout();
+    if (validationError) {
+      Alert.alert("Validation Error", validationError);
+      return;
+    }
+
+    if (!items || items.length === 0) {
+      Alert.alert("Cart Error", "Your cart is empty. Please add items before checking out.");
+      return;
+    }
+
     setLoading(true);
+    setIsSubmitting(true);
+
     try {
+      const normalizedPhone = normalizePhone(phone);
       const full = `${addressLabel} | ${fullAddressText} | Building ${building}, Apt ${apt}, Floor ${floor} | Notes: ${notes}`;
-      const { error } = await supabase.rpc('create_secure_order', {
-        p_address_id: null, p_street: street, p_building: building, p_apartment: apt, p_floor: floor,
-        p_phone: phone, p_notes: notes, p_lat: coord.lat, p_lng: coord.lng, p_payment_method: paymentMethod, p_delivery_address_text: full
+
+      // Only product ids and quantities are sent. Prices, stock and totals are calculated on the server.
+      const { data: orderId, error } = await supabase.rpc('place_order', {
+        p_items: items.map((i: any) => ({ product_id: i.id, quantity: i.quantity })),
+        p_street: street.trim(),
+        p_building: building.trim(),
+        p_apartment: apt.trim(),
+        p_floor: floor.trim(),
+        p_phone: normalizedPhone,
+        p_notes: notes.trim(),
+        p_lat: coord.lat,
+        p_lng: coord.lng,
+        p_payment_method: paymentMethod,
+        p_delivery_address_text: full,
+        p_address_id: null,
+        p_idempotency_key: idempotencyKeyRef.current,
       });
-      if (error) throw error;
-      clearCart();
-      router.replace("/(customer)/orders" as any);
-    } catch (e: any) { Alert.alert("Failed", e.message); } finally { setLoading(false); }
+
+      if (error) {
+        console.error('place_order error:', error);
+        const msg = (error.message || '').toLowerCase();
+        // SECURITY: Never expose raw server error messages to the client.
+        // Log the detail server-side (console.error in dev only) but always show
+        // a generic message to the user.
+        if (__DEV__) console.error('place_order error:', error);
+        let friendly = 'Failed to place order. Please try again.';
+        if (msg.includes('out of stock') || msg.includes('unavailable')) {
+          friendly = 'Some products are unavailable or out of stock. Please check your cart.';
+        } else if (msg.includes('too many pending')) {
+          friendly = 'Please wait for your current orders before placing a new one.';
+        } else if (msg.includes('not authenticated')) {
+          friendly = 'You are not logged in. Please sign in first.';
+        }
+        throw new Error(friendly);
+      }
+
+      if (orderId) {
+        // Success: a new key is used for the next order
+        idempotencyKeyRef.current = uuidv4();
+        clearCart();
+        Alert.alert("Success", `Order #${String(orderId).slice(0, 8)} placed successfully!`, [
+          { text: "OK", onPress: () => router.replace("/(customer)/orders" as any) }
+        ]);
+      }
+    } catch (e: any) {
+      Alert.alert("Failed", e.message || "An unexpected error occurred");
+    } finally {
+      setLoading(false);
+      setTimeout(() => setIsSubmitting(false), 2000);
+    }
   };
 
   return (
@@ -149,7 +269,7 @@ export default function Checkout() {
 
       <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 140, gap: 16 }}>
         <View style={{ height: 220, borderRadius: 20, overflow: 'hidden', borderWidth: 1, borderColor: "#F0E6D9", backgroundColor: "#fff" }}>
-          {mapLoading? (
+          {mapLoading ? (
             <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
               <ActivityIndicator color="#0A84FF" />
               <Text style={{ marginTop: 8, color: '#888', fontSize: 12 }}>Detecting location...</Text>
@@ -179,7 +299,7 @@ export default function Checkout() {
               <Ionicons name="location" size={18} color="#0A84FF" />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={{ fontWeight: '800', color: "#2B2117", fontSize: 13 }} numberOfLines={1}>{isLocating? "Detecting..." : addressLabel}</Text>
+              <Text style={{ fontWeight: '800', color: "#2B2117", fontSize: 13 }} numberOfLines={1}>{isLocating ? "Detecting..." : addressLabel}</Text>
               <Text style={{ color: "#8B7355", marginTop: 2, fontSize: 11 }} numberOfLines={1}>{fullAddressText || street || "Drag map to adjust"}</Text>
             </View>
           </View>
@@ -227,22 +347,22 @@ export default function Checkout() {
                     flexDirection: "row", alignItems: "center", gap: 12,
                     padding: 14, borderRadius: 16,
                     borderWidth: 1.5,
-                    borderColor: selectedOpt? "#2B2117" : "#E8DDD0",
-                    backgroundColor: selectedOpt? "#FFFBF5" : "#fff"
+                    borderColor: selectedOpt ? "#2B2117" : "#E8DDD0",
+                    backgroundColor: selectedOpt ? "#FFFBF5" : "#fff"
                   }}
                 >
-                  <View style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: selectedOpt? "#2B2117" : "#FFFBF5", justifyContent: "center", alignItems: "center" }}>
-                    <Ionicons name={opt.icon as any} size={20} color={selectedOpt? "#fff" : "#2B2117"} />
+                  <View style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: selectedOpt ? "#2B2117" : "#FFFBF5", justifyContent: "center", alignItems: "center" }}>
+                    <Ionicons name={opt.icon as any} size={20} color={selectedOpt ? "#fff" : "#2B2117"} />
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={{ fontWeight: "800", fontSize: 14, color: "#2B2117" }}>{opt.label}</Text>
                     <Text style={{ fontSize: 11, color: "#B8A89A", marginTop: 2 }}>{opt.sub}</Text>
                   </View>
-                  <View style={{ width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: selectedOpt? "#2B2117" : "#D9C5B0", justifyContent: "center", alignItems: "center" }}>
+                  <View style={{ width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: selectedOpt ? "#2B2117" : "#D9C5B0", justifyContent: "center", alignItems: "center" }}>
                     {selectedOpt && <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: "#2B2117" }} />}
                   </View>
                 </Pressable>
-              )
+              );
             })}
           </View>
         </View>
@@ -254,7 +374,7 @@ export default function Checkout() {
           </View>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
             <Text style={{ color: "#8B7355" }}>Delivery</Text>
-            <Text style={{ fontWeight: '700' }}>{fee === 0? "FREE" : `${fee} EGP`}</Text>
+            <Text style={{ fontWeight: '700' }}>{fee === 0 ? "FREE" : `${fee} EGP`}</Text>
           </View>
           <View style={{ height: 1, backgroundColor: "#F0E6D9", marginVertical: 6 }} />
           <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
@@ -265,8 +385,21 @@ export default function Checkout() {
       </ScrollView>
 
       <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: 16, backgroundColor: "#FFFBF5", borderTopWidth: 1, borderColor: "#F0E6D9", paddingBottom: insets.bottom + 16 }}>
-        <Pressable disabled={loading} onPress={placeOrder} style={{ height: 56, borderRadius: 28, backgroundColor: loading? "#D9C5B0" : "#2B2117", justifyContent: 'center', alignItems: 'center' }}>
-          <Text style={{ color: '#fff', fontWeight: '900', fontSize: 15 }}>{loading? "Processing..." : `Place Order - ${total} EGP`}</Text>
+        <Pressable
+          disabled={loading || isSubmitting}
+          onPress={placeOrder}
+          style={{
+            height: 56,
+            borderRadius: 28,
+            backgroundColor: (loading || isSubmitting) ? "#D9C5B0" : "#2B2117",
+            justifyContent: 'center',
+            alignItems: 'center',
+            opacity: (loading || isSubmitting) ? 0.6 : 1
+          }}
+        >
+          <Text style={{ color: '#fff', fontWeight: '900', fontSize: 15 }}>
+            {loading ? "Processing..." : `Place Order - ${total} EGP`}
+          </Text>
         </Pressable>
       </View>
 

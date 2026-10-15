@@ -576,6 +576,8 @@
       "deleted": "Deleted ✅",
       "deleteTitle": "Delete permanently?",
       "deleteDesc": "{{name}} will be deleted permanently",
+      "deleteAuthError": "You are not authorized to perform this action.",
+      "deleteWarningFollowUp": "Please verify the staff record was removed in the admin panel.",
       "staffName": "Staff name",
       "email": "Email",
       "password": "Password",

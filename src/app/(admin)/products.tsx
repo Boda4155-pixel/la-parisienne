@@ -8,6 +8,30 @@ import { ActivityIndicator, Alert, Image, Modal, ScrollView, StyleSheet, Switch,
 import DraggableFlatList, { RenderItemParams } from 'react-native-draggable-flatlist';
 import { ADMIN_COLORS } from "../../../lib/adminTheme";
 import { supabase } from '../../../lib/supabase';
+import { FunctionsHttpError, FunctionsFetchError } from '@supabase/supabase-js';
+
+/**
+ * Invoke the admin-api Edge Function with error classification.
+ * All product mutations (create/update/delete/reorder/toggle) are routed
+ * through the admin-api, which enforces admin-only authorization, field
+ * whitelisting, and UUID validation server-side.
+ */
+async function invokeAdminApi(body: object): Promise<any> {
+  const { data, error } = await supabase.functions.invoke('admin-api', {
+    body: JSON.stringify(body),
+  });
+  if (error) {
+    if (error instanceof FunctionsHttpError) {
+      const httpStatus = error.context?.status ?? error.context?.response?.status;
+      throw new Error(`Server error: ${httpStatus}`);
+    }
+    if (error instanceof FunctionsFetchError) {
+      throw new Error('Network error. Please check your connection.');
+    }
+    throw error;
+  }
+  return data;
+}
 
 export default function ProductsPage() {
   const { t } = useTranslation();
@@ -36,10 +60,15 @@ export default function ProductsPage() {
   });
 
   const toggleAvailability = async (item: any) => {
-    const current = item.is_available?? item.is_active?? true;
-    const newVal =!current;
-    setProducts(prev => prev.map(p => p.id === item.id? {...p, is_available: newVal, is_active: newVal } : p));
-    await supabase.from('products').update({ is_available: newVal, is_active: newVal } as any).eq('id', item.id);
+    const current = item.is_available ?? item.is_active ?? true;
+    const newVal = !current;
+    setProducts(prev => prev.map(p => p.id === item.id ? { ...p, is_available: newVal, is_active: newVal } : p));
+    try {
+      // SECURITY: Server-side read-then-toggle prevents client from setting an arbitrary value.
+      await invokeAdminApi({ action: 'toggle-product-availability', payload: { id: item.id } });
+    } catch (e: any) {
+      Alert.alert('Error', e.message);
+    }
   };
 
   const handleDragEnd = async ({ data }: { data: any[] }) => {
@@ -57,8 +86,15 @@ export default function ProductsPage() {
       });
     }
     setProducts(newProducts);
-    for (let i = 0; i < newProducts.length; i++) {
-      await supabase.from('products').update({ sort_order: i } as any).eq('id', newProducts[i].id);
+    try {
+      // SECURITY: Route reordering through admin-api so each update is validated
+      // (UUID checks, field whitelist, admin authorization) server-side.
+      await invokeAdminApi({
+        action: 'reorder-products',
+        payload: { items: newProducts.map((p: any, i: number) => ({ id: p.id, sort_order: i })) },
+      });
+    } catch (e: any) {
+      Alert.alert('Error', e.message);
     }
   };
 
@@ -78,7 +114,7 @@ export default function ProductsPage() {
         finalImageUrl = `data:image/jpeg;base64,${base64}`;
       }
       const catNameObj = categories.find(c=>c.id===edit.category_id)?.name || '';
-      const payload = {
+      const payload: any = {
         name: edit.name,
         price: Number(edit.price),
         category: catNameObj,
@@ -88,16 +124,28 @@ export default function ProductsPage() {
         is_available: edit.is_available?? true,
         stock_quantity: Number(edit.stock_quantity?? 10),
       };
-      if(edit.id){
-        const { error } = await supabase.from('products').update(payload).eq('id', edit.id);
-        if(error) throw error;
+      if (edit.id) {
+        // SECURITY: Route through admin-api — server validates UUID, field
+        // whitelist, and admin authorization before touching the DB.
+        payload.id = edit.id;
+        await invokeAdminApi({ action: 'update-product', payload });
       } else {
-        const { error } = await supabase.from('products').insert(payload);
-        if(error) throw error;
+        // SECURITY: create-product action enforces field whitelist server-side.
+        await invokeAdminApi({ action: 'create-product', payload });
       }
       setModal(false); setEdit(null); load();
     } catch(e:any){ Alert.alert('Error', e.message); }
     setUploading(false);
+  };
+
+  const deleteProduct = async (item: any) => {
+    try {
+      // SECURITY: Route through admin-api — server validates UUID and admin auth.
+      await invokeAdminApi({ action: 'delete-product', payload: { id: item.id } });
+      load();
+    } catch (e: any) {
+      Alert.alert('Error', e.message);
+    }
   };
 
   const renderItem = ({ item, drag, isActive }: RenderItemParams<any>) => {
@@ -127,7 +175,7 @@ export default function ProductsPage() {
         <Text style={[s.rowPrice,!isAvailable && { color: ADMIN_COLORS.danger }]}>{t('common.currency')} {Number(item.price).toFixed(0)}</Text>
         <View style={s.rowActions}>
           <TouchableOpacity style={s.iconBtn} onPress={()=>{ setEdit(item); setModal(true); }}><Ionicons name="pencil" size={14} color={ADMIN_COLORS.textPrimary}/></TouchableOpacity>
-          <TouchableOpacity style={[s.iconBtn, s.iconBtnDel]} onPress={async()=>{ await supabase.from('products').delete().eq('id', item.id); load(); }}><Ionicons name="trash" size={14} color={ADMIN_COLORS.danger}/></TouchableOpacity>
+          <TouchableOpacity style={[s.iconBtn, s.iconBtnDel]} onPress={() => deleteProduct(item)}><Ionicons name="trash" size={14} color={ADMIN_COLORS.danger}/></TouchableOpacity>
         </View>
       </TouchableOpacity>
     );

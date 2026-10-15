@@ -4,16 +4,18 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, Modal, ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { supabase } from '../../../lib/supabase';
+import { FunctionsHttpError, FunctionsFetchError } from '@supabase/supabase-js';
 import { ADMIN_COLORS } from "../../../lib/adminTheme";
 
-const ROLES = ['admin','manager','cashier','delivery','staff'];
+const ROLES = ['admin', 'cashier', 'driver'];
 
 export default function StaffManagement(){
   const { t } = useTranslation();
   const [staff, setStaff] = useState<any[]>([]);
   const [name, setName] = useState(''); const [email, setEmail] = useState(''); const [password, setPassword] = useState('');
-  const [role, setRole] = useState('staff'); const [showAdd, setShowAdd] = useState(false);
+  const [role, setRole] = useState('cashier'); const [showAdd, setShowAdd] = useState(false);
   const [editItem, setEditItem] = useState<any>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const load = async () => {
     const { data } = await supabase.from('staff_members').select('*').order('created_at',{ascending:false});
@@ -23,7 +25,7 @@ export default function StaffManagement(){
 
   const addStaff = async () => {
     if(!name.trim() ||!email.trim() ||!password.trim()) return Alert.alert(t('admin.staff.fillRequired'));
-    const { data: authData, error: authError } = await supabase.auth.signUp({ email: email.trim().toLowerCase(), password, options:{data:{full_name:name, role}} });
+    const { data: authData, error: authError } = await supabase.auth.signUp({ email: email.trim().toLowerCase(), password, options:{data:{full_name:name}} });
     if(authError) return Alert.alert(authError.message);
     if(!authData?.user) return Alert.alert(t('admin.staff.createFailed'));
     const { error } = await supabase.from('staff_members').insert({ id: authData.user.id, name: name.trim(), email: email.trim().toLowerCase(), role, is_active:true });
@@ -43,14 +45,52 @@ export default function StaffManagement(){
 
   const deleteFully = async (item:any) => {
     Alert.alert(t('admin.staff.deleteTitle'), t('admin.staff.deleteDesc', { name: item.name }), [
-      {text:t('common:no'), style:'cancel'},
-      {text:t('common:yes'), style:'destructive', onPress: async ()=>{
-        const { error } = await supabase.rpc('delete_staff_user', { target_id: item.id });
-        if(error){
-          await supabase.from('staff_members').delete().eq('id', item.id);
+      {text: t('common:no'), style: 'cancel'},
+      {text: t('common:yes'), style: 'destructive', onPress: async () => {
+        if (deletingId) return;
+        setDeletingId(item.id);
+        try {
+          const { data, error } = await supabase.functions.invoke('delete-user', {
+            body: JSON.stringify({ user_id: item.id }),
+          });
+
+          if (error) {
+            // FunctionsHttpError — inspect HTTP status from error.context.status
+            if (error instanceof FunctionsHttpError) {
+              const httpStatus = error.context?.status ?? error.context?.response?.status;
+              if (httpStatus === 403) {
+                Alert.alert(t('common:error'), t('admin.staff.deleteAuthError') || 'You are not authorized to perform this action.');
+              } else {
+                Alert.alert(t('common:error'), error.message || t('common:somethingWentWrong'));
+              }
+              return;
+            }
+            // FunctionsFetchError — network-level failure
+            if (error instanceof FunctionsFetchError) {
+              Alert.alert(t('common:error'), t('common:somethingWentWrong'));
+              return;
+            }
+            // Generic FunctionsError or other
+            Alert.alert(t('common:error'), error.message || t('common:somethingWentWrong'));
+            return;
+          }
+
+          // Success (2xx) — check for partial-failure warning
+          const res = data as any;
+          if (res?.success && res?.warning) {
+            Alert.alert(
+              t('admin.staff.deleted') || 'Deleted',
+              res.warning + ' ' + (t('admin.staff.deleteWarningFollowUp') || 'The staff member was removed from authentication. Please clean up the staff record manually in the admin panel.'),
+            );
+          } else {
+            Alert.alert(t('admin.staff.deleted') || 'Deleted');
+          }
+          load();
+        } catch (e: any) {
+          Alert.alert(t('common:error'), e.message || t('common:somethingWentWrong'));
+        } finally {
+          setDeletingId(null);
         }
-        Alert.alert(t('admin.staff.deleted'));
-        load();
       }}
     ]);
   };
@@ -81,7 +121,13 @@ export default function StaffManagement(){
           <View key={item.id} style={[s.card,!item.is_active && {opacity:0.6}]}>
             <View style={{flexDirection:'row', justifyContent:'space-between', alignItems:'center'}}>
               <View style={{flexDirection:'row', gap:10}}>
-                <TouchableOpacity onPress={()=>deleteFully(item)} style={s.iconSmall}><Ionicons name="trash" size={16} color={ADMIN_COLORS.danger}/></TouchableOpacity>
+                <TouchableOpacity
+                  onPress={()=>deleteFully(item)}
+                  style={[s.iconSmall, deletingId === item.id && { opacity: 0.5 }]}
+                  disabled={deletingId === item.id}
+                >
+                  <Ionicons name="trash" size={16} color={ADMIN_COLORS.danger}/>
+                </TouchableOpacity>
                 <TouchableOpacity onPress={()=>setEditItem(item)} style={s.iconSmall}><Ionicons name="create" size={16} color={ADMIN_COLORS.textPrimary}/></TouchableOpacity>
               </View>
               <View style={{alignItems:'flex-end', flex:1, marginHorizontal:12}}><Text style={s.name}>{item.name}</Text><Text style={s.email}>{item.email} • {t(`admin.staff.roles.${item.role}`)}</Text></View>

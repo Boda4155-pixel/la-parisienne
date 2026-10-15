@@ -576,6 +576,8 @@
       "deleted": "Supprimé ✅",
       "deleteTitle": "Supprimer définitivement?",
       "deleteDesc": "{{name}} sera supprimé définitivement",
+      "deleteAuthError": "Vous n'êtes pas autorisé à effectuer cette action.",
+      "deleteWarningFollowUp": "Veuillez vérifier que l'enregistrement du personnel a été supprimé dans le panneau d'administration.",
       "staffName": "Nom personnel",
       "email": "Email",
       "password": "Mot de passe",

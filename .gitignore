@@ -32,6 +32,13 @@ yarn-error.*
 
 # local env files
 .env*.local
+.env
+
+# security-sensitive directories not for version control
+security-reports/
+memory/
+src-backup/
+scripts/live-db-audit-queries.sql
 
 # typescript
 *.tsbuildinfo
@@ -41,3 +48,4 @@ example
 # generated native folders
 /ios
 /android
+.aider*

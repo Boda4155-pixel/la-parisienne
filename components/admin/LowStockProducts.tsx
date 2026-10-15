@@ -1,7 +1,7 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { AlertTriangle } from "lucide-react-native";
-import type { LowStockProduct } from "../../lib/adminQueries";
+import type { LowStockProduct } from "../../lib/adminData";
 
 type LowStockProductsProps = {
   data: LowStockProduct[];
