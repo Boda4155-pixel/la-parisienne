@@ -97,7 +97,13 @@ export default function OrdersPage() {
   };
 
   const updateStatus = async (id:string, newStatus:string) => {
-    const { error } = await supabase.from('orders').update({ status: newStatus }).eq('id', id);
+    // SECURITY: Route through server-side RPC instead of direct table write.
+    // The update_order_status SECURITY DEFINER function validates the status
+    // transition and the caller's authorization before applying changes.
+    const { error } = await supabase.rpc('update_order_status', {
+      p_order_id: id,
+      p_new_status: newStatus,
+    });
     if(error) Alert.alert('Error', error.message);
     else { setSelected(null); load(); }
   };
