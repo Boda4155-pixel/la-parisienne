@@ -1,19 +1,14 @@
+// La Parisienne — Admin theme (موحد مع الكاستومر)
 export const ADMIN_COLORS = {
-  background: '#F5EFE6', // بيج
-  backgroundSecondary: '#EDE6D8',
+  background: '#FDFBF7',
   card: '#FFFFFF',
-  cardSecondary: '#FFFBF5',
-  border: '#E8DCC8',
-  borderLight: '#F0E6D3',
-  textPrimary: '#1A1A1A', // اسود
-  textSecondary: '#6B6B6B',
-  textMuted: '#9A9A9A',
-  primary: '#1A1A1A',
+  textPrimary: '#2B2117',
+  textSecondary: '#8B7355',
+  textMuted: '#B8A89A',
+  primary: '#2B2117',
   primaryText: '#FFFFFF',
-  danger: '#EF4444',
-  dangerBg: '#FEF2F2',
-  dangerBorder: '#FECACA',
-  inputBg: '#FFFFFF',
-  inputBorder: '#E8DCC8',
-  inputText: '#1A1A1A',
-};
+  border: '#EFE6D6',
+  accent: '#C2A46A',
+  tabActive: '#2B2117',
+  tabInactive: '#B8A89A',
+} as const;

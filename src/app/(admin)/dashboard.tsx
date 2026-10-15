@@ -7,8 +7,14 @@ import { supabase } from '../../../lib/supabase';
 
 export default function Dashboard() {
   const { t } = useTranslation();
-  const [stats, setStats] = useState({ today:0, todayCount:0, total:0, totalCount:0, pending:0, delivered:0, users:0, products:0 });
-  const [chart, setChart] = useState({ labels: [''], data: [0] });
+  const [stats, setStats] = useState({
+    today: 0, todayCount: 0, total: 0, totalCount: 0,
+    pending: 0, delivered: 0, users: 0, products: 0
+  });
+  const [chart, setChart] = useState<{ labels: string[]; data: number[] }>({
+    labels: ['No Data'],
+    data: [0]
+  });
   const [loading, setLoading] = useState(true);
 
   const load = async () => {
@@ -49,36 +55,59 @@ export default function Dashboard() {
 
   useEffect(() => {
     load();
-    const ch = supabase.channel('dash').on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, load).subscribe();
+
+    // Prevent stale-channel error in React Strict Mode: remove any existing
+    // 'dash' channel before creating a fresh subscription.
+    // removeChannel() is async (awaits WebSocket leave round-trip); we must
+    // also synchronously splice the stale channel from the internal
+    // `channels` array — otherwise channel() returns the leaving-state
+    // channel and .subscribe() silently no-ops.
+    const topic = 'dash';
+    const realtimeTopic = `realtime:${topic}`;
+    const stale = supabase.getChannels().filter((c) => c.topic === realtimeTopic);
+    stale.forEach((c) => supabase.removeChannel(c));
+    supabase.realtime.channels = supabase.realtime.channels.filter(
+      (c) => c.topic !== realtimeTopic
+    );
+
+    const ch = supabase.channel(topic)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, load)
+      .subscribe();
     return () => { supabase.removeChannel(ch); }
   }, []);
 
-  if(loading) return <View style={{flex:1, backgroundColor: ADMIN_COLORS.background, justifyContent:'center', alignItems:'center'}}><ActivityIndicator color={ADMIN_COLORS.primary} size="large"/></View>;
+  if(loading) {
+    return (
+      <View style={{flex:1, backgroundColor: ADMIN_COLORS.background, justifyContent:'center', alignItems:'center'}}>
+        <ActivityIndicator color={ADMIN_COLORS.primary} size="large"/>
+      </View>
+    );
+  }
 
   return (
     <View style={{flex:1, backgroundColor: ADMIN_COLORS.background, padding:16, paddingTop:50}}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{paddingBottom: 120}}>
         <Text style={{color: ADMIN_COLORS.textPrimary, fontSize:30, fontWeight:'800'}}>{t('admin.nav.dashboard')}</Text>
-        <Text style={{color: ADMIN_COLORS.textSecondary, marginBottom:20, marginTop:4, fontWeight:'700'}}>La Parisienne • {t('admin.dashboard.ordersCount', { count: stats.totalCount })} • Live</Text>
+        <Text style={{color: ADMIN_COLORS.textSecondary, marginBottom:20, marginTop:4, fontWeight:'700'}}>La Parisienne - {t('admin.dashboard.ordersCount', { count: stats.totalCount })} - Live</Text>
 
         <View style={{flexDirection:'row', flexWrap:'wrap', gap:12}}>
-          <View style={{backgroundColor: ADMIN_COLORS.primary, width:'47%', padding:18, borderRadius:18, borderWidth:1, borderColor: ADMIN_COLORS.primary}}>
-            <Text style={{color: ADMIN_COLORS.primaryText, opacity:0.9, fontSize:10, letterSpacing:1, fontWeight:'700', textTransform:'uppercase'}}>{t('admin.dashboard.pending')}</Text>
+          <View style={{backgroundColor: ADMIN_COLORS.primary, width:'47%', padding:18, borderRadius:18}}>
+            <Text style={{color: ADMIN_COLORS.primaryText, opacity:0.9, fontSize:10, fontWeight:'700', textTransform:'uppercase'}}>{t('admin.dashboard.pending')}</Text>
             <Text style={{color: ADMIN_COLORS.primaryText, fontSize:20, fontWeight:'800', marginTop:8}}>{stats.pending}</Text>
-            <Text style={{color: ADMIN_COLORS.background, opacity:0.7, fontSize:11, marginTop:4}}>{t('admin.dashboard.needAction')}</Text>
+            <Text style={{color: ADMIN_COLORS.primaryText, opacity:0.7, fontSize:11, marginTop:4}}>{t('admin.dashboard.needAction')}</Text>
           </View>
           <View style={{backgroundColor: ADMIN_COLORS.card, width:'47%', padding:18, borderRadius:18, borderWidth:1, borderColor: ADMIN_COLORS.border}}>
-            <Text style={{color: ADMIN_COLORS.textMuted, fontSize:10, letterSpacing:1, fontWeight:'700', textTransform:'uppercase'}}>{t('admin.dashboard.todaySales')}</Text>
+            <Text style={{color: ADMIN_COLORS.textMuted, fontSize:10, fontWeight:'700', textTransform:'uppercase'}}>{t('admin.dashboard.todaySales')}</Text>
             <Text style={{color: ADMIN_COLORS.textPrimary, fontSize:20, fontWeight:'800', marginTop:8}}>EGP {stats.today}</Text>
             <Text style={{color: ADMIN_COLORS.textSecondary, fontSize:11, marginTop:4}}>{t('admin.dashboard.ordersToday', { count: stats.todayCount })}</Text>
           </View>
           <View style={{backgroundColor: ADMIN_COLORS.card, width:'47%', padding:18, borderRadius:18, borderWidth:1, borderColor: ADMIN_COLORS.border}}>
-            <Text style={{color: ADMIN_COLORS.textMuted, fontSize:10, letterSpacing:1, fontWeight:'700', textTransform:'uppercase'}}>{t('admin.dashboard.totalRevenue')}</Text>
+            <Text style={{color: ADMIN_COLORS.textMuted, fontSize:10, fontWeight:'700', textTransform:'uppercase'}}>{t('admin.dashboard.totalRevenue')}</Text>
             <Text style={{color: ADMIN_COLORS.textPrimary, fontSize:20, fontWeight:'800', marginTop:8}}>EGP {stats.total}</Text>
             <Text style={{color: ADMIN_COLORS.textSecondary, fontSize:11, marginTop:4}}>{t('admin.dashboard.totalOrders', { count: stats.totalCount })}</Text>
           </View>
           <View style={{backgroundColor: ADMIN_COLORS.card, width:'47%', padding:18, borderRadius:18, borderWidth:1, borderColor: ADMIN_COLORS.border}}>
-            <Text style={{color: ADMIN_COLORS.textMuted, fontSize:10, letterSpacing:1, fontWeight:'700', textTransform:'uppercase'}}>{t('admin.dashboard.delivered')}</Text>
+            <Text style={{color: ADMIN_COLORS.textMuted, fontSize:10, fontWeight:'700', textTransform:'uppercase'}}>{t('admin.dashboard.delivered')}</Text>
             <Text style={{color: ADMIN_COLORS.textPrimary, fontSize:20, fontWeight:'800', marginTop:8}}>{stats.delivered}</Text>
             <Text style={{color: ADMIN_COLORS.textSecondary, fontSize:11, marginTop:4}}>{t('admin.dashboard.completed')}</Text>
           </View>
@@ -91,13 +120,12 @@ export default function Dashboard() {
             width={Dimensions.get('window').width - 50}
             height={220}
             yAxisLabel="EGP "
-            yAxisSuffix=""
             chartConfig={{
               backgroundColor: ADMIN_COLORS.card,
               backgroundGradientFrom: ADMIN_COLORS.card,
               backgroundGradientTo: ADMIN_COLORS.card,
               decimalPlaces: 0,
-              color: (opacity = 1) => `rgba(26, 26, 26, ${opacity})`,
+              color: (opacity = 1) => `rgba(43, 33, 23, ${opacity})`,
               labelColor: () => ADMIN_COLORS.textPrimary,
               style: { borderRadius: 16 },
               barPercentage: 0.6,
