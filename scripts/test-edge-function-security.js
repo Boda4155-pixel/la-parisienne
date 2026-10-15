@@ -79,9 +79,9 @@ test('verifyAdminWithJwt function defined', () => {
   assert(adminApiSrc.includes('async function verifyAdminWithJwt'), 'Missing verifyAdminWithJwt function');
 });
 
-test('Admin role check (admin or supervisor)', () => {
+test('Admin-only role check (no supervisor — matches user_role enum)', () => {
   assert(adminApiSrc.includes("profile.role !== 'admin'"), 'Missing admin role check');
-  assert(adminApiSrc.includes("profile.role !== 'supervisor'"), 'Missing supervisor role check');
+  assert(!adminApiSrc.includes("supervisor"), 'admin-api must NOT reference supervisor role');
 });
 
 test('Supabase auth.getUser called with JWT', () => {
@@ -93,9 +93,14 @@ test('profiles.role queried for authorization', () => {
   assert(adminApiSrc.includes(".select('role')"), 'Missing role column select');
 });
 
-test('Action whitelist (create-product, delete-order only)', () => {
-  assert(adminApiSrc.includes("action !== 'create-product'"), 'Missing create-product whitelist');
-  assert(adminApiSrc.includes("action !== 'delete-order'"), 'Missing delete-order whitelist');
+test('Action whitelist via ALLOWED_ACTIONS Set', () => {
+  assert(adminApiSrc.includes('ALLOWED_ACTIONS'), 'Missing ALLOWED_ACTIONS Set');
+  assert(adminApiSrc.includes("'create-product'"), 'create-product must be in whitelist');
+  assert(adminApiSrc.includes("'update-product'"), 'update-product must be in whitelist');
+  assert(adminApiSrc.includes("'delete-product'"), 'delete-product must be in whitelist');
+  assert(adminApiSrc.includes("'reorder-products'"), 'reorder-products must be in whitelist');
+  assert(adminApiSrc.includes("'toggle-product-availability'"), 'toggle-product-availability must be in whitelist');
+  assert(adminApiSrc.includes("'delete-order'"), 'delete-order must be in whitelist');
 });
 
 test('Product payload field whitelist via ALLOWED_PRODUCT_FIELDS', () => {
@@ -143,14 +148,30 @@ test('403 for auth errors', () => {
   assert(adminApiSrc.includes('403'), 'Missing 403 status for auth errors');
 });
 
-test('No EXPOSED service-role key via EXPO_PUBLIC_ prefix in client code', () => {
-  const supabaseAdminSrc = fs.readFileSync(
-    path.join(__dirname, '..', 'lib', 'supabaseAdmin.ts'),
-    'utf8'
-  );
-  // Check that the env var is not actually read in code (not just mentioned in comments)
-  assert(!supabaseAdminSrc.includes('process.env.EXPO_PUBLIC_SUPABASE_SERVICE_ROLE_KEY'),
-    'EXPO_PUBLIC_SUPABASE_SERVICE_ROLE_KEY must not be read in client code');
+test('CORS: no wildcard origin ("*")', () => {
+  assert(!adminApiSrc.includes("'Access-Control-Allow-Origin': '*'"),
+    'admin-api must not use wildcard CORS origin');
+  assert(!adminApiSrc.includes('"Access-Control-Allow-Origin": "*"'),
+    'admin-api must not use wildcard CORS origin (double quotes)');
+});
+
+test('CORS: ALLOWED_ORIGINS allowlist with origin matching', () => {
+  assert(adminApiSrc.includes('ALLOWED_ORIGINS'), 'Missing ALLOWED_ORIGINS env var');
+  assert(adminApiSrc.includes("ALLOWED_ORIGINS.includes(origin)"),
+    'Missing origin allowlist check in getCorsHeaders');
+  assert(adminApiSrc.includes("'Vary': 'Origin'"), 'Missing Vary: Origin header');
+});
+
+test('Service-role key accessed via Deno.env (server-side only, never EXPO_PUBLIC_)', () => {
+  // The Edge Function must read the service-role key via Deno.env.get (server-side only)
+  assert(adminApiSrc.includes("Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')"),
+    'admin-api must read SUPABASE_SERVICE_ROLE_KEY via Deno.env.get');
+  // The service-role key must never be referenced with EXPO_PUBLIC_ prefix (client-bundle leak)
+  assert(!adminApiSrc.includes('EXPO_PUBLIC'),
+    'admin-api must never reference EXPO_PUBLIC_ env vars');
+  // Verify the delete-user function also uses Deno.env (not client env)
+  assert(deleteUserSrc.includes("Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')"),
+    'delete-user must read SUPABASE_SERVICE_ROLE_KEY via Deno.env.get');
 });
 
 // ── delete-user source verification ──
@@ -233,6 +254,17 @@ test('403 for auth/authorization errors', () => {
   assert(deleteUserSrc.includes('403'), 'Missing 403 status for auth errors');
 });
 
+test('delete-user CORS: no wildcard origin', () => {
+  assert(!deleteUserSrc.includes("'Access-Control-Allow-Origin': '*'"),
+    'delete-user must not use wildcard CORS origin');
+});
+
+test('delete-user CORS: ALLOWED_ORIGINS allowlist present', () => {
+  assert(deleteUserSrc.includes('ALLOWED_ORIGINS'), 'Missing ALLOWED_ORIGINS env var');
+  assert(deleteUserSrc.includes("ALLOWED_ORIGINS.includes(origin)"),
+    'Missing origin allowlist check in getCorsHeaders');
+});
+
 // ── config.toml verification ──
 console.log('\nconfig.toml security:');
 
@@ -251,6 +283,18 @@ test('config.toml has both function sections', () => {
   );
   assert(config.includes('[functions.admin-api]'), 'Missing [functions.admin-api] section');
   assert(config.includes('[functions.delete-user]'), 'Missing [functions.delete-user] section');
+});
+
+test('config.toml has create-payment section with verify_jwt = true', () => {
+  const config = fs.readFileSync(
+    path.join(__dirname, '..', 'supabase', 'config.toml'),
+    'utf8'
+  );
+  assert(config.includes('[functions.create-payment]'),
+    'Missing [functions.create-payment] section — function deployed but not in config.toml');
+  const cpSection = config.split('[functions.create-payment]')[1]?.split('[functions.')[0];
+  assert(cpSection?.includes('verify_jwt = true'),
+    'create-payment must have verify_jwt = true');
 });
 
 // ── Input validation unit tests ──
@@ -297,6 +341,8 @@ test('Allowed product fields set contains expected fields', () => {
   assert(ALLOWED_PRODUCT_FIELDS.has('is_active'), 'is_active should be allowed');
   assert(ALLOWED_PRODUCT_FIELDS.has('is_available'), 'is_available should be allowed');
   assert(ALLOWED_PRODUCT_FIELDS.has('category_id'), 'category_id should be allowed');
+  assert(ALLOWED_PRODUCT_FIELDS.has('sort_order'), 'sort_order should be allowed for reordering');
+  assert(ALLOWED_PRODUCT_FIELDS.has('category'), 'category should be allowed for display name');
 });
 
 test('Allowed product fields set does NOT contain dangerous fields', () => {
@@ -305,6 +351,17 @@ test('Allowed product fields set does NOT contain dangerous fields', () => {
   assert(!ALLOWED_PRODUCT_FIELDS.has('updated_at'), 'updated_at should not be allowed');
   assert(!ALLOWED_PRODUCT_FIELDS.has('user_id'), 'user_id should not be allowed');
   assert(!ALLOWED_PRODUCT_FIELDS.has('is_featured'), 'arbitrary fields should not be allowed');
+});
+
+test('validateProductId function defined for product actions', () => {
+  assert(adminApiSrc.includes('function validateProductId'), 'Missing validateProductId function');
+  assert(adminApiSrc.includes('validateProductId(payload.id)'), 'validateProductId must be called on product id');
+});
+
+test('Product update/delete/reorder actions routed through admin-api', () => {
+  assert(adminApiSrc.includes("action === 'update-product'"), 'Missing update-product handler');
+  assert(adminApiSrc.includes("action === 'delete-product'"), 'Missing delete-product handler');
+  assert(adminApiSrc.includes("action === 'reorder-products'"), 'Missing reorder-products handler');
 });
 
 // ── Handler flow verification ──

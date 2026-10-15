@@ -62,9 +62,11 @@ const ALLOWED_PRODUCT_FIELDS = new Set([
   'price',
   'stock_quantity',
   'category_id',
+  'category',
   'is_active',
   'is_available',
   'image_url',
+  'sort_order',
 ])
 
 interface CreateProductPayload {
@@ -145,6 +147,13 @@ function validateOrderId(id: any): string {
   return id
 }
 
+function validateProductId(id: any): string {
+  if (typeof id !== 'string' || !UUID_REGEX.test(id)) {
+    throw new Error('Invalid payload: product id must be a valid UUID')
+  }
+  return id
+}
+
 /**
  * Sanitize Supabase errors so internal details (column names, constraint
  * names, internal UUIDs) are not leaked to the caller.
@@ -200,15 +209,23 @@ serve(async (req: Request) => {
     const { action, payload } = body
 
     // Whitelist allowed actions
-    if (action !== 'create-product' && action !== 'delete-order') {
-      throw new Error(`Invalid action: "${action}". Allowed: create-product, delete-order`)
+    const ALLOWED_ACTIONS = new Set([
+      'create-product',
+      'update-product',
+      'delete-product',
+      'reorder-products',
+      'toggle-product-availability',
+      'delete-order',
+    ])
+    if (!ALLOWED_ACTIONS.has(action)) {
+      throw new Error(`Invalid action: "${action}". Allowed: ${[...ALLOWED_ACTIONS].join(', ')}`)
     }
 
     // ── Role-based authorization per action ──
-    // Both create-product and delete-order require admin role (already
+    // All product and order management actions require admin role (already
     // enforced by verifyAdminWithJwt; this is a defense-in-depth check).
-    if (action === 'delete-order' && callerRole !== 'admin') {
-      throw new Error('Forbidden: admin role required for delete-order')
+    if (callerRole !== 'admin') {
+      throw new Error('Forbidden: admin role required')
     }
 
     let result: any
@@ -219,6 +236,69 @@ serve(async (req: Request) => {
       result = await supabaseAdmin
         .from('products')
         .insert(validatedPayload)
+        .select()
+    } else if (action === 'update-product') {
+      // Validate payload structure and product ID before any DB operation
+      if (!payload || typeof payload !== 'object' || !('id' in payload)) {
+        throw new Error('Invalid payload: missing "id" field')
+      }
+      const productId = validateProductId(payload.id)
+      const validatedPayload = validateProductPayload(payload)
+      result = await supabaseAdmin
+        .from('products')
+        .update(validatedPayload)
+        .eq('id', productId)
+        .select()
+    } else if (action === 'delete-product') {
+      // Validate payload structure before any DB operation
+      if (!payload || typeof payload !== 'object' || !('id' in payload)) {
+        throw new Error('Invalid payload: missing "id" field')
+      }
+      const productId = validateProductId(payload.id)
+      result = await supabaseAdmin
+        .from('products')
+        .delete()
+        .eq('id', productId)
+    } else if (action === 'reorder-products') {
+      // Batch update: validate each item, then update sort_order in order
+      if (!payload || typeof payload !== 'object' || !Array.isArray(payload.items)) {
+        throw new Error('Invalid payload: missing "items" array')
+      }
+      const updates: Array<{ id: string; sort_order: number }> = []
+      for (const item of payload.items) {
+        const productId = validateProductId(item.id)
+        if (typeof item.sort_order !== 'number' || !Number.isInteger(item.sort_order) || item.sort_order < 0) {
+          throw new Error('Invalid payload: sort_order must be a non-negative integer')
+        }
+        updates.push({ id: productId, sort_order: item.sort_order })
+      }
+      for (const { id, sort_order } of updates) {
+        const r = await supabaseAdmin
+          .from('products')
+          .update({ sort_order })
+          .eq('id', id)
+        if (r.error) throw sanitizeSupabaseError(r.error)
+      }
+      result = { data: updates }
+    } else if (action === 'toggle-product-availability') {
+      // Security: toggle is handled server-side to prevent client from
+      // setting an arbitrary value. The server reads current value and flips it.
+      if (!payload || typeof payload !== 'object' || !('id' in payload)) {
+        throw new Error('Invalid payload: missing "id" field')
+      }
+      const productId = validateProductId(payload.id)
+      const { data: current, error: fetchErr } = await supabaseAdmin
+        .from('products')
+        .select('is_available, is_active')
+        .eq('id', productId)
+        .single()
+      if (fetchErr) throw sanitizeSupabaseError(fetchErr)
+      if (!current) throw new Error('Product not found')
+      const newVal = !(current.is_available ?? current.is_active ?? true)
+      result = await supabaseAdmin
+        .from('products')
+        .update({ is_available: newVal, is_active: newVal })
+        .eq('id', productId)
         .select()
     } else if (action === 'delete-order') {
       // Validate payload structure before any DB operation
