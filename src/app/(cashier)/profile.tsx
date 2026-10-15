@@ -5,13 +5,10 @@ import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Image, KeyboardAvoidingView, Modal, Platform, ScrollView, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
+import { CUSTOMER_COLORS } from '../../../lib/customerTheme';
 import { supabase } from '../../../lib/supabase';
 
 const STORE_ID = 'la-parisienne-1';
-const GOLD = '#C5A059';
-const BLACK = '#0A0A0A';
-const GOLD_BORDER = '#E8DCC6';
-const GOLD_LIGHT = '#FBF6EC';
 
 const translations: any = {
   ar: { title: 'مطعمي - La Parisienne', orders: 'الطلبات', rating: 'التقييم', years: 'سنوات', name: 'اسم المطعم', address: 'العنوان', phone: 'الهاتف', cuisine: 'أنواع المطبخ', desc: 'الوصف', gps: 'GPS', cover: 'صورة واجهة المطعم', change: 'تغيير', auto: 'القبول التلقائي', min: 'الحد الأدنى', delivery: 'رسوم التوصيل', free: 'توصيل مجاني', hours: 'ساعات العمل', lang: 'اللغة', logout: 'تسجيل خروج', save: 'حفظ', confirm: 'تأكيد الموقع', pound: 'جنيه', edit: 'تعديل' },
@@ -20,6 +17,7 @@ const translations: any = {
 };
 
 export default function Profile() {
+  const C = CUSTOMER_COLORS;
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [lang, setLang] = useState('ar');
@@ -83,33 +81,32 @@ export default function Profile() {
       { text: t('logout'), style: 'destructive', onPress: async () => { try { await supabase.auth.signOut(); await AsyncStorage.clear(); } catch (e) {} try { router.replace('/'); } catch (e) { router.dismissAll(); } } }
     ]);
   };
-  if (loading) return <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor:'#FAFAF8' }}><ActivityIndicator color={GOLD}/></View>;
+  if (loading) return <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: C.background }}><ActivityIndicator color={C.textPrimary}/></View>;
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#FAFAF8' }}>
-      {/* Header */}
-      <View style={{ backgroundColor: BLACK, paddingTop: 50, paddingBottom: 14, alignItems: 'center', borderBottomWidth:1.5, borderBottomColor:GOLD, borderBottomLeftRadius:20, borderBottomRightRadius:20 }}>
-        <Text style={{ fontWeight: '900', fontSize: 14, color: GOLD, letterSpacing:2 }}>LA PARISIENNE</Text>
-        <Text style={{ fontWeight: '800', fontSize: 16, color:'white', marginTop:4 }}>{t('title')}</Text>
+    <View style={{ flex: 1, backgroundColor: C.background }}>
+      <View style={{ backgroundColor: C.textPrimary, paddingTop: 50, paddingBottom: 14, alignItems: 'center', borderBottomLeftRadius:20, borderBottomRightRadius:20 }}>
+        <Text style={{ fontWeight: '900', fontSize: 14, color: C.accent, letterSpacing:2 }}>LA PARISIENNE</Text>
+        <Text style={{ fontWeight: '800', fontSize: 16, color: C.card, marginTop:4 }}>{t('title')}</Text>
       </View>
 
       <ScrollView contentContainerStyle={{ paddingBottom: 180 }}>
-        <View style={{ backgroundColor: 'white', alignItems: 'center', padding: 20, borderBottomWidth:1, borderColor:GOLD_BORDER }}>
-          <TouchableOpacity onPress={() => pick('logo_url')} style={{ width: 90, height: 90, borderRadius: 45, backgroundColor: '#fff', borderWidth: 2, borderColor: GOLD, justifyContent: 'center', alignItems: 'center' }}>
+        <View style={{ backgroundColor: C.card, alignItems: 'center', padding: 20, borderBottomWidth:1, borderColor: C.border }}>
+          <TouchableOpacity onPress={() => pick('logo_url')} style={{ width: 90, height: 90, borderRadius: 45, backgroundColor: '#fff', borderWidth: 2, borderColor: C.accent, justifyContent: 'center', alignItems: 'center' }}>
             {store?.logo_url? <Image source={{ uri: store.logo_url }} style={{ width: 86, height: 86, borderRadius: 43 }} /> : <Text style={{ fontSize: 40 }}>🥐</Text>}
           </TouchableOpacity>
-          <Text style={{ marginTop: 12, fontSize: 20, fontWeight: '900', color:BLACK }}>{store?.name}</Text>
-          <Text style={{ color: GOLD, fontSize: 13, fontWeight:'700' }}>{store?.cuisine}</Text>
+          <Text style={{ marginTop: 12, fontSize: 20, fontWeight: '900', color: C.textPrimary }}>{store?.name}</Text>
+          <Text style={{ color: C.textSecondary, fontSize: 13, fontWeight:'700' }}>{store?.cuisine}</Text>
           <View style={{ flexDirection: 'row', width: '100%', marginTop: 18, justifyContent: 'space-around' }}>
-            <View style={{ alignItems: 'center', flex: 1 }}><Text style={{ fontWeight: '900', fontSize: 16, color:BLACK }}>{ordersCount}</Text><Text style={{ color: '#999', fontSize: 11 }}>{t('orders')}</Text></View>
-            <View style={{ width: 1, backgroundColor: GOLD_BORDER }} />
-            <TouchableOpacity onPress={() => openEdit('rating', store?.rating, t('rating'))} style={{ alignItems: 'center', flex: 1 }}><Text style={{ fontWeight: '900', fontSize: 16, color:BLACK }}>{store?.rating} ⭐</Text><Text style={{ color: GOLD, fontSize: 11 }}>{t('rating')} ✏️</Text></TouchableOpacity>
-            <View style={{ width: 1, backgroundColor: GOLD_BORDER }} />
-            <TouchableOpacity onPress={() => openEdit('years_in_business', store?.years_in_business, t('years'))} style={{ alignItems: 'center', flex: 1 }}><Text style={{ fontWeight: '900', fontSize: 16, color:BLACK }}>{store?.years_in_business}</Text><Text style={{ color: GOLD, fontSize: 11 }}>{t('years')} ✏️</Text></TouchableOpacity>
+            <View style={{ alignItems: 'center', flex: 1 }}><Text style={{ fontWeight: '900', fontSize: 16, color: C.textPrimary }}>{ordersCount}</Text><Text style={{ color: C.textMuted, fontSize: 11 }}>{t('orders')}</Text></View>
+            <View style={{ width: 1, backgroundColor: C.border }} />
+            <TouchableOpacity onPress={() => openEdit('rating', store?.rating, t('rating'))} style={{ alignItems: 'center', flex: 1 }}><Text style={{ fontWeight: '900', fontSize: 16, color: C.textPrimary }}>{store?.rating} ⭐</Text><Text style={{ color: C.textSecondary, fontSize: 11 }}>{t('rating')} ✏️</Text></TouchableOpacity>
+            <View style={{ width: 1, backgroundColor: C.border }} />
+            <TouchableOpacity onPress={() => openEdit('years_in_business', store?.years_in_business, t('years'))} style={{ alignItems: 'center', flex: 1 }}><Text style={{ fontWeight: '900', fontSize: 16, color: C.textPrimary }}>{store?.years_in_business}</Text><Text style={{ color: C.textSecondary, fontSize: 11 }}>{t('years')} ✏️</Text></TouchableOpacity>
           </View>
         </View>
 
-        <View style={{ backgroundColor: 'white', marginTop: 8, borderTopWidth:1, borderBottomWidth:1, borderColor:GOLD_BORDER }}>
+        <View style={{ backgroundColor: C.card, marginTop: 8, borderTopWidth:1, borderBottomWidth:1, borderColor: C.border }}>
           <Item label={t('name')} value={store?.name} onPress={() => openEdit('name', store?.name, t('name'))} />
           <Item label={t('address')} value={store?.address} onPress={() => openEdit('address', store?.address, t('address'))} />
           <Item label={t('phone')} value={store?.phone} onPress={() => openEdit('phone', store?.phone, t('phone'))} />
@@ -118,63 +115,63 @@ export default function Profile() {
         </View>
 
         <View style={{ padding: 12 }}>
-          <TouchableOpacity onPress={() => setMapVisible(true)} style={{ backgroundColor: BLACK, borderWidth:1, borderColor:GOLD, borderRadius: 14, padding: 14, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Ionicons name="chevron-back" size={18} color={GOLD} />
-            <Text style={{ color: 'white', fontWeight: '800', fontSize: 12 }}>{t('gps')}: {store?.latitude?.toFixed(4)}, {store?.longitude?.toFixed(4)}</Text>
-            <View style={{ backgroundColor: GOLD, borderRadius: 8, padding: 7 }}><Ionicons name="map" size={18} color={BLACK} /></View>
+          <TouchableOpacity onPress={() => setMapVisible(true)} style={{ backgroundColor: C.textPrimary, borderRadius: 14, padding: 14, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Ionicons name="chevron-back" size={18} color={C.accent} />
+            <Text style={{ color: C.card, fontWeight: '800', fontSize: 12 }}>{t('gps')}: {store?.latitude?.toFixed(4)}, {store?.longitude?.toFixed(4)}</Text>
+            <View style={{ backgroundColor: C.accent, borderRadius: 8, padding: 7 }}><Ionicons name="map" size={18} color={C.textPrimary} /></View>
           </TouchableOpacity>
         </View>
 
-        <View style={{ backgroundColor: 'white', padding: 14, borderTopWidth:1, borderBottomWidth:1, borderColor:GOLD_BORDER }}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}><Text style={{ fontWeight: '800', color:BLACK }}>{t('cover')}</Text><TouchableOpacity onPress={() => pick('cover_url')} style={{ backgroundColor: BLACK, borderWidth:1, borderColor:GOLD, paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20 }}><Text style={{ color: GOLD, fontSize: 11, fontWeight:'800' }}>{t('change')}</Text></TouchableOpacity></View>
-          <Image source={{ uri: store?.cover_url || 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4' }} style={{ width: '100%', height: 180, borderRadius: 14, marginTop: 12, borderWidth:1, borderColor:GOLD_BORDER }} />
+        <View style={{ backgroundColor: C.card, padding: 14, borderTopWidth:1, borderBottomWidth:1, borderColor: C.border }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}><Text style={{ fontWeight: '800', color: C.textPrimary }}>{t('cover')}</Text><TouchableOpacity onPress={() => pick('cover_url')} style={{ backgroundColor: C.textPrimary, paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20 }}><Text style={{ color: C.card, fontSize: 11, fontWeight:'800' }}>{t('change')}</Text></TouchableOpacity></View>
+          <Image source={{ uri: store?.cover_url || 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4' }} style={{ width: '100%', height: 180, borderRadius: 14, marginTop: 12, borderWidth:1, borderColor: C.border }} />
         </View>
 
-        <View style={{ backgroundColor: 'white', marginTop: 12, borderTopWidth:1, borderBottomWidth:1, borderColor:GOLD_BORDER }}>
-          <View style={{ padding: 15, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomWidth: 1, borderColor: '#f6f6f6' }}>
-            <Switch value={!!store?.auto_accept} onValueChange={(v) => update('auto_accept', v)} trackColor={{ true: GOLD }} thumbColor={BLACK} />
-            <Text style={{ fontWeight: '700', color:BLACK }}>{t('auto')}</Text>
+        <View style={{ backgroundColor: C.card, marginTop: 12, borderTopWidth:1, borderBottomWidth:1, borderColor: C.border }}>
+          <View style={{ padding: 15, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomWidth: 1, borderColor: C.searchBg }}>
+            <Switch value={!!store?.auto_accept} onValueChange={(v) => update('auto_accept', v)} trackColor={{ true: C.accent, false: '#ddd' }} thumbColor={C.textPrimary} />
+            <Text style={{ fontWeight: '700', color: C.textPrimary }}>{t('auto')}</Text>
           </View>
           <Item label={t('min')} value={`${store?.min_order} ${t('pound')}`} onPress={() => openEdit('min_order', store?.min_order, t('min'))} />
           <Item label={t('delivery')} value={`${store?.delivery_fee} ${t('pound')}`} onPress={() => openEdit('delivery_fee', store?.delivery_fee, t('delivery'))} />
-          <View style={{ padding: 15, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomWidth: 1, borderColor: '#f6f6f6' }}>
-            <Switch value={!!store?.free_delivery} onValueChange={(v) => update('free_delivery', v)} trackColor={{ true: GOLD }} thumbColor={BLACK}/>
-            <Text style={{ fontWeight: '700', color:BLACK }}>{t('free')}</Text>
+          <View style={{ padding: 15, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomWidth: 1, borderColor: C.searchBg }}>
+            <Switch value={!!store?.free_delivery} onValueChange={(v) => update('free_delivery', v)} trackColor={{ true: C.accent, false: '#ddd' }} thumbColor={C.textPrimary}/>
+            <Text style={{ fontWeight: '700', color: C.textPrimary }}>{t('free')}</Text>
           </View>
           <Item label={t('hours')} value={store?.work_hours} onPress={() => openEdit('work_hours', store?.work_hours, t('hours'))} />
         </View>
 
-        <View style={{ backgroundColor: 'white', marginTop: 12, padding: 14, borderTopWidth:1, borderBottomWidth:1, borderColor:GOLD_BORDER }}>
-          <Text style={{ fontWeight: '800', textAlign: 'right', marginBottom: 10, color:BLACK }}>{t('lang')}</Text>
+        <View style={{ backgroundColor: C.card, marginTop: 12, padding: 14, borderTopWidth:1, borderBottomWidth:1, borderColor: C.border }}>
+          <Text style={{ fontWeight: '800', textAlign: 'right', marginBottom: 10, color: C.textPrimary }}>{t('lang')}</Text>
           <View style={{ flexDirection: 'row', gap: 8 }}>
             {[{ id: 'ar', label: 'العربية 🇪🇬' }, { id: 'en', label: 'English 🇬🇧' }, { id: 'fr', label: 'Français 🇫🇷' }].map(l => (
-              <TouchableOpacity key={l.id} onPress={() => changeLanguage(l.id)} style={{ flex: 1, padding: 12, borderRadius: 10, borderWidth: 1.5, borderColor: lang === l.id? GOLD : GOLD_BORDER, backgroundColor: lang === l.id? BLACK : 'white', alignItems: 'center' }}>
-                <Text style={{ color: lang === l.id? GOLD : BLACK, fontWeight: '900', fontSize: 12 }}>{l.label}</Text>
+              <TouchableOpacity key={l.id} onPress={() => changeLanguage(l.id)} style={{ flex: 1, padding: 12, borderRadius: 10, borderWidth: 1.5, borderColor: lang === l.id? C.textPrimary : C.border, backgroundColor: lang === l.id? C.textPrimary : C.card, alignItems: 'center' }}>
+                <Text style={{ color: lang === l.id? C.card : C.textPrimary, fontWeight: '900', fontSize: 12 }}>{l.label}</Text>
               </TouchableOpacity>
             ))}
           </View>
         </View>
 
         <View style={{ padding: 20 }}>
-          <TouchableOpacity onPress={handleLogout} style={{ backgroundColor: BLACK, borderWidth:1, borderColor:GOLD, padding: 16, borderRadius: 14, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8 }}>
-            <Ionicons name="log-out-outline" size={20} color={GOLD} />
-            <Text style={{ color: GOLD, fontWeight: '900', fontSize: 15 }}>{t('logout')}</Text>
+          <TouchableOpacity onPress={handleLogout} style={{ backgroundColor: C.textPrimary, padding: 16, borderRadius: 14, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8 }}>
+            <Ionicons name="log-out-outline" size={20} color={C.accent} />
+            <Text style={{ color: C.accent, fontWeight: '900', fontSize: 15 }}>{t('logout')}</Text>
           </TouchableOpacity>
-          <Text style={{ textAlign: 'center', color: '#999', fontSize: 11, marginTop: 12 }}>LA PARISIENNE • Luxury Edition 🖤💛</Text>
+          <Text style={{ textAlign: 'center', color: C.textMuted, fontSize: 11, marginTop: 12 }}>LA PARISIENNE • {C.background} Edition</Text>
         </View>
       </ScrollView>
 
       <Modal visible={modal} transparent animationType="slide">
         <KeyboardAvoidingView behavior={Platform.OS === 'ios'? 'padding' : 'height'} style={{ flex: 1 }}>
           <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' }}>
-            <View style={{ backgroundColor: 'white', padding: 20, borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingBottom: 40, borderTopWidth:2, borderColor:GOLD }}>
+            <View style={{ backgroundColor: C.card, padding: 20, borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingBottom: 40, borderTopWidth:2, borderColor: C.accent }}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 15 }}>
-                <TouchableOpacity onPress={() => setModal(false)}><Text style={{ color: '#999' }}>إلغاء</Text></TouchableOpacity>
-                <Text style={{ fontWeight: '900', color:BLACK }}>{label}</Text>
+                <TouchableOpacity onPress={() => setModal(false)}><Text style={{ color: C.textMuted }}>إلغاء</Text></TouchableOpacity>
+                <Text style={{ fontWeight: '900', color: C.textPrimary }}>{label}</Text>
               </View>
-              <TextInput value={temp} onChangeText={setTemp} keyboardType={['rating', 'years_in_business', 'min_order', 'delivery_fee'].includes(field)? 'numeric' : 'default'} style={{ borderWidth: 1.5, borderColor: GOLD, borderRadius: 10, padding: 14, textAlign: lang === 'ar'? 'right' : 'left', fontSize: 16 }} autoFocus placeholder={label} />
-              <TouchableOpacity onPress={save} style={{ backgroundColor: BLACK, borderWidth:1, borderColor:GOLD, padding: 16, borderRadius: 10, alignItems: 'center', marginTop: 12 }}>
-                <Text style={{ color: GOLD, fontWeight: '900', fontSize: 16 }}>{t('save')} ✨</Text>
+              <TextInput value={temp} onChangeText={setTemp} keyboardType={['rating', 'years_in_business', 'min_order', 'delivery_fee'].includes(field)? 'numeric' : 'default'} style={{ borderWidth: 1.5, borderColor: C.border, borderRadius: 10, padding: 14, textAlign: lang === 'ar'? 'right' : 'left', fontSize: 16, color: C.textPrimary }} autoFocus placeholder={label} />
+              <TouchableOpacity onPress={save} style={{ backgroundColor: C.textPrimary, padding: 16, borderRadius: 10, alignItems: 'center', marginTop: 12 }}>
+                <Text style={{ color: C.card, fontWeight: '900', fontSize: 16 }}>{t('save')} ✨</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -186,8 +183,8 @@ export default function Profile() {
           <MapView style={{ flex: 1 }} initialRegion={{...marker, latitudeDelta: 0.01, longitudeDelta: 0.01 }} onPress={e => setMarker(e.nativeEvent.coordinate)}>
             <Marker draggable coordinate={marker} onDragEnd={e => setMarker(e.nativeEvent.coordinate)} />
           </MapView>
-          <TouchableOpacity onPress={async () => { await update('latitude', marker.latitude); await update('longitude', marker.longitude); setMapVisible(false); }} style={{ backgroundColor: BLACK, padding: 18, alignItems: 'center', borderTopWidth:1.5, borderColor:GOLD }}>
-            <Text style={{ color: GOLD, fontWeight: '900' }}>{t('confirm')} ✨</Text>
+          <TouchableOpacity onPress={async () => { await update('latitude', marker.latitude); await update('longitude', marker.longitude); setMapVisible(false); }} style={{ backgroundColor: C.textPrimary, padding: 18, alignItems: 'center' }}>
+            <Text style={{ color: C.card, fontWeight: '900' }}>{t('confirm')} ✨</Text>
           </TouchableOpacity>
         </View>
       </Modal>
@@ -196,14 +193,15 @@ export default function Profile() {
 }
 
 function Item({ label, value, onPress }: any) {
+  const C = CUSTOMER_COLORS;
   return (
-    <TouchableOpacity onPress={onPress} style={{ padding: 14, borderBottomWidth: 1, borderColor: '#f6f6f6', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-      <View style={{ width: 26, height: 26, borderRadius: 13, backgroundColor: GOLD_LIGHT, borderWidth:1, borderColor:GOLD_BORDER, justifyContent: 'center', alignItems: 'center' }}>
-        <Ionicons name="pencil" size={12} color={GOLD} />
+    <TouchableOpacity onPress={onPress} style={{ padding: 14, borderBottomWidth: 1, borderColor: C.searchBg, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+      <View style={{ width: 26, height: 26, borderRadius: 13, backgroundColor: C.searchBg, borderWidth:1, borderColor: C.border, justifyContent: 'center', alignItems: 'center' }}>
+        <Ionicons name="pencil" size={12} color={C.textPrimary} />
       </View>
       <View style={{ flex: 1, alignItems: 'flex-end', marginRight: 10 }}>
-        <Text style={{ fontSize: 11, color: '#999' }}>{label}</Text>
-        <Text style={{ fontWeight: '700', textAlign: 'right', marginTop: 2, color:BLACK }} numberOfLines={2}>{value}</Text>
+        <Text style={{ fontSize: 11, color: C.textMuted }}>{label}</Text>
+        <Text style={{ fontWeight: '700', textAlign: 'right', marginTop: 2, color: C.textPrimary }} numberOfLines={2}>{value}</Text>
       </View>
     </TouchableOpacity>
   );

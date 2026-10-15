@@ -1,24 +1,27 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { CUSTOMER_COLORS } from '../../../lib/customerTheme';
 
 export default function CashierLayout() {
   const insets = useSafeAreaInsets();
+  const C = CUSTOMER_COLORS;
   return (
     <Tabs 
       screenOptions={{ 
         headerShown: false, 
-        tabBarActiveTintColor: '#C5A059', // الدهبي هو اللي شغال
-        tabBarInactiveTintColor: '#777', // الباقي رمادي
+        tabBarActiveTintColor: C.tabActive,
+        tabBarInactiveTintColor: C.tabInactive,
         tabBarStyle: { 
-          height: 70 + insets.bottom,
-          paddingBottom: insets.bottom + 10,
-          paddingTop: 10,
-          backgroundColor: '#0A0A0A', // اسود فاخر
-          borderTopWidth: 1.5,
-          borderTopColor: '#C5A059', // خط دهبي فوق
+          height: 75 + insets.bottom,
+          paddingBottom: insets.bottom > 0 ? insets.bottom : 8,
+          paddingTop: 8,
+          backgroundColor: C.background,
+          borderTopWidth: 1,
+          borderTopColor: C.border,
+          elevation: 0,
         },
-        tabBarLabelStyle: { fontSize: 11, fontWeight: '800' }
+        tabBarLabelStyle: { fontSize: 11, fontWeight: '600' }
       }}
     >
       <Tabs.Screen name="index" options={{ href: null }} />
