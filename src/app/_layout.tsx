@@ -94,7 +94,7 @@ export default function RootLayout() {
       router.replace(getRouteByRole(role) as any);
       return;
     }
-    if (currentGroup === "(customer)" && ["admin","cashier","driver","supervisor"].includes(role)) {
+    if (currentGroup === "(customer)" && ["admin","cashier","driver"].includes(role)) {
       router.replace(getRouteByRole(role) as any);
       return;
     }

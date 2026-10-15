@@ -7,13 +7,13 @@ import { supabase } from '../../../lib/supabase';
 import { FunctionsHttpError, FunctionsFetchError } from '@supabase/supabase-js';
 import { ADMIN_COLORS } from "../../../lib/adminTheme";
 
-const ROLES = ['admin','manager','cashier','delivery','staff'];
+const ROLES = ['admin', 'cashier', 'driver'];
 
 export default function StaffManagement(){
   const { t } = useTranslation();
   const [staff, setStaff] = useState<any[]>([]);
   const [name, setName] = useState(''); const [email, setEmail] = useState(''); const [password, setPassword] = useState('');
-  const [role, setRole] = useState('staff'); const [showAdd, setShowAdd] = useState(false);
+  const [role, setRole] = useState('cashier'); const [showAdd, setShowAdd] = useState(false);
   const [editItem, setEditItem] = useState<any>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
@@ -25,7 +25,7 @@ export default function StaffManagement(){
 
   const addStaff = async () => {
     if(!name.trim() ||!email.trim() ||!password.trim()) return Alert.alert(t('admin.staff.fillRequired'));
-    const { data: authData, error: authError } = await supabase.auth.signUp({ email: email.trim().toLowerCase(), password, options:{data:{full_name:name, role}} });
+    const { data: authData, error: authError } = await supabase.auth.signUp({ email: email.trim().toLowerCase(), password, options:{data:{full_name:name}} });
     if(authError) return Alert.alert(authError.message);
     if(!authData?.user) return Alert.alert(t('admin.staff.createFailed'));
     const { error } = await supabase.from('staff_members').insert({ id: authData.user.id, name: name.trim(), email: email.trim().toLowerCase(), role, is_active:true });
